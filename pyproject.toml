@@ -2,4 +2,4 @@
 name = "PySide QtQuick Project"
 
 [tool.pyside6-project]
-files = ["main.py", "main.qml"]
+files = ["main.py", "main.qml", "Components/InfiniteCanvas.qml", "Components/StatusBar.qml"]
