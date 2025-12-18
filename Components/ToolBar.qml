@@ -26,11 +26,19 @@ Rectangle {
             Layout.preferredHeight: 32
             Layout.alignment: Qt.AlignHCenter
             
-            text: "Sel"
-            font.pixelSize: 8
-            
+            text: ""
             checkable: true
             checked: root.activeTool === "select" || root.activeTool === ""
+            
+            contentItem: Item {
+                anchors.fill: parent
+                PhIcon {
+                    anchors.centerIn: parent
+                    name: "hand-pointing"
+                    size: 20
+                    color: "white"
+                }
+            }
             
             onClicked: {
                 if (checked) {
@@ -59,11 +67,19 @@ Rectangle {
             Layout.preferredHeight: 32
             Layout.alignment: Qt.AlignHCenter
             
-            text: "Rect"
-            font.pixelSize: 8
-            
+            text: ""
             checkable: true
             checked: root.activeTool === "rectangle"
+            
+            contentItem: Item {
+                anchors.fill: parent
+                PhIcon {
+                    anchors.centerIn: parent
+                    name: "rectangle"
+                    size: 20
+                    color: "white"
+                }
+            }
             
             onClicked: {
                 if (checked) {
