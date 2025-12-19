@@ -7,7 +7,6 @@ import "." as DV
 ScrollView {
     id: root
     clip: true
-    contentWidth: availableWidth  // Prevents horizontal scrolling
     
     // Property to receive selected item data
     property var selectedItem: null

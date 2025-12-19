@@ -48,35 +48,38 @@ Item {
         // Dashed border drawn with Canvas
         Canvas {
             id: dashedCanvas
-            anchors.fill: parent
+            property real padding: settings ? (settings.strokeWidth / tool.zoomLevel / 2) : 0
+            x: -padding
+            y: -padding
+            width: parent.width + padding * 2
+            height: parent.height + padding * 2
             
             onPaint: {
                 var ctx = getContext("2d");
                 ctx.clearRect(0, 0, width, height);
                 
-                if (width > 0 && height > 0) {
-                    ctx.save();
-                    ctx.strokeStyle = "white";
-                    ctx.lineWidth = 2 / tool.zoomLevel;
-                    ctx.setLineDash([4 / tool.zoomLevel, 3 / tool.zoomLevel]);
-                    
-                    // Draw ellipse inscribed in the bounding box using scale and arc
+                if (width > 0 && height > 0 && settings) {
+                    var pad = padding;
                     var centerX = width / 2;
                     var centerY = height / 2;
-                    var radiusX = width / 2;
-                    var radiusY = height / 2;
+                    var radiusX = (parent.width / 2);
+                    var radiusY = (parent.height / 2);
                     
+                    ctx.save();
                     ctx.translate(centerX, centerY);
                     ctx.scale(radiusX, radiusY);
                     ctx.beginPath();
                     ctx.arc(0, 0, 1, 0, 2 * Math.PI, false);
                     ctx.restore();
-                    ctx.save();
-                    ctx.strokeStyle = "white";
-                    ctx.lineWidth = 2 / tool.zoomLevel;
-                    ctx.setLineDash([4 / tool.zoomLevel, 3 / tool.zoomLevel]);
+                    
+                    var fillColor = Qt.color(settings.fillColor);
+                    fillColor.a = settings.fillOpacity;
+                    ctx.fillStyle = fillColor;
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = settings.strokeColor;
+                    ctx.lineWidth = settings.strokeWidth / tool.zoomLevel;
                     ctx.stroke();
-                    ctx.restore();
                 }
             }
             
@@ -92,6 +95,7 @@ Item {
             Connections {
                 target: tool
                 function onZoomLevelChanged() { dashedCanvas.requestPaint() }
+                function onSettingsChanged() { dashedCanvas.requestPaint() }
             }
         }
     }

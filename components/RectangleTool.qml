@@ -45,36 +45,20 @@ Item {
         width: tool.currentRect ? tool.currentRect.width : 0
         height: tool.currentRect ? tool.currentRect.height : 0
         
-        // Dashed border drawn with Canvas
-        Canvas {
-            id: dashedCanvas
-            anchors.fill: parent
-            
-            onPaint: {
-                var ctx = getContext("2d");
-                ctx.clearRect(0, 0, width, height);
-                
-                if (width > 0 && height > 0) {
-                    ctx.strokeStyle = "white";
-                    ctx.lineWidth = 2 / tool.zoomLevel;
-                    ctx.setLineDash([4 / tool.zoomLevel, 3 / tool.zoomLevel]);
-                    ctx.strokeRect(0, 0, width, height);
-                }
+        Rectangle {
+            property real halfStroke: settings ? (settings.strokeWidth / tool.zoomLevel / 2) : 0
+            x: -halfStroke
+            y: -halfStroke
+            width: parent.width + settings.strokeWidth / tool.zoomLevel
+            height: parent.height + settings.strokeWidth / tool.zoomLevel
+            color: {
+                if (!settings) return "transparent";
+                var c = Qt.color(settings.fillColor);
+                c.a = settings.fillOpacity;
+                return c;
             }
-            
-            Component.onCompleted: requestPaint()
-            
-            Connections {
-                target: previewRect
-                function onWidthChanged() { dashedCanvas.requestPaint() }
-                function onHeightChanged() { dashedCanvas.requestPaint() }
-                function onVisibleChanged() { if (previewRect.visible) dashedCanvas.requestPaint() }
-            }
-            
-            Connections {
-                target: tool
-                function onZoomLevelChanged() { dashedCanvas.requestPaint() }
-            }
+            border.color: settings ? settings.strokeColor : "#ffffff"
+            border.width: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
         }
     }
     

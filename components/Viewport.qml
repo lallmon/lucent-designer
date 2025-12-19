@@ -211,6 +211,7 @@ Item {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         hoverEnabled: true
+        focus: true
         
         // Get reference to Canvas component
         property var canvasComponent: contentContainer.children.length > 0 ? contentContainer.children[0] : null
@@ -219,6 +220,7 @@ Item {
         cursorShape: canvasComponent ? canvasComponent.currentCursorShape : Qt.ArrowCursor
         
         onPressed: (mouse) => {
+            forceActiveFocus();
             if (canvasComponent) {
                 canvasComponent.handleMousePress(mouse.x, mouse.y, mouse.button);
             }

@@ -11,7 +11,7 @@ All items use QPainter for rendering and support stroke/fill styling.
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
-from PySide6.QtCore import QRectF
+from PySide6.QtCore import QRectF, Qt
 
 # Canvas coordinate system constants
 # The canvas uses a virtual coordinate system centered at (0, 0) in canvas space
@@ -69,6 +69,7 @@ class RectangleItem(CanvasItem):
         # Set up pen for stroke
         pen = QPen(QColor(self.stroke_color))
         pen.setWidthF(scaled_stroke_width)
+        pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
         painter.setPen(pen)
         
         # Set up brush for fill
