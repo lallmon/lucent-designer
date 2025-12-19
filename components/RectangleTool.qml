@@ -8,6 +8,7 @@ Item {
     // Properties passed from Canvas
     property real zoomLevel: 1.0
     property bool active: false
+    property var settings: null  // Tool settings object
     
     // Internal state
     property bool isDrawing: false
@@ -15,8 +16,8 @@ Item {
     property real drawStartY: 0
     property var currentRect: null
     
-    // Signal emitted when a rectangle is completed
-    signal rectangleCompleted(real x, real y, real width, real height)
+    // Signal emitted when an item is completed
+    signal itemCompleted(var itemData)
     
     // Starting point indicator (black dot shown during rectangle drawing)
     Rectangle {
@@ -105,9 +106,21 @@ Item {
                 console.log("Finalizing rect:", currentRect.x, currentRect.y, 
                            currentRect.width, currentRect.height);
                 
-                // Emit signal with rectangle data
-                rectangleCompleted(currentRect.x, currentRect.y, 
-                                 currentRect.width, currentRect.height);
+                // Create complete item data object
+                var itemData = {
+                    type: "rectangle",
+                    x: currentRect.x,
+                    y: currentRect.y,
+                    width: currentRect.width,
+                    height: currentRect.height,
+                    strokeWidth: settings ? settings.strokeWidth : 1,
+                    strokeColor: settings ? settings.strokeColor : "#ffffff",
+                    fillColor: settings ? settings.fillColor : "#ffffff",
+                    fillOpacity: settings ? settings.fillOpacity : 0.0
+                };
+                
+                // Emit signal with complete item data
+                itemCompleted(itemData);
             }
             
             // Clear current rectangle and reset drawing state

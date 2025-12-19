@@ -69,10 +69,7 @@ ApplicationWindow {
                         zoomLevel: viewport.zoomLevel
                         offsetX: viewport.offsetX
                         offsetY: viewport.offsetY
-                        rectangleStrokeWidth: toolSettings.rectangleStrokeWidth
-                        rectangleStrokeColor: toolSettings.rectangleStrokeColor
-                        rectangleFillColor: toolSettings.rectangleFillColor
-                        rectangleFillOpacity: toolSettings.rectangleFillOpacity
+                        toolSettings: toolSettings.toolSettings
                         
                         onPanRequested: (dx, dy) => {
                             viewport.pan(dx, dy);

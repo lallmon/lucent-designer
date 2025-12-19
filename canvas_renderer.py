@@ -1,7 +1,7 @@
 from PySide6.QtCore import Property, Signal, Slot
 from PySide6.QtQuick import QQuickPaintedItem
 from PySide6.QtGui import QPainter
-from canvas_items import CanvasItem, RectangleItem
+from canvas_items import CanvasItem, RectangleItem, EllipseItem
 
 
 class CanvasRenderer(QQuickPaintedItem):
@@ -58,6 +58,9 @@ class CanvasRenderer(QQuickPaintedItem):
                     item_type = item_data.get("type", "")
                     if item_type == "rectangle":
                         item_obj = RectangleItem.from_dict(item_data)
+                        converted_items.append(item_obj)
+                    elif item_type == "ellipse":
+                        item_obj = EllipseItem.from_dict(item_data)
                         converted_items.append(item_obj)
                     # else: Unknown item type, skip
                 except Exception:

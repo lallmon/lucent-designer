@@ -43,7 +43,7 @@ QtObject {
 
         // Buttons / icons
         readonly property int toolButtonSize: 32
-        readonly property int iconSize: 20
+        readonly property int iconSize: 24
         readonly property int statusIconSize: 16
 
         // Radii

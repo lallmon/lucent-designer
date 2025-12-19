@@ -84,7 +84,7 @@ Pane {
                 anchors.fill: parent
                 PhIcon {
                     anchors.centerIn: parent
-                    name: "rectangle"
+                    name: "rectangle-dashed"
                     size: DV.Theme.sizes.iconSize
                     color: "white"
                 }
@@ -104,6 +104,47 @@ Pane {
             background: Rectangle {
                 color: rectButton.checked ? DV.Theme.colors.panelActive : (rectButton.hovered ? DV.Theme.colors.panelHover : DV.Theme.colors.panelBackground)
                 border.color: rectButton.checked ? "#ffffff" : DV.Theme.colors.borderDefault
+                border.width: 1
+                radius: DV.Theme.sizes.radiusMd
+            }
+        }
+        
+        // Ellipse tool button
+        ToolButton {
+            id: ellipseButton
+            Layout.preferredWidth: DV.Theme.sizes.toolButtonSize
+            Layout.preferredHeight: DV.Theme.sizes.toolButtonSize
+            Layout.alignment: Qt.AlignHCenter
+            
+            text: ""
+            checkable: true
+            checked: root.activeTool === "ellipse"
+            ButtonGroup.group: toolButtonGroup
+            
+            contentItem: Item {
+                anchors.fill: parent
+                PhIcon {
+                    anchors.centerIn: parent
+                    name: "circle-dashed"
+                    size: DV.Theme.sizes.iconSize
+                    color: "white"
+                }
+            }
+            
+            onClicked: {
+                if (checked) {
+                    root.activeTool = "ellipse"
+                    root.toolSelected("ellipse")
+                } else {
+                    root.activeTool = ""
+                    root.toolSelected("")
+                }
+            }
+            
+            // Visual feedback for active state
+            background: Rectangle {
+                color: ellipseButton.checked ? DV.Theme.colors.panelActive : (ellipseButton.hovered ? DV.Theme.colors.panelHover : DV.Theme.colors.panelBackground)
+                border.color: ellipseButton.checked ? "#ffffff" : DV.Theme.colors.borderDefault
                 border.width: 1
                 radius: DV.Theme.sizes.radiusMd
             }
