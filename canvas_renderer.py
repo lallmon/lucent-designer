@@ -1,4 +1,11 @@
-from PySide6.QtCore import Property, Signal, Slot
+"""
+Canvas renderer component for DesignVibe.
+
+This module provides the CanvasRenderer class, which is a QQuickPaintedItem
+that bridges QML and Python, rendering canvas items using QPainter.
+"""
+from typing import List, Any, Optional
+from PySide6.QtCore import Property, Signal, Slot, QObject
 from PySide6.QtQuick import QQuickPaintedItem
 from PySide6.QtGui import QPainter
 from canvas_items import CanvasItem, RectangleItem, EllipseItem
@@ -10,12 +17,12 @@ class CanvasRenderer(QQuickPaintedItem):
     itemsChanged = Signal()
     zoomLevelChanged = Signal()
     
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
-        self._items = []
-        self._zoom_level = 1.0
+        self._items: List[CanvasItem] = []
+        self._zoom_level: float = 1.0
         
-    def paint(self, painter):
+    def paint(self, painter: QPainter) -> None:
         """Render all items using QPainter"""
         painter.setRenderHint(QPainter.Antialiasing, True)
         
@@ -25,11 +32,11 @@ class CanvasRenderer(QQuickPaintedItem):
     # Use `list` for QML arrays to enable automatic JavaScript→Python conversion.
     # PySide6 does not expose a `QVariant` class to import like PyQt/PySide2 did.
     @Property(list, notify=itemsChanged)
-    def items(self):
+    def items(self) -> List[CanvasItem]:
         return self._items
     
     @items.setter
-    def items(self, value):
+    def items(self, value: List[Any]) -> None:
         # Convert QML list to Python list of CanvasItem objects
         converted_items = []
         if value:
@@ -49,8 +56,9 @@ class CanvasRenderer(QQuickPaintedItem):
                             "fillColor": item_data.get("fillColor", "#ffffff") if hasattr(item_data, "get") else item_data.property("fillColor"),
                             "fillOpacity": float(item_data.get("fillOpacity", 0.0) if hasattr(item_data, "get") else item_data.property("fillOpacity")),
                         }
-                    except Exception:
-                        # Skip items that can't be converted
+                    except (AttributeError, KeyError, TypeError, ValueError) as e:
+                        # Skip items that can't be converted - log for debugging
+                        print(f"Warning: Failed to convert QML object to dict: {type(e).__name__}: {e}")
                         continue
                 
                 # Use factory method to create appropriate item object
@@ -63,8 +71,9 @@ class CanvasRenderer(QQuickPaintedItem):
                         item_obj = EllipseItem.from_dict(item_data)
                         converted_items.append(item_obj)
                     # else: Unknown item type, skip
-                except Exception:
-                    # Skip items that can't be created
+                except (KeyError, ValueError, TypeError) as e:
+                    # Skip items that can't be created - log for debugging
+                    print(f"Warning: Failed to create item of type '{item_type}': {type(e).__name__}: {e}")
                     continue
         
         self._items = converted_items
@@ -72,11 +81,11 @@ class CanvasRenderer(QQuickPaintedItem):
         self.update()
     
     @Property(float, notify=zoomLevelChanged)
-    def zoomLevel(self):
+    def zoomLevel(self) -> float:
         return self._zoom_level
     
     @zoomLevel.setter
-    def zoomLevel(self, value):
+    def zoomLevel(self, value: float) -> None:
         if self._zoom_level != value:
             self._zoom_level = value
             self.zoomLevelChanged.emit()

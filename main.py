@@ -1,7 +1,14 @@
 # This Python file uses the following encoding: utf-8
+"""
+DesignVibe - Main application entry point.
+
+This module initializes the Qt application, registers QML components,
+and launches the main window.
+"""
 import sys
 import os
 from pathlib import Path
+from typing import List
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
