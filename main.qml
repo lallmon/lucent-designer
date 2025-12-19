@@ -12,12 +12,12 @@ ApplicationWindow {
 
     // Menu Bar
     menuBar: MenuBar {
-        canvas: canvas
+        viewport: viewport
     }
 
     // Status Bar
     footer: StatusBar {
-        zoomLevel: canvas.zoomLevel
+        zoomLevel: viewport.zoomLevel
         cursorX: canvas.cursorX
         cursorY: canvas.cursorY
     }
@@ -51,15 +51,27 @@ ApplicationWindow {
                 }
             }
             
-            // Main Canvas Area
-            Canvas {
-                id: canvas
+            // Main Viewport with Canvas
+            Viewport {
+                id: viewport
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                rectangleStrokeWidth: toolSettings.rectangleStrokeWidth
-                rectangleStrokeColor: toolSettings.rectangleStrokeColor
-                rectangleFillColor: toolSettings.rectangleFillColor
-                rectangleFillOpacity: toolSettings.rectangleFillOpacity
+                
+                Canvas {
+                    id: canvas
+                    anchors.fill: parent
+                    zoomLevel: viewport.zoomLevel
+                    offsetX: viewport.offsetX
+                    offsetY: viewport.offsetY
+                    rectangleStrokeWidth: toolSettings.rectangleStrokeWidth
+                    rectangleStrokeColor: toolSettings.rectangleStrokeColor
+                    rectangleFillColor: toolSettings.rectangleFillColor
+                    rectangleFillOpacity: toolSettings.rectangleFillOpacity
+                    
+                    onPanRequested: (dx, dy) => {
+                        viewport.pan(dx, dy);
+                    }
+                }
             }
         }
     }

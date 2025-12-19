@@ -5,8 +5,8 @@ import QtQuick.Controls
 MenuBar {
     id: root
     
-    // Property to reference the canvas for zoom operations
-    property var canvas: null
+    // Property to reference the viewport for zoom operations
+    property var viewport: null
     
     Menu {
         title: qsTr("&File")
@@ -23,8 +23,8 @@ MenuBar {
             text: qsTr("Zoom &In (Ctrl++)")
             shortcut: StandardKey.ZoomIn
             onTriggered: {
-                if (root.canvas) {
-                    root.canvas.zoomIn()
+                if (root.viewport) {
+                    root.viewport.zoomIn()
                 }
             }
         }
@@ -32,8 +32,8 @@ MenuBar {
             text: qsTr("Zoom &Out (Ctrl+-)")
             shortcut: StandardKey.ZoomOut
             onTriggered: {
-                if (root.canvas) {
-                    root.canvas.zoomOut()
+                if (root.viewport) {
+                    root.viewport.zoomOut()
                 }
             }
         }
@@ -41,8 +41,8 @@ MenuBar {
             text: qsTr("&Reset Zoom (Ctrl+0)")
             shortcut: "Ctrl+0"
             onTriggered: {
-                if (root.canvas) {
-                    root.canvas.resetZoom()
+                if (root.viewport) {
+                    root.viewport.resetZoom()
                 }
             }
         }

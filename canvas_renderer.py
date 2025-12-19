@@ -14,17 +14,13 @@ class CanvasRenderer(QQuickPaintedItem):
         super().__init__(parent)
         self._items = []
         self._zoom_level = 1.0
-        print("CanvasRenderer created")
         
     def paint(self, painter):
         """Render all items using QPainter"""
         painter.setRenderHint(QPainter.Antialiasing, True)
         
-        print(f"CanvasRenderer.paint() called with {len(self._items)} items")
-        
         # Each item knows how to paint itself
         for item in self._items:
-            print(f"Rendering item: {type(item).__name__}")
             item.paint(painter, self._zoom_level)
     # Use `list` for QML arrays to enable automatic JavaScript→Python conversion.
     # PySide6 does not expose a `QVariant` class to import like PyQt/PySide2 did.
@@ -34,8 +30,6 @@ class CanvasRenderer(QQuickPaintedItem):
     
     @items.setter
     def items(self, value):
-        print(f"CanvasRenderer.items setter called with: {type(value)}, value: {value}")
-        
         # Convert QML list to Python list of CanvasItem objects
         converted_items = []
         if value:
@@ -55,8 +49,8 @@ class CanvasRenderer(QQuickPaintedItem):
                             "fillColor": item_data.get("fillColor", "#ffffff") if hasattr(item_data, "get") else item_data.property("fillColor"),
                             "fillOpacity": float(item_data.get("fillOpacity", 0.0) if hasattr(item_data, "get") else item_data.property("fillOpacity")),
                         }
-                    except Exception as e:
-                        print(f"Error converting item data to dict: {e}")
+                    except Exception:
+                        # Skip items that can't be converted
                         continue
                 
                 # Use factory method to create appropriate item object
@@ -65,14 +59,12 @@ class CanvasRenderer(QQuickPaintedItem):
                     if item_type == "rectangle":
                         item_obj = RectangleItem.from_dict(item_data)
                         converted_items.append(item_obj)
-                    else:
-                        print(f"Unknown item type: {item_type}")
-                except Exception as e:
-                    print(f"Error creating item object: {e}")
+                    # else: Unknown item type, skip
+                except Exception:
+                    # Skip items that can't be created
                     continue
         
         self._items = converted_items
-        print(f"Items updated, new count: {len(self._items)}")
         self.itemsChanged.emit()
         self.update()
     
