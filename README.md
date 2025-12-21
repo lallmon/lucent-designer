@@ -1,66 +1,22 @@
 # DesignVibe
 
-A digital design application built with PySide6 and Qt Quick.
+## What
+A modern, open source hybrid vector/raster digital design application, built with QT. Taking a Linux first approach, but planning to be multi-platform.
 
-## Features
+## Why
+Mainly because there isn't a good alternative to Affinity Designer on Linux honestly, and with their purchase by Canva and the quick enshittification of that software, it's pushed me to at least take a stab at something.
 
-### Rendering Canvas
-- **Infinite canvas** with pan and zoom capabilities
-- **Grid system** with minor and major gridlines for visual reference
-- **Zoom controls**: Mouse wheel, keyboard shortcuts (Ctrl+/Ctrl-/Ctrl+0), and menu options
-- **Pan navigation**: Click and drag with left mouse button
-- **Crisp rendering** with smooth transformations
-- Starts at 100% zoom level
+# Architecture 
 
-### Drawing Tools
-- **Rectangle tool**: Draw vector rectangles on the canvas
-  - Red stroke (2px width) for finalized shapes
-  - Dotted red preview while dragging
-  - Click and drag to create rectangles
-  - Proper coordinate transformation with zoom and pan
-  - Stroke width scales inversely with zoom for consistent appearance
+I am currently learing both QTQuick and Python, so we don't have a solid architecture yet, but am open to suggestions and best practices.
 
-### User Interface
-- Menu bar with File and View menus
-- Left vertical tool palette with drawing tools
-- Right resizable panel for object properties (128-256px, default 220px)
-- Status bar with real-time zoom level and cursor position
-- Tool settings bar for active tool options
+## Contributing
+There's plenty to do but the end goal is pretty clear for me, so if you want to help out, I'd love it anything I can do.
 
+### Getting Started
 
-## Controls
+As of right now you can follow [QT for Python](https://doc.qt.io/qtforpython-6/gettingstarted.html) guide to get going that way, but it might just be easier to grab [QT Creator](https://download.qt.io/official_releases/qtcreator/) which should have the python dependencies already in it.
 
-### Navigation
-- **Pan**: Click and drag with left mouse button (when no tool is selected)
-- **Zoom**: Mouse wheel or Ctrl+Plus/Ctrl+Minus
-- **Reset view**: Ctrl+0
-- **Quit**: Ctrl+Q
-
-### Tools
-- **Select tool**: Click the "Sel" button to enable pan and zoom mode
-- **Rectangle tool**: Click the "Rect" button to draw rectangles
-  - Click and drag on the canvas to draw
-  - Rectangle appears with dotted preview while dragging
-  - Solid red outline when finalized
-
-## Project Structure
-
-- `main.py` - Application entry point
-- `main.qml` - Main application window with menu bar and layout
-- `components/` - QML components directory
-  - `Canvas.qml` - Canvas component with pan/zoom and drawing
-  - `Viewport.qml` - Viewport with zoom/pan transforms and grid
-  - `MenuBar.qml` - Application menu bar with File and View menus
-  - `StatusBar.qml` - Status bar component with zoom level and cursor position
-  - `ToolSettings.qml` - Context-sensitive tool settings bar
-  - `ToolPalette.qml` - Left tool palette with drawing tool buttons
-  - `RightPanel.qml` - Right resizable panel for object properties
-  - `SelectTool.qml` - Select/pan tool implementation
-  - `RectangleTool.qml` - Rectangle drawing tool implementation
-  - `Theme.qml` - Centralized UI constants and styling
-  - `PhIcon.qml` - SVG icon component using Phosphor icons
-- `canvas_renderer.py` - QPainter-based canvas renderer
-- `canvas_items.py` - Canvas item data structures
-- `pyproject.toml` - Project configuration
-- `requirements.txt` - Python dependencies
+#### AI Contributions
+I have used AI on this project, so I am not against it, but you definitely need to wrangle that slop machine. LOL. Just straight vibe coding is definitely not something that will work in the long run.
 
