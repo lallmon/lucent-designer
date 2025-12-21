@@ -4,62 +4,56 @@ Canvas renderer component for DesignVibe.
 This module provides the CanvasRenderer class, which is a QQuickPaintedItem
 that bridges QML and Python, rendering canvas items using QPainter.
 """
-from typing import List, Any, Optional
+from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Property, Signal, Slot, QObject
 from PySide6.QtQuick import QQuickPaintedItem
 from PySide6.QtGui import QPainter
-from canvas_items import CanvasItem, RectangleItem, EllipseItem
+
+if TYPE_CHECKING:
+    from canvas_model import CanvasModel
 
 
 class CanvasRenderer(QQuickPaintedItem):
     """Custom QPainter-based renderer for canvas items"""
     
-    itemsChanged = Signal()
     zoomLevelChanged = Signal()
     
     def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
-        self._items: List[CanvasItem] = []
+        self._model: Optional['CanvasModel'] = None
         self._zoom_level: float = 1.0
+    
+    @Slot(QObject)
+    def setModel(self, model: QObject) -> None:
+        """
+        Set the canvas model to render items from.
+        
+        Args:
+            model: CanvasModel instance to get items from
+        """
+        # Import here to avoid circular dependency
+        from canvas_model import CanvasModel
+        
+        if isinstance(model, CanvasModel):
+            self._model = model
+            # Connect to model signals for automatic updates
+            model.itemAdded.connect(self.update)
+            model.itemRemoved.connect(self.update)
+            model.itemsCleared.connect(self.update)
+            model.itemModified.connect(self.update)
+            # Initial render
+            self.update()
         
     def paint(self, painter: QPainter) -> None:
-        """Render all items using QPainter"""
+        """Render all items from the model using QPainter"""
+        if not self._model:
+            return
+            
         painter.setRenderHint(QPainter.Antialiasing, True)
         
-        # Each item knows how to paint itself
-        for item in self._items:
+        # Get items from model and render each one
+        for item in self._model.getItems():
             item.paint(painter, self._zoom_level)
-    # Use `list` for QML arrays to enable automatic JavaScript→Python conversion.
-    # PySide6 does not expose a `QVariant` class to import like PyQt/PySide2 did.
-    @Property(list, notify=itemsChanged)
-    def items(self) -> List[CanvasItem]:
-        return self._items
-    
-    @items.setter
-    def items(self, value: List[Any]) -> None:
-        # Convert QML list to Python list of CanvasItem objects
-        # QML automatically converts JavaScript objects to Python dicts
-        converted_items = []
-        if value:
-            for item_data in value:
-                # Use factory method to create appropriate item object
-                try:
-                    item_type = item_data.get("type", "")
-                    if item_type == "rectangle":
-                        item_obj = RectangleItem.from_dict(item_data)
-                        converted_items.append(item_obj)
-                    elif item_type == "ellipse":
-                        item_obj = EllipseItem.from_dict(item_data)
-                        converted_items.append(item_obj)
-                    # else: Unknown item type, skip
-                except (KeyError, ValueError, TypeError, AttributeError) as e:
-                    # Skip items that can't be created - log for debugging
-                    print(f"Warning: Failed to create item of type '{item_data.get('type', 'unknown')}': {type(e).__name__}: {e}")
-                    continue
-        
-        self._items = converted_items
-        self.itemsChanged.emit()
-        self.update()
     
     @Property(float, notify=zoomLevelChanged)
     def zoomLevel(self) -> float:

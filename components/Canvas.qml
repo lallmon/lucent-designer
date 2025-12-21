@@ -38,9 +38,6 @@ Item {
         }
     })
     
-    // List to store drawn items
-    property var items: []
-    
     // Current cursor shape (for dynamic cursor changes)
     property int currentCursorShape: Qt.OpenHandCursor
     
@@ -56,8 +53,11 @@ Item {
             y: -5000
             width: 10000
             height: 10000
-            items: root.items
             zoomLevel: root.zoomLevel
+            
+            Component.onCompleted: {
+                setModel(canvasModel)
+            }
         }
         
         // Selection indicator overlay
@@ -217,9 +217,8 @@ Item {
     
     // Generic item completion handler
     function handleItemCompleted(itemData) {
-        var newItems = root.items.slice();
-        newItems.push(itemData);
-        root.items = newItems;
+        // Add item to the model instead of local array
+        canvasModel.addItem(itemData);
     }
     
     // Set the drawing mode
@@ -250,6 +249,9 @@ Item {
     
     // Hit test to find item at canvas coordinates
     function hitTest(canvasX, canvasY) {
+        // Get items from model for hit testing
+        var items = canvasModel.getItemsForHitTest();
+        
         // Iterate backwards (topmost items first)
         for (var i = items.length - 1; i >= 0; i--) {
             var item = items[i];
@@ -275,7 +277,7 @@ Item {
     function selectItemAt(canvasX, canvasY) {
         var hitIndex = hitTest(canvasX, canvasY);
         DV.SelectionManager.selectedItemIndex = hitIndex;
-        DV.SelectionManager.selectedItem = (hitIndex >= 0) ? items[hitIndex] : null;
+        DV.SelectionManager.selectedItem = (hitIndex >= 0) ? canvasModel.getItemData(hitIndex) : null;
     }
 }
 

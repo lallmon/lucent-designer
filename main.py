@@ -14,6 +14,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtCore import Qt
 from canvas_renderer import CanvasRenderer
+from canvas_model import CanvasModel
 
 
 if __name__ == "__main__":
@@ -28,6 +29,10 @@ if __name__ == "__main__":
     qmlRegisterType(CanvasRenderer, "DesignVibe", 1, 0, "CanvasRenderer")
     
     engine = QQmlApplicationEngine()
+    
+    # Create and register canvas model as global singleton
+    canvas_model = CanvasModel()
+    engine.rootContext().setContextProperty("canvasModel", canvas_model)
     qml_file = Path(__file__).resolve().parent / "main.qml"
     engine.load(qml_file)
     if not engine.rootObjects():
