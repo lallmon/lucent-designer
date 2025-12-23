@@ -105,6 +105,7 @@ coverage.xml
 # IDEs and editors
 .vscode/
 .idea/
+.qtcreator/
 *.swo
 .project
 .pydevproject
