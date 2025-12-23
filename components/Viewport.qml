@@ -219,6 +219,12 @@ Item {
         // Bind cursor shape to Canvas's currentCursorShape
         cursorShape: canvasComponent ? canvasComponent.currentCursorShape : Qt.ArrowCursor
         
+        Keys.onDeletePressed: {
+            if (canvasComponent) {
+                canvasComponent.deleteSelectedItem();
+            }
+        }
+        
         onPressed: (mouse) => {
             forceActiveFocus();
             if (canvasComponent) {
