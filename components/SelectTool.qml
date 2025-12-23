@@ -1,35 +1,34 @@
 import QtQuick
 import QtQuick.Controls
+import "." as DV
 
 // Select tool component - handles panning and object selection
 Item {
     id: tool
     
-    // Properties
     property bool active: false
+    property var hitTestCallback: null
+    property var viewportToCanvasCallback: null
     
-    // Internal state
     property bool isPanning: false
     property bool isSelecting: false
+    property bool isDraggingObject: false
+    property bool clickedOnSelectedObject: false
     property real lastX: 0
     property real lastY: 0
     property real selectPressX: 0
     property real selectPressY: 0
     
-    // Sliding window smoothing (averages last N frames)
     property var deltaBufferX: []
     property var deltaBufferY: []
-    property int bufferSize: 3  // Average last 3 frames for smooth motion
-    
-    // Threshold for distinguishing click from drag (pixels)
+    property int bufferSize: 3
     property real clickThreshold: 5
     
-    // Signals
     signal panDelta(real dx, real dy)
     signal cursorShapeChanged(int shape)
     signal objectClicked(real viewportX, real viewportY)
+    signal objectDragged(real canvasDx, real canvasDy)
     
-    // Handle mouse press for panning and selection
     function handlePress(screenX, screenY, button) {
         if (!tool.active) return false;
         
@@ -37,51 +36,65 @@ Item {
             isPanning = true;
             lastX = screenX;
             lastY = screenY;
-            deltaBufferX = [];  // Clear buffer
+            deltaBufferX = [];
             deltaBufferY = [];
             cursorShapeChanged(Qt.ClosedHandCursor);
-            return true;  // Event handled
+            return true;
         }
         
         if (button === Qt.LeftButton) {
             isSelecting = true;
             selectPressX = screenX;
             selectPressY = screenY;
-            return true;  // Event handled
+            lastX = screenX;
+            lastY = screenY;
+            clickedOnSelectedObject = false;
+            
+            if (hitTestCallback && viewportToCanvasCallback && DV.SelectionManager.selectedItemIndex >= 0) {
+                var canvasCoords = viewportToCanvasCallback(screenX, screenY);
+                var hitIndex = hitTestCallback(canvasCoords.x, canvasCoords.y);
+                if (hitIndex === DV.SelectionManager.selectedItemIndex) {
+                    clickedOnSelectedObject = true;
+                }
+            }
+            
+            return true;
         }
         
         return false;
     }
     
-    // Handle mouse release
     function handleRelease(screenX, screenY, button) {
         if (!tool.active) return false;
         
         if (isPanning && button === Qt.MiddleButton) {
             isPanning = false;
             cursorShapeChanged(Qt.OpenHandCursor);
-            return true;  // Event handled
+            return true;
         }
         
         if (isSelecting && button === Qt.LeftButton) {
-            isSelecting = false;
+            if (isDraggingObject) {
+                isDraggingObject = false;
+                isSelecting = false;
+                cursorShapeChanged(Qt.OpenHandCursor);
+                return true;
+            }
             
-            // Check if it was a click (not a drag)
+            isSelecting = false;
             var dx = Math.abs(screenX - selectPressX);
             var dy = Math.abs(screenY - selectPressY);
             
             if (dx < clickThreshold && dy < clickThreshold) {
-                // It was a click - emit signal with viewport coords
                 objectClicked(screenX, screenY);
             }
             
-            return true;  // Event handled
+            return true;
         }
         
         return false;
     }
     
-    // Handle mouse movement for panning
     function handleMouseMove(screenX, screenY) {
         if (!tool.active) return false;
         
@@ -89,24 +102,20 @@ Item {
             var dx = screenX - lastX;
             var dy = screenY - lastY;
             
-            // Clamp individual deltas to prevent extreme jumps (e.g. from window focus changes)
-            var maxDelta = 200;  // Maximum 200 pixels per frame
+            var maxDelta = 200;
             if (Math.abs(dx) > maxDelta || Math.abs(dy) > maxDelta) {
                 dx = Math.max(-maxDelta, Math.min(maxDelta, dx));
                 dy = Math.max(-maxDelta, Math.min(maxDelta, dy));
             }
             
-            // Add to sliding window buffer
             deltaBufferX.push(dx);
             deltaBufferY.push(dy);
             
-            // Keep buffer at fixed size (remove oldest if over limit)
             if (deltaBufferX.length > bufferSize) {
                 deltaBufferX.shift();
                 deltaBufferY.shift();
             }
             
-            // Calculate average of buffer (sliding window)
             var sumX = 0, sumY = 0;
             for (var i = 0; i < deltaBufferX.length; i++) {
                 sumX += deltaBufferX[i];
@@ -115,21 +124,38 @@ Item {
             var avgDx = sumX / deltaBufferX.length;
             var avgDy = sumY / deltaBufferY.length;
             
-            // Emit smoothed delta (always emit, even if small)
             panDelta(avgDx, avgDy);
             
             lastX = screenX;
             lastY = screenY;
-            return true;  // Event handled
+            return true;
+        }
+        
+        if (isSelecting && clickedOnSelectedObject && DV.SelectionManager.selectedItemIndex >= 0) {
+            var dx = Math.abs(screenX - selectPressX);
+            var dy = Math.abs(screenY - selectPressY);
+            
+            if (!isDraggingObject && (dx >= clickThreshold || dy >= clickThreshold)) {
+                isDraggingObject = true;
+                cursorShapeChanged(Qt.ClosedHandCursor);
+            }
+            
+            if (isDraggingObject) {
+                objectDragged(screenX - lastX, screenY - lastY);
+                lastX = screenX;
+                lastY = screenY;
+                return true;
+            }
         }
         
         return false;
     }
     
-    // Reset tool state
     function reset() {
         isPanning = false;
         isSelecting = false;
+        isDraggingObject = false;
+        clickedOnSelectedObject = false;
     }
 }
 

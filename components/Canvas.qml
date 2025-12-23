@@ -119,6 +119,8 @@ Item {
         SelectTool {
             id: selectTool
             active: root.drawingMode === ""
+            hitTestCallback: root.hitTest
+            viewportToCanvasCallback: root.viewportToCanvas
             
             onPanDelta: (dx, dy) => {
                 root.panRequested(dx, dy);
@@ -131,6 +133,10 @@ Item {
             onObjectClicked: (viewportX, viewportY) => {
                 var canvasCoords = root.viewportToCanvas(viewportX, viewportY);
                 root.selectItemAt(canvasCoords.x, canvasCoords.y);
+            }
+            
+            onObjectDragged: (viewportDx, viewportDy) => {
+                root.updateSelectedItemPosition(viewportDx / root.zoomLevel, viewportDy / root.zoomLevel);
             }
         }
         
@@ -278,6 +284,25 @@ Item {
         var hitIndex = hitTest(canvasX, canvasY);
         DV.SelectionManager.selectedItemIndex = hitIndex;
         DV.SelectionManager.selectedItem = (hitIndex >= 0) ? canvasModel.getItemData(hitIndex) : null;
+    }
+    
+    function updateSelectedItemPosition(canvasDx, canvasDy) {
+        var index = DV.SelectionManager.selectedItemIndex;
+        if (index < 0) return;
+        
+        var item = DV.SelectionManager.selectedItem;
+        if (!item) return;
+        
+        var properties = {};
+        if (item.type === "rectangle") {
+            properties.x = item.x + canvasDx;
+            properties.y = item.y + canvasDy;
+        } else if (item.type === "ellipse") {
+            properties.centerX = item.centerX + canvasDx;
+            properties.centerY = item.centerY + canvasDy;
+        }
+        
+        canvasModel.updateItem(index, properties);
     }
 }
 
