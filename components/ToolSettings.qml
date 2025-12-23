@@ -82,7 +82,6 @@ ToolBar {
                     var value = parseFloat(text);
                     if (!isNaN(value) && value >= 0.1 && value <= 100.0) {
                         root.rectangleStrokeWidth = value;
-                        console.log("Stroke width set to:", value);
                     } else {
                         // Reset to current value if invalid
                         text = root.rectangleStrokeWidth.toString();
@@ -436,7 +435,6 @@ ToolBar {
                     var value = parseInt(text);
                     if (!isNaN(value) && value >= 0 && value <= 100) {
                         root.rectangleFillOpacity = value / 100.0;
-                        console.log("Fill opacity set to:", root.rectangleFillOpacity);
                     } else {
                         // Reset to current value if invalid
                         text = Math.round(root.rectangleFillOpacity * 100).toString();
@@ -488,7 +486,6 @@ ToolBar {
             
             onAccepted: {
                 root.rectangleStrokeColor = selectedColor;
-                console.log("Stroke color set to:", selectedColor);
             }
         }
         
@@ -500,7 +497,6 @@ ToolBar {
             
             onAccepted: {
                 root.rectangleFillColor = selectedColor;
-                console.log("Fill color set to:", selectedColor);
             }
         }
         
@@ -536,7 +532,6 @@ ToolBar {
                     var value = parseFloat(text);
                     if (!isNaN(value) && value >= 0.1 && value <= 100.0) {
                         root.ellipseStrokeWidth = value;
-                        console.log("Ellipse stroke width set to:", value);
                     } else {
                         // Reset to current value if invalid
                         text = root.ellipseStrokeWidth.toString();
@@ -887,7 +882,6 @@ ToolBar {
                     var value = parseInt(text);
                     if (!isNaN(value) && value >= 0 && value <= 100) {
                         root.ellipseFillOpacity = value / 100.0;
-                        console.log("Ellipse fill opacity set to:", root.ellipseFillOpacity);
                     } else {
                         // Reset to current value if invalid
                         text = Math.round(root.ellipseFillOpacity * 100).toString();
@@ -939,7 +933,6 @@ ToolBar {
             
             onAccepted: {
                 root.ellipseStrokeColor = selectedColor;
-                console.log("Ellipse stroke color set to:", selectedColor);
             }
         }
         
@@ -951,7 +944,6 @@ ToolBar {
             
             onAccepted: {
                 root.ellipseFillColor = selectedColor;
-                console.log("Ellipse fill color set to:", selectedColor);
             }
         }
         
