@@ -1,6 +1,7 @@
 # DesignVibe
 
-[![Coverage](https://gitlab.com/your-namespace/DesignVibe/badges/main/coverage.svg)](https://gitlab.com/lallmon/DesignVibe/-/commits/main)
+[![Tests](https://github.com/lallmon/designvibe/actions/workflows/test.yml/badge.svg)](https://github.com/lallmon/designvibe/actions)
+[![codecov](https://codecov.io/gh/lallmon/designvibe/branch/main/graph/badge.svg)](https://codecov.io/gh/lallmon/designvibe)
 
 ## What
 A modern, open source hybrid vector/raster digital design application, built with QT. Taking a Linux first approach, but planning to be multi-platform.
