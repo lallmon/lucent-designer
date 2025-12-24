@@ -11,6 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -57,10 +58,15 @@ jobs:
           VERSION="${{ github.ref_name }}"
           VERSION_NUMBER="${VERSION#v}"
           
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
+          if [[ "$RUNNER_OS" == "Darwin" ]]; then
+            # macOS uses BSD sed, requires empty string after -i
+            sed -i '' "s/__VERSION__/$VERSION_NUMBER/g" pysidedeploy.spec
+            sed -i '' "s/__VERSION__/$VERSION_NUMBER/g" main.py
+          elif [[ "$RUNNER_OS" == "Windows" ]]; then
             sed -i "s/__VERSION__/$VERSION_NUMBER/" pysidedeploy.spec
             sed -i "s/__VERSION__/$VERSION_NUMBER/" main.py
           else
+            # Linux uses GNU sed
             sed -i "s/__VERSION__/$VERSION_NUMBER/g" pysidedeploy.spec
             sed -i "s/__VERSION__/$VERSION_NUMBER/g" main.py
           fi
