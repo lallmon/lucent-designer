@@ -15,12 +15,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: Linux
+          # - os: ubuntu-latest
+          #   platform: Linux
           # - os: macos-latest
           #   platform: macOS
-          # - os: windows-latest
-          #   platform: Windows
+          - os: windows-latest
+            platform: Windows
     
     steps:
       - name: Checkout code
