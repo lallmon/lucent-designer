@@ -1,7 +1,7 @@
 [app]
 title = DesignVibe
 version = __VERSION__
-exec_directory = .
+exec_directory = deployment
 icon = assets/appIcon.png
 input_file = main.py
 project_dir = .

@@ -46,7 +46,7 @@ jobs:
             libgssapi-krb5-2 libx11-6 libx11-xcb1 \
             libxext6 libxrender1 libxkbcommon0 \
             fuse libfuse2 \
-            build-essential ccache patchelf
+            build-essential patchelf
       
       - name: Install Python dependencies
         run: |
@@ -66,17 +66,11 @@ jobs:
           
           echo "Building version: $VERSION_NUMBER"
       
-      - name: Setup ccache (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          ccache --set-config=max_size=500M
-          ccache --zero-stats
-      
       - name: Build with pyside6-deploy (Linux)
         if: matrix.os == 'ubuntu-latest'
         env:
-          CC: ccache gcc
-          CXX: ccache g++
+          CC: gcc
+          CXX: g++
         run: |
           pyside6-deploy -c pysidedeploy.spec --force
       
@@ -85,10 +79,15 @@ jobs:
         run: |
           pyside6-deploy -c pysidedeploy.spec --force
       
-      - name: Show ccache stats (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Verify build output
+        shell: bash
         run: |
-          ccache --show-stats
+          if [ ! -d "deployment" ]; then
+            echo "ERROR: deployment directory not created - build failed"
+            exit 1
+          fi
+          echo "Build output:"
+          ls -la deployment/
       
       - name: Debug - List deployment directory
         shell: bash
