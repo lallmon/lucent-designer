@@ -10,7 +10,6 @@ project_file = pyproject.toml
 [python]
 version = 3.10
 packages = PySide6
-python_path = /home/lka/Git/DesignVibe/.venv/bin/python
 
 [qt]
 qml_files = App.qml,components/

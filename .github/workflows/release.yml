@@ -81,8 +81,8 @@ jobs:
       
       - name: Build with pyside6-deploy
         env:
-          CC: ${{ matrix.os == 'ubuntu-latest' && 'ccache gcc' || 'gcc' }}
-          CXX: ${{ matrix.os == 'ubuntu-latest' && 'ccache g++' || 'g++' }}
+          CC: ${{ matrix.os == 'ubuntu-latest' && 'ccache gcc' || '' }}
+          CXX: ${{ matrix.os == 'ubuntu-latest' && 'ccache g++' || '' }}
         run: |
           pyside6-deploy -c pysidedeploy.spec --force
       
@@ -92,6 +92,7 @@ jobs:
           ccache --show-stats
       
       - name: Debug - List deployment directory
+        shell: bash
         run: |
           echo "=== Contents of deployment directory ==="
           ls -la deployment/ || echo "deployment/ directory does not exist"
@@ -125,6 +126,7 @@ jobs:
       
       - name: Create Installer (Windows)
         if: matrix.os == 'windows-latest'
+        shell: bash
         run: |
           mv deployment/DesignVibe.exe ${{ matrix.artifact }}
       
