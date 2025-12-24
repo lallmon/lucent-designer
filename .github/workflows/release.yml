@@ -98,11 +98,11 @@ jobs:
             ls -la DesignVibe.app/
           elif [ -f "DesignVibe.exe" ]; then
             echo "Found Windows executable: DesignVibe.exe"
-          elif [ -f "DesignVibe" ] || [ -f "main.bin" ]; then
-            echo "Found Linux executable"
+          elif [ -f "DesignVibe.bin" ]; then
+            echo "Found Linux executable: DesignVibe.bin"
           else
             echo "ERROR: No build output found"
-            find . -name "*.app" -o -name "*.exe" -o -name "*.bin" 2>/dev/null
+            find . -maxdepth 1 \( -name "*.app" -o -name "*.exe" -o -name "*.bin" \) 2>/dev/null
             exit 1
           fi
       
@@ -112,12 +112,9 @@ jobs:
           wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
           
-          # Find the executable (could be DesignVibe or main.bin)
-          EXEC_FILE=$(find . -maxdepth 1 -type f -executable -name "DesignVibe" -o -name "main.bin" | head -1)
-          echo "Found executable: $EXEC_FILE"
-          
           mkdir -p AppDir/usr/bin
-          cp "$EXEC_FILE" AppDir/usr/bin/DesignVibe
+          cp DesignVibe.bin AppDir/usr/bin/DesignVibe
+          chmod +x AppDir/usr/bin/DesignVibe
           
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
