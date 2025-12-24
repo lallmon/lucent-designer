@@ -1,0 +1,155 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+            artifact: DesignVibe-${{ github.ref_name }}-x86_64.AppImage
+          - os: macos-latest
+            platform: macOS
+            artifact: DesignVibe-${{ github.ref_name }}-macOS.dmg
+          - os: windows-latest
+            platform: Windows
+            artifact: DesignVibe-${{ github.ref_name }}-Windows.exe
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Qt dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            libgl1 libegl1 libxkbcommon-x11-0 \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 \
+            libxcb-xfixes0 libxcb-shape0 libxcb-cursor0 \
+            libdbus-1-3 libfontconfig1 libglib2.0-0 \
+            libgssapi-krb5-2 libx11-6 libx11-xcb1 \
+            libxext6 libxrender1 libxkbcommon0 \
+            fuse libfuse2
+      
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyside6-deploy
+      
+      - name: Inject version from git tag
+        shell: bash
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION_NUMBER="${VERSION#v}"
+          
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            sed -i "s/__VERSION__/$VERSION_NUMBER/" pysidedeploy.spec
+            sed -i "s/__VERSION__/$VERSION_NUMBER/" main.py
+          else
+            sed -i "s/__VERSION__/$VERSION_NUMBER/g" pysidedeploy.spec
+            sed -i "s/__VERSION__/$VERSION_NUMBER/g" main.py
+          fi
+          
+          echo "Building version: $VERSION_NUMBER"
+      
+      - name: Build with pyside6-deploy
+        run: |
+          pyside6-deploy -c pysidedeploy.spec
+      
+      - name: Create AppImage (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir deployment \
+            --desktop-file DesignVibe.desktop \
+            --icon-file assets/icon.png \
+            --output appimage
+          
+          mv DesignVibe-*.AppImage ${{ matrix.artifact }}
+      
+      - name: Create DMG (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          hdiutil create -volname "DesignVibe" \
+            -srcfolder deployment/DesignVibe.app \
+            -ov -format UDZO \
+            ${{ matrix.artifact }}
+      
+      - name: Create Installer (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mv deployment/DesignVibe.exe ${{ matrix.artifact }}
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-build
+          path: ${{ matrix.artifact }}
+  
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+      
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          echo "## What's Changed" > release_notes.md
+          echo "" >> release_notes.md
+          echo "$COMMITS" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## Downloads" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "- **Linux**: DesignVibe-${{ github.ref_name }}-x86_64.AppImage" >> release_notes.md
+          echo "- **macOS**: DesignVibe-${{ github.ref_name }}-macOS.dmg" >> release_notes.md
+          echo "- **Windows**: DesignVibe-${{ github.ref_name }}-Windows.exe" >> release_notes.md
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release_notes.md
+          files: |
+            Linux-build/*
+            macOS-build/*
+            Windows-build/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

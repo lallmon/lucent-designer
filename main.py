@@ -15,6 +15,9 @@ from PySide6.QtCore import Qt
 from canvas_renderer import CanvasRenderer
 from canvas_model import CanvasModel
 
+# Version placeholder - replaced by GitHub Actions during release builds
+__version__ = "__VERSION__"
+
 
 if __name__ == "__main__":
     # Enable VSync and optimize rendering
@@ -32,6 +35,9 @@ if __name__ == "__main__":
     # Create and register canvas model as global singleton
     canvas_model = CanvasModel()
     engine.rootContext().setContextProperty("canvasModel", canvas_model)
+    
+    # Expose application version to QML
+    engine.rootContext().setContextProperty("appVersion", __version__)
     qml_file = Path(__file__).resolve().parent / "App.qml"
     engine.load(qml_file)
     if not engine.rootObjects():
