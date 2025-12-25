@@ -2,6 +2,9 @@
 import pytest
 from canvas_model import CanvasModel
 from canvas_items import RectangleItem, EllipseItem
+from commands import (
+    Command, AddItemCommand, RemoveItemCommand, UpdateItemCommand, TransactionCommand
+)
 
 
 class TestCanvasModelBasics:
@@ -494,6 +497,29 @@ class TestCanvasModelUndo:
         with qtbot.waitSignal(canvas_model.undoStackChanged, timeout=1000):
             canvas_model.undo()
 
+    def test_undo_stack_contains_command_objects(self, canvas_model):
+        """Test that undo stack contains Command objects."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        assert len(canvas_model._undo_stack) == 1
+        assert isinstance(canvas_model._undo_stack[0], Command)
+
+    def test_add_item_pushes_add_command(self, canvas_model):
+        """Test addItem pushes an AddItemCommand to the stack."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        assert isinstance(canvas_model._undo_stack[-1], AddItemCommand)
+
+    def test_remove_item_pushes_remove_command(self, canvas_model):
+        """Test removeItem pushes a RemoveItemCommand to the stack."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.removeItem(0)
+        assert isinstance(canvas_model._undo_stack[-1], RemoveItemCommand)
+
+    def test_update_item_pushes_update_command(self, canvas_model):
+        """Test updateItem pushes an UpdateItemCommand to the stack."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.updateItem(0, {"x": 50})
+        assert isinstance(canvas_model._undo_stack[-1], UpdateItemCommand)
+
 
 class TestCanvasModelTransactions:
     """Tests for transaction coalescing in CanvasModel."""
@@ -565,6 +591,16 @@ class TestCanvasModelTransactions:
 
         canvas_model.undo()
         assert canvas_model.getItems()[0].x == 0
+
+    def test_transaction_pushes_transaction_command(self, canvas_model):
+        """Test that transactions push TransactionCommand to the stack."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 100, "height": 100})
+
+        canvas_model.beginTransaction()
+        canvas_model.updateItem(0, {"x": 50})
+        canvas_model.endTransaction()
+
+        assert isinstance(canvas_model._undo_stack[-1], TransactionCommand)
 
 
 class TestCanvasModelRedo:

@@ -22,14 +22,14 @@ MenuBar {
         Action {
             text: qsTr("&Undo (Ctrl+Z)")
             shortcut: StandardKey.Undo
-            enabled: canvasModel.canUndo
-            onTriggered: canvasModel.undo()
+            enabled: canvasModel ? canvasModel.canUndo : false
+            onTriggered: if (canvasModel) canvasModel.undo()
         }
         Action {
             text: qsTr("&Redo (Ctrl+Shift+Z)")
             shortcut: StandardKey.Redo
-            enabled: canvasModel.canRedo
-            onTriggered: canvasModel.redo()
+            enabled: canvasModel ? canvasModel.canRedo : false
+            onTriggered: if (canvasModel) canvasModel.redo()
         }
     }
 
