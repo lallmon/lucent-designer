@@ -37,6 +37,10 @@ Item {
     Item {
         id: previewEllipse
         
+        // Enable layer smoothing to match QPainter antialiasing
+        layer.enabled: true
+        layer.smooth: true
+        
         property real strokeW: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
         property real halfStroke: strokeW / 2
         

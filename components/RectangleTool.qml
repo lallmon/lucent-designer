@@ -37,6 +37,10 @@ Item {
     Item {
         id: previewRect
         
+        // Enable layer smoothing to match QPainter antialiasing
+        layer.enabled: true
+        layer.smooth: true
+        
         property real strokeW: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
         property color strokeColor: {
             if (!settings) return "#ffffff";
@@ -74,6 +78,8 @@ Item {
             width: parent.width + previewRect.strokeW
             height: previewRect.strokeW
             color: previewRect.strokeColor
+            radius: 0.5
+            antialiasing: true
         }
         
         // Bottom border
@@ -83,6 +89,8 @@ Item {
             width: parent.width + previewRect.strokeW
             height: previewRect.strokeW
             color: previewRect.strokeColor
+            radius: 0.5
+            antialiasing: true
         }
         
         // Left border
@@ -92,6 +100,8 @@ Item {
             width: previewRect.strokeW
             height: parent.height - previewRect.strokeW
             color: previewRect.strokeColor
+            radius: 0.5
+            antialiasing: true
         }
         
         // Right border
@@ -101,6 +111,8 @@ Item {
             width: previewRect.strokeW
             height: parent.height - previewRect.strokeW
             color: previewRect.strokeColor
+            radius: 0.5
+            antialiasing: true
         }
     }
     
