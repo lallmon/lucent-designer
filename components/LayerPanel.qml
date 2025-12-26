@@ -55,8 +55,9 @@ Item {
                         required property string itemType
                         required property int itemIndex
 
-                        // Computed property for reversed display order
-                        property int displayIndex: canvasModel.rowCount() - 1 - index
+                        // Use layerRepeater.count (reactive property) not canvasModel.rowCount() (method)
+                        // Methods don't trigger binding updates; properties do
+                        property int displayIndex: layerRepeater.count - 1 - index
                         property bool isSelected: displayIndex === DV.SelectionManager.selectedItemIndex
                         property bool isBeingDragged: root.draggedIndex === displayIndex
                         property real dragOffsetY: 0
@@ -112,7 +113,7 @@ Item {
                                                         let totalItemHeight = layerContainer.itemHeight + layerContainer.itemSpacing
                                                         let indexDelta = Math.round(delegateRoot.dragOffsetY / totalItemHeight)
                                                         let newListIndex = delegateRoot.index + indexDelta
-                                                        let rowCount = canvasModel.rowCount()
+                                                        let rowCount = layerRepeater.count
                                                         newListIndex = Math.max(0, Math.min(rowCount - 1, newListIndex))
                                                         let newItemIndex = rowCount - 1 - newListIndex
 
@@ -171,7 +172,7 @@ Item {
 
             Label {
                 anchors.centerIn: parent
-                visible: canvasModel.rowCount() === 0
+                visible: layerRepeater.count === 0
                 text: qsTr("No objects")
                 font.pixelSize: 11
                 color: DV.Theme.colors.textSubtle
