@@ -8,7 +8,7 @@ Item {
     clip: true  // Constrain rendering to viewport boundaries
     
     // Zoom/pan state (camera controls)
-    property real zoomLevel: 1.0  // Start at 100%
+    property real zoomLevel: 0.7  // Start at 70%
     readonly property real minZoom: 0.1
     readonly property real maxZoom: 10.0
     readonly property real zoomStep: 1.05  // 5% zoom increments
@@ -173,6 +173,18 @@ Item {
             
             ctx.restore();
         }
+    }
+    
+    // Origin marker at canvas (0,0)
+    Rectangle {
+        id: originDot
+        width: 8
+        height: 8
+        radius: 4
+        color: "#ff0000"
+        x: (parent.width / 2) + root.offsetX - 4
+        y: (parent.height / 2) + root.offsetY - 4
+        z: 1
     }
     
     // The viewport surface that applies zoom and pan transforms

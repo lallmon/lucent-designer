@@ -33,37 +33,39 @@ Item {
         border.width: 1 / tool.zoomLevel
     }
     
-    // Preview ellipse with dashed border (shown while drawing)
+    // Preview ellipse (shown while drawing)
     Item {
         id: previewEllipse
+        
+        property real strokeW: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
+        property real halfStroke: strokeW / 2
+        
         visible: tool.currentEllipse !== null && 
                  tool.currentEllipse !== undefined &&
                  tool.currentEllipse.width > 0 &&
                  tool.currentEllipse.height > 0
-        x: tool.currentEllipse ? tool.currentEllipse.x : 0
-        y: tool.currentEllipse ? tool.currentEllipse.y : 0
-        width: tool.currentEllipse ? tool.currentEllipse.width : 0
-        height: tool.currentEllipse ? tool.currentEllipse.height : 0
         
-        // Dashed border drawn with Canvas
+        // Position accounts for stroke extending outward
+        x: (tool.currentEllipse ? tool.currentEllipse.x : 0) - halfStroke
+        y: (tool.currentEllipse ? tool.currentEllipse.y : 0) - halfStroke
+        width: (tool.currentEllipse ? tool.currentEllipse.width : 0) + strokeW
+        height: (tool.currentEllipse ? tool.currentEllipse.height : 0) + strokeW
+        
+        // Ellipse drawn with Canvas
         Canvas {
             id: dashedCanvas
-            property real padding: settings ? (settings.strokeWidth / tool.zoomLevel / 2) : 0
-            x: -padding
-            y: -padding
-            width: parent.width + padding * 2
-            height: parent.height + padding * 2
+            anchors.fill: parent
             
             onPaint: {
                 var ctx = getContext("2d");
                 ctx.clearRect(0, 0, width, height);
                 
                 if (width > 0 && height > 0 && settings) {
-                    var pad = padding;
                     var centerX = width / 2;
                     var centerY = height / 2;
-                    var radiusX = (parent.width / 2);
-                    var radiusY = (parent.height / 2);
+                    // Radii account for the stroke width being part of the parent size
+                    var radiusX = (width - previewEllipse.strokeW) / 2;
+                    var radiusY = (height - previewEllipse.strokeW) / 2;
                     
                     ctx.save();
                     ctx.translate(centerX, centerY);
@@ -80,7 +82,7 @@ Item {
                     var strokeColor = Qt.color(settings.strokeColor);
                     strokeColor.a = settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
                     ctx.strokeStyle = strokeColor;
-                    ctx.lineWidth = settings.strokeWidth / tool.zoomLevel;
+                    ctx.lineWidth = previewEllipse.strokeW;
                     ctx.stroke();
                 }
             }

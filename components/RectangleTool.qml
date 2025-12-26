@@ -33,37 +33,74 @@ Item {
         border.width: 1 / tool.zoomLevel
     }
     
-    // Preview rectangle with dashed border (shown while drawing)
+    // Preview rectangle (shown while drawing) - using explicit rectangles for reliable rendering
     Item {
         id: previewRect
+        
+        property real strokeW: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
+        property color strokeColor: {
+            if (!settings) return "#ffffff";
+            var c = Qt.color(settings.strokeColor);
+            c.a = settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
+            return c;
+        }
+        property color fillColor: {
+            if (!settings) return "transparent";
+            var c = Qt.color(settings.fillColor);
+            c.a = settings.fillOpacity;
+            return c;
+        }
+        
         visible: tool.currentRect !== null && 
                  tool.currentRect !== undefined &&
                  tool.currentRect.width > 0 &&
                  tool.currentRect.height > 0
+        
         x: tool.currentRect ? tool.currentRect.x : 0
         y: tool.currentRect ? tool.currentRect.y : 0
         width: tool.currentRect ? tool.currentRect.width : 0
         height: tool.currentRect ? tool.currentRect.height : 0
         
+        // Fill rectangle
         Rectangle {
-            property real halfStroke: settings ? (settings.strokeWidth / tool.zoomLevel / 2) : 0
-            x: -halfStroke
-            y: -halfStroke
-            width: parent.width + (settings ? settings.strokeWidth / tool.zoomLevel : 0)
-            height: parent.height + (settings ? settings.strokeWidth / tool.zoomLevel : 0)
-            color: {
-                if (!settings) return "transparent";
-                var c = Qt.color(settings.fillColor);
-                c.a = settings.fillOpacity;
-                return c;
-            }
-            border.color: {
-                if (!settings) return "#ffffff";
-                var c = Qt.color(settings.strokeColor);
-                c.a = settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
-                return c;
-            }
-            border.width: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
+            anchors.fill: parent
+            color: previewRect.fillColor
+        }
+        
+        // Top border
+        Rectangle {
+            x: -previewRect.strokeW / 2
+            y: -previewRect.strokeW / 2
+            width: parent.width + previewRect.strokeW
+            height: previewRect.strokeW
+            color: previewRect.strokeColor
+        }
+        
+        // Bottom border
+        Rectangle {
+            x: -previewRect.strokeW / 2
+            y: parent.height - previewRect.strokeW / 2
+            width: parent.width + previewRect.strokeW
+            height: previewRect.strokeW
+            color: previewRect.strokeColor
+        }
+        
+        // Left border
+        Rectangle {
+            x: -previewRect.strokeW / 2
+            y: previewRect.strokeW / 2
+            width: previewRect.strokeW
+            height: parent.height - previewRect.strokeW
+            color: previewRect.strokeColor
+        }
+        
+        // Right border
+        Rectangle {
+            x: parent.width - previewRect.strokeW / 2
+            y: previewRect.strokeW / 2
+            width: previewRect.strokeW
+            height: parent.height - previewRect.strokeW
+            color: previewRect.strokeColor
         }
     }
     
