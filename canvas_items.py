@@ -5,6 +5,7 @@ This module defines the canvas item hierarchy, including:
 - CanvasItem: Abstract base class for all drawable items
 - RectangleItem: Rectangular shapes
 - EllipseItem: Elliptical shapes
+- LayerItem: Organizational layers for grouping items
 
 All items use QPainter for rendering and support stroke/fill styling.
 """
@@ -200,4 +201,25 @@ class EllipseItem(CanvasItem):
             stroke_opacity=stroke_opacity,
             name=data.get("name", "")
         )
+
+
+class LayerItem(CanvasItem):
+    """Layer item for organizing canvas items.
+    
+    Layers provide a way to group and organize items for Z-ordering.
+    They don't render directly but serve as organizational containers.
+    """
+    
+    def __init__(self, name: str = "") -> None:
+        self.name = name
+    
+    def paint(self, painter: QPainter, zoom_level: float, 
+              offset_x: float = CANVAS_OFFSET_X, offset_y: float = CANVAS_OFFSET_Y) -> None:
+        """Layers don't render directly - they are organizational containers."""
+        pass
+    
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> 'LayerItem':
+        """Create LayerItem from QML data dictionary."""
+        return LayerItem(name=data.get("name", ""))
 

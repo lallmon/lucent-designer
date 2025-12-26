@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from PySide6.QtCore import (
     QAbstractListModel, QModelIndex, Qt, Signal, Slot, Property, QObject
 )
-from canvas_items import CanvasItem, RectangleItem, EllipseItem
+from canvas_items import CanvasItem, RectangleItem, EllipseItem, LayerItem
 from commands import (
     Command, AddItemCommand, RemoveItemCommand,
     UpdateItemCommand, ClearCommand, MoveItemCommand, TransactionCommand
@@ -50,7 +50,13 @@ class CanvasModel(QAbstractListModel):
         if role == self.NameRole:
             return item.name
         elif role == self.TypeRole:
-            return "rectangle" if isinstance(item, RectangleItem) else "ellipse"
+            if isinstance(item, RectangleItem):
+                return "rectangle"
+            elif isinstance(item, EllipseItem):
+                return "ellipse"
+            elif isinstance(item, LayerItem):
+                return "layer"
+            return "unknown"
         elif role == self.IndexRole:
             return index.row()
         return None
@@ -112,7 +118,7 @@ class CanvasModel(QAbstractListModel):
     @Slot(dict)
     def addItem(self, item_data: Dict[str, Any]) -> None:
         item_type = item_data.get("type", "")
-        if item_type not in ("rectangle", "ellipse"):
+        if item_type not in ("rectangle", "ellipse", "layer"):
             print(f"Warning: Unknown item type '{item_type}'")
             return
 
@@ -122,6 +128,11 @@ class CanvasModel(QAbstractListModel):
 
         command = AddItemCommand(self, item_data)
         self._execute_command(command)
+
+    @Slot()
+    def addLayer(self) -> None:
+        """Create a new layer with an auto-generated name."""
+        self.addItem({"type": "layer"})
 
     @Slot(int)
     def removeItem(self, index: int) -> None:
@@ -289,5 +300,10 @@ class CanvasModel(QAbstractListModel):
                 "strokeOpacity": item.stroke_opacity,
                 "fillColor": item.fill_color,
                 "fillOpacity": item.fill_opacity
+            }
+        elif isinstance(item, LayerItem):
+            return {
+                "type": "layer",
+                "name": item.name
             }
         return {}

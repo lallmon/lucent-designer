@@ -6,13 +6,16 @@ from PySide6.QtCore import QModelIndex
 if TYPE_CHECKING:
     from canvas_model import CanvasModel
 
-from canvas_items import CanvasItem, RectangleItem, EllipseItem
+from canvas_items import CanvasItem, RectangleItem, EllipseItem, LayerItem
 
 
 def _create_item(item_data: Dict[str, Any]) -> CanvasItem:
     """Create a CanvasItem from a dictionary."""
-    if item_data.get("type") == "rectangle":
+    item_type = item_data.get("type")
+    if item_type == "rectangle":
         return RectangleItem.from_dict(item_data)
+    elif item_type == "layer":
+        return LayerItem.from_dict(item_data)
     return EllipseItem.from_dict(item_data)
 
 
@@ -50,7 +53,7 @@ class AddItemCommand(Command):
         return f"Add {item_type}"
 
     def execute(self) -> None:
-        if self._item_data.get("type") not in ("rectangle", "ellipse"):
+        if self._item_data.get("type") not in ("rectangle", "ellipse", "layer"):
             return
         self._index = len(self._model._items)
         self._model.beginInsertRows(QModelIndex(), self._index, self._index)

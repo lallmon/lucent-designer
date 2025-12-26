@@ -3,7 +3,7 @@ import pytest
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import QRectF
 from canvas_items import (
-    CanvasItem, RectangleItem, EllipseItem,
+    CanvasItem, RectangleItem, EllipseItem, LayerItem,
     CANVAS_OFFSET_X, CANVAS_OFFSET_Y
 )
 
@@ -391,4 +391,42 @@ class TestCanvasItemName:
         data = {"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10}
         ellipse = EllipseItem.from_dict(data)
         assert ellipse.name == ""
+
+
+class TestLayerItem:
+    """Tests for LayerItem class."""
+
+    def test_basic_creation(self):
+        """Test creating a basic layer with a name."""
+        layer = LayerItem(name="Layer 1")
+        assert layer.name == "Layer 1"
+
+    def test_creation_empty_name(self):
+        """Test creating a layer with empty name."""
+        layer = LayerItem()
+        assert layer.name == ""
+
+    def test_from_dict_with_name(self):
+        """Test creating layer from dictionary with name."""
+        data = {"type": "layer", "name": "Background"}
+        layer = LayerItem.from_dict(data)
+        assert layer.name == "Background"
+
+    def test_from_dict_missing_name_defaults_to_empty(self):
+        """Test creating layer from dictionary without name defaults to empty."""
+        data = {"type": "layer"}
+        layer = LayerItem.from_dict(data)
+        assert layer.name == ""
+
+    def test_layer_is_canvas_item(self):
+        """LayerItem should be a CanvasItem subclass."""
+        layer = LayerItem(name="Test Layer")
+        assert isinstance(layer, CanvasItem)
+
+    def test_paint_does_nothing(self):
+        """Layer paint method should be a no-op (doesn't raise)."""
+        layer = LayerItem(name="Test Layer")
+        # Should not raise any exception when called with None
+        # (paint is a no-op, so it doesn't use the painter)
+        layer.paint(None, 1.0, 0, 0)
 

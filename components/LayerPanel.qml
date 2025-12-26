@@ -12,12 +12,41 @@ Item {
         anchors.fill: parent
         spacing: 8
 
-        Label {
-            text: qsTr("Layers")
-            font.pixelSize: 12
-            font.bold: true
-            color: "white"
+        RowLayout {
             Layout.fillWidth: true
+            spacing: 4
+
+            Label {
+                text: qsTr("Layers")
+                font.pixelSize: 12
+                font.bold: true
+                color: "white"
+                Layout.fillWidth: true
+            }
+
+            Rectangle {
+                id: addLayerButton
+                Layout.preferredWidth: 24
+                Layout.preferredHeight: 24
+                radius: DV.Theme.sizes.radiusSm
+                color: addLayerHover.hovered ? DV.Theme.colors.panelHover : "transparent"
+
+                DV.PhIcon {
+                    anchors.centerIn: parent
+                    name: "stack-plus"
+                    size: 18
+                    color: DV.Theme.colors.textSubtle
+                }
+
+                HoverHandler {
+                    id: addLayerHover
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    onTapped: canvasModel.addLayer()
+                }
+            }
         }
 
         Rectangle {
@@ -81,21 +110,20 @@ Item {
 
                                 Item {
                                     id: dragHandle
-                                    Layout.preferredWidth: 24
+                                    Layout.preferredWidth: 28
                                     Layout.fillHeight: true
 
-                                    Column {
+                                    // Icon indicating item type: stack for layers, specific tool icon for shapes
+                                    DV.PhIcon {
                                         anchors.centerIn: parent
-                                        spacing: 2
-                                        Repeater {
-                                            model: 3
-                                            Rectangle {
-                                                width: 10
-                                                height: 2
-                                                radius: 1
-                                                color: DV.Theme.colors.textSubtle
-                                            }
+                                        name: {
+                                            if (delegateRoot.itemType === "layer") return "stack"
+                                            if (delegateRoot.itemType === "rectangle") return "rectangle"
+                                            if (delegateRoot.itemType === "ellipse") return "circle"
+                                            return "shapes"
                                         }
+                                        size: 18
+                                        color: delegateRoot.isSelected ? "white" : DV.Theme.colors.textSubtle
                                     }
 
                                     DragHandler {

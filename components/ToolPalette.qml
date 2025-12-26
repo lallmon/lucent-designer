@@ -66,7 +66,7 @@ Pane {
                 anchors.fill: parent
                 PhIcon {
                     anchors.centerIn: parent
-                    name: "rectangle-dashed"
+                    name: "rectangle"
                     color: "white"
                 }
             }
@@ -99,7 +99,7 @@ Pane {
                 anchors.fill: parent
                 PhIcon {
                     anchors.centerIn: parent
-                    name: "circle-dashed"
+                    name: "circle"
                     color: "white"
                 }
             }

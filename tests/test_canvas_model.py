@@ -1,7 +1,7 @@
 """Unit tests for canvas_model module."""
 import pytest
 from canvas_model import CanvasModel
-from canvas_items import RectangleItem, EllipseItem
+from canvas_items import RectangleItem, EllipseItem, LayerItem
 from commands import (
     Command, AddItemCommand, RemoveItemCommand, UpdateItemCommand, TransactionCommand
 )
@@ -762,6 +762,88 @@ class TestCanvasModelAutoNames:
         canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
 
         assert canvas_model.getItems()[0].name == "Rectangle 1"
+
+
+class TestCanvasModelLayers:
+    """Tests for layer functionality in CanvasModel."""
+
+    def test_add_layer_via_addItem(self, canvas_model, qtbot):
+        """Test adding a layer using addItem with type 'layer'."""
+        with qtbot.waitSignal(canvas_model.itemAdded, timeout=1000) as blocker:
+            canvas_model.addItem({"type": "layer"})
+
+        assert canvas_model.count() == 1
+        assert blocker.args == [0]
+
+        items = canvas_model.getItems()
+        assert len(items) == 1
+        assert isinstance(items[0], LayerItem)
+
+    def test_add_layer_via_addLayer_slot(self, canvas_model, qtbot):
+        """Test adding a layer using the addLayer convenience slot."""
+        with qtbot.waitSignal(canvas_model.itemAdded, timeout=1000):
+            canvas_model.addLayer()
+
+        assert canvas_model.count() == 1
+        items = canvas_model.getItems()
+        assert isinstance(items[0], LayerItem)
+
+    def test_layer_gets_auto_generated_name(self, canvas_model):
+        """Layers should get auto-generated names like 'Layer 1'."""
+        canvas_model.addLayer()
+        item = canvas_model.getItems()[0]
+        assert item.name == "Layer 1"
+
+    def test_multiple_layers_increment_counter(self, canvas_model):
+        """Multiple layers should get incrementing numbers."""
+        canvas_model.addLayer()
+        canvas_model.addLayer()
+        canvas_model.addLayer()
+        items = canvas_model.getItems()
+        assert items[0].name == "Layer 1"
+        assert items[1].name == "Layer 2"
+        assert items[2].name == "Layer 3"
+
+    def test_layer_counter_separate_from_shapes(self, canvas_model):
+        """Layer counter should be separate from rectangle/ellipse counters."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.addLayer()
+        canvas_model.addItem({"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10})
+        canvas_model.addLayer()
+
+        items = canvas_model.getItems()
+        assert items[0].name == "Rectangle 1"
+        assert items[1].name == "Layer 1"
+        assert items[2].name == "Ellipse 1"
+        assert items[3].name == "Layer 2"
+
+    def test_get_item_data_returns_layer_data(self, canvas_model):
+        """getItemData should return layer type and name."""
+        canvas_model.addLayer()
+        data = canvas_model.getItemData(0)
+
+        assert data is not None
+        assert data["type"] == "layer"
+        assert data["name"] == "Layer 1"
+
+    def test_layer_type_role_returns_layer(self, canvas_model):
+        """TypeRole should return 'layer' for LayerItem."""
+        canvas_model.addLayer()
+        index = canvas_model.index(0, 0)
+        item_type = canvas_model.data(index, canvas_model.TypeRole)
+        assert item_type == "layer"
+
+    def test_layer_undo_redo(self, canvas_model):
+        """Undo/redo should work for layer creation."""
+        canvas_model.addLayer()
+        assert canvas_model.count() == 1
+
+        canvas_model.undo()
+        assert canvas_model.count() == 0
+
+        canvas_model.redo()
+        assert canvas_model.count() == 1
+        assert isinstance(canvas_model.getItems()[0], LayerItem)
 
 
 class TestCanvasModelMoveItem:
