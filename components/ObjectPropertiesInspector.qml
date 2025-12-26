@@ -14,6 +14,10 @@ ScrollView {
     property string originalStrokeColor: ""
     property string originalFillColor: ""
     
+    // Helper to check if selected item is a shape with stroke/fill properties
+    readonly property bool isShapeSelected: selectedItem !== null && 
+        (selectedItem.type === "rectangle" || selectedItem.type === "ellipse")
+    
     readonly property int labelSize: 11
     readonly property color labelColor: DV.Theme.colors.textSubtle
     
@@ -167,10 +171,50 @@ ScrollView {
                 }
             }
 
+            // Layer section - shown when a layer is selected
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                visible: root.selectedItem !== null
+                visible: root.selectedItem && root.selectedItem.type === "layer"
+
+                Label {
+                    text: qsTr("Layer")
+                    font.pixelSize: 12
+                    font.bold: true
+                    color: root.labelColor
+                }
+
+                GridLayout {
+                    columns: 2
+                    rowSpacing: 4
+                    columnSpacing: 8
+                    Layout.fillWidth: true
+
+                    Label { text: qsTr("Name:"); font.pixelSize: root.labelSize; color: root.labelColor }
+                    Label {
+                        text: root.selectedItem ? root.selectedItem.name : ""
+                        font.pixelSize: root.labelSize
+                        color: "white"
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+                }
+
+                Label {
+                    text: qsTr("Layers are used to organize items.")
+                    font.pixelSize: 10
+                    color: root.labelColor
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    Layout.topMargin: 8
+                }
+            }
+
+            // Appearance section - only for shapes (rectangle, ellipse)
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: root.isShapeSelected
 
                 PropertySeparator {}
 
@@ -216,14 +260,14 @@ ScrollView {
                                 strokeColorDialog.open()
                             }
                             background: Rectangle {
-                                color: root.selectedItem ? root.selectedItem.strokeColor : "transparent"
+                                color: root.isShapeSelected ? root.selectedItem.strokeColor : "transparent"
                                 border.color: DV.Theme.colors.borderSubtle
                                 border.width: 1
                                 radius: DV.Theme.sizes.radiusSm
                             }
                         }
                         TextField {
-                            text: root.selectedItem ? root.selectedItem.strokeColor : ""
+                            text: root.isShapeSelected ? root.selectedItem.strokeColor : ""
                             font.pixelSize: 10
                             Layout.fillWidth: true
                             selectByMouse: true
@@ -312,14 +356,14 @@ ScrollView {
                                 fillColorDialog.open()
                             }
                             background: Rectangle {
-                                color: root.selectedItem ? root.selectedItem.fillColor : "transparent"
+                                color: root.isShapeSelected ? root.selectedItem.fillColor : "transparent"
                                 border.color: DV.Theme.colors.borderSubtle
                                 border.width: 1
                                 radius: DV.Theme.sizes.radiusSm
                             }
                         }
                         TextField {
-                            text: root.selectedItem ? root.selectedItem.fillColor : ""
+                            text: root.isShapeSelected ? root.selectedItem.fillColor : ""
                             font.pixelSize: 10
                             Layout.fillWidth: true
                             selectByMouse: true
@@ -390,7 +434,7 @@ ScrollView {
                 ColorDialog {
                     id: strokeColorDialog
                     title: qsTr("Choose Stroke Color")
-                    selectedColor: root.selectedItem ? root.selectedItem.strokeColor : "#ffffff"
+                    selectedColor: root.isShapeSelected ? root.selectedItem.strokeColor : "#ffffff"
                     onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
@@ -402,7 +446,7 @@ ScrollView {
                 ColorDialog {
                     id: fillColorDialog
                     title: qsTr("Choose Fill Color")
-                    selectedColor: root.selectedItem ? root.selectedItem.fillColor : "#ffffff"
+                    selectedColor: root.isShapeSelected ? root.selectedItem.fillColor : "#ffffff"
                     onSelectedColorChanged: root.updateProperty("fillColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
