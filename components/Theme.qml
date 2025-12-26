@@ -26,6 +26,7 @@ QtObject {
 
         // Accents / feedback
         readonly property color accent: "#0078d4"
+        readonly property color accentHover: "#1a8ae6"
         readonly property color error: "#ff7373"
     }
 

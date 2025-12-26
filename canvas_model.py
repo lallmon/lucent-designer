@@ -17,6 +17,8 @@ class CanvasModel(QAbstractListModel):
     NameRole = Qt.UserRole + 1
     TypeRole = Qt.UserRole + 2
     IndexRole = Qt.UserRole + 3
+    ItemIdRole = Qt.UserRole + 4      # Unique ID for layers
+    ParentIdRole = Qt.UserRole + 5    # Parent layer ID for shapes
 
     # Legacy signals (kept for backward compatibility with CanvasRenderer)
     itemAdded = Signal(int)
@@ -59,6 +61,16 @@ class CanvasModel(QAbstractListModel):
             return "unknown"
         elif role == self.IndexRole:
             return index.row()
+        elif role == self.ItemIdRole:
+            # Only layers have IDs
+            if isinstance(item, LayerItem):
+                return item.id
+            return None
+        elif role == self.ParentIdRole:
+            # Only shapes have parent IDs
+            if isinstance(item, (RectangleItem, EllipseItem)):
+                return item.parent_id
+            return None
         return None
 
     def roleNames(self) -> Dict[int, bytes]:
@@ -66,6 +78,8 @@ class CanvasModel(QAbstractListModel):
             self.NameRole: b"name",
             self.TypeRole: b"itemType",
             self.IndexRole: b"itemIndex",
+            self.ItemIdRole: b"itemId",
+            self.ParentIdRole: b"parentId",
         }
 
     def _execute_command(self, command: Command, record: bool = True) -> None:
@@ -164,6 +178,127 @@ class CanvasModel(QAbstractListModel):
         command = MoveItemCommand(self, from_index, to_index)
         self._execute_command(command)
 
+    @Slot(int, str)
+    def setParent(self, item_index: int, parent_id: str) -> None:
+        """Set the parent layer for a shape item.
+        
+        Args:
+            item_index: Index of the shape item to reparent
+            parent_id: ID of the layer to set as parent, or empty string to make top-level
+        """
+        if not (0 <= item_index < len(self._items)):
+            return
+        
+        item = self._items[item_index]
+        # Only shapes can have parents
+        if not isinstance(item, (RectangleItem, EllipseItem)):
+            return
+        
+        # Convert empty string to None for top-level items
+        new_parent_id = parent_id if parent_id else None
+        
+        # Update via updateItem to get proper undo/redo support
+        self.updateItem(item_index, {"parentId": new_parent_id})
+
+    @Slot(str, result=int)
+    def getLayerIndex(self, layer_id: str) -> int:
+        """Get the index of a layer by its ID."""
+        for i, item in enumerate(self._items):
+            if isinstance(item, LayerItem) and item.id == layer_id:
+                return i
+        return -1
+
+    def _findLastChildPosition(self, layer_id: str) -> int:
+        """Find the position where a new child of the layer should be inserted.
+        
+        Returns the index just before the next top-level item after the layer,
+        or the end of the list if no such item exists.
+        """
+        layer_index = self.getLayerIndex(layer_id)
+        if layer_index < 0:
+            return len(self._items)
+        
+        # Scan from after the layer to find the next top-level item
+        for i in range(layer_index + 1, len(self._items)):
+            item = self._items[i]
+            if isinstance(item, LayerItem):
+                # Next layer found - insert before it
+                return i
+            elif isinstance(item, (RectangleItem, EllipseItem)):
+                if item.parent_id is None:
+                    # Top-level shape found - insert before it
+                    return i
+        
+        # No top-level item found after layer, insert at end
+        return len(self._items)
+
+    @Slot(int, str)
+    def reparentItem(self, item_index: int, parent_id: str) -> None:
+        """Set parent and move item to be last child of that layer.
+        
+        This combines setParent + moveItem into a single undoable operation.
+        The item is moved to be just before the next top-level item after the layer.
+        
+        Args:
+            item_index: Index of the shape item to reparent
+            parent_id: ID of the layer to set as parent, or empty string to unparent
+        """
+        if not (0 <= item_index < len(self._items)):
+            return
+        
+        item = self._items[item_index]
+        # Only shapes can have parents
+        if not isinstance(item, (RectangleItem, EllipseItem)):
+            return
+        
+        # Convert empty string to None for top-level items
+        new_parent_id = parent_id if parent_id else None
+        
+        # If already has this parent and we're not unparenting, skip
+        if item.parent_id == new_parent_id:
+            return
+        
+        # Calculate target position
+        if new_parent_id:
+            # Moving into a layer - position as last child
+            target_index = self._findLastChildPosition(new_parent_id)
+            # Adjust if item is before target (it will be removed first)
+            if item_index < target_index:
+                target_index -= 1
+        else:
+            # Unparenting - keep at current position (just clear parent)
+            target_index = item_index
+        
+        # Use a transaction to group both operations for single undo
+        # Store old state
+        old_props = self._itemToDict(item)
+        old_index = item_index
+        
+        # Set parent
+        item.parent_id = new_parent_id
+        new_props = self._itemToDict(item)
+        
+        # Create commands
+        commands: List[Command] = []
+        
+        # Add update command for parent change
+        commands.append(UpdateItemCommand(self, item_index, old_props, new_props))
+        
+        # Add move command if position changes
+        if target_index != item_index:
+            commands.append(MoveItemCommand(self, item_index, target_index))
+        
+        # Execute as transaction
+        if len(commands) == 1:
+            self._execute_command(commands[0])
+        else:
+            transaction = TransactionCommand(commands, "Reparent Item")
+            self._execute_command(transaction)
+        
+        # Emit signals for UI update
+        model_index = self.index(target_index if target_index != item_index else item_index, 0)
+        self.dataChanged.emit(model_index, model_index, [])
+
     @Slot(int, dict)
     def updateItem(self, index: int, properties: Dict[str, Any]) -> None:
         if not (0 <= index < len(self._items)):
@@ -193,16 +328,20 @@ class CanvasModel(QAbstractListModel):
                 if "radiusY" in properties:
                     item.radius_y = max(0.0, float(properties["radiusY"]))
 
-            if "strokeWidth" in properties:
-                item.stroke_width = max(0.1, min(100.0, float(properties["strokeWidth"])))
-            if "strokeColor" in properties:
-                item.stroke_color = str(properties["strokeColor"])
-            if "strokeOpacity" in properties:
-                item.stroke_opacity = max(0.0, min(1.0, float(properties["strokeOpacity"])))
-            if "fillColor" in properties:
-                item.fill_color = str(properties["fillColor"])
-            if "fillOpacity" in properties:
-                item.fill_opacity = max(0.0, min(1.0, float(properties["fillOpacity"])))
+            # Common shape properties
+            if isinstance(item, (RectangleItem, EllipseItem)):
+                if "strokeWidth" in properties:
+                    item.stroke_width = max(0.1, min(100.0, float(properties["strokeWidth"])))
+                if "strokeColor" in properties:
+                    item.stroke_color = str(properties["strokeColor"])
+                if "strokeOpacity" in properties:
+                    item.stroke_opacity = max(0.0, min(1.0, float(properties["strokeOpacity"])))
+                if "fillColor" in properties:
+                    item.fill_color = str(properties["fillColor"])
+                if "fillOpacity" in properties:
+                    item.fill_opacity = max(0.0, min(1.0, float(properties["fillOpacity"])))
+                if "parentId" in properties:
+                    item.parent_id = properties["parentId"]
 
             new_props = self._itemToDict(item)
 
@@ -277,6 +416,7 @@ class CanvasModel(QAbstractListModel):
             return {
                 "type": "rectangle",
                 "name": item.name,
+                "parentId": item.parent_id,
                 "x": item.x,
                 "y": item.y,
                 "width": item.width,
@@ -291,6 +431,7 @@ class CanvasModel(QAbstractListModel):
             return {
                 "type": "ellipse",
                 "name": item.name,
+                "parentId": item.parent_id,
                 "centerX": item.center_x,
                 "centerY": item.center_y,
                 "radiusX": item.radius_x,
@@ -304,6 +445,7 @@ class CanvasModel(QAbstractListModel):
         elif isinstance(item, LayerItem):
             return {
                 "type": "layer",
+                "id": item.id,
                 "name": item.name
             }
         return {}

@@ -1027,3 +1027,432 @@ class TestCanvasModelListModel:
         with qtbot.waitSignal(canvas_model.dataChanged, timeout=1000):
             canvas_model.updateItem(0, {"x": 50})
 
+
+class TestCanvasModelParentChild:
+    """Tests for parent-child relationships between layers and shapes."""
+
+    def test_shape_has_no_parent_by_default(self, canvas_model):
+        """Shapes should have no parent by default."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        item = canvas_model.getItems()[0]
+        assert item.parent_id is None
+
+    def test_layer_has_unique_id(self, canvas_model):
+        """Layers should have a unique ID."""
+        canvas_model.addLayer()
+        item = canvas_model.getItems()[0]
+        assert item.id is not None
+        assert len(item.id) > 0
+
+    def test_multiple_layers_have_different_ids(self, canvas_model):
+        """Multiple layers should have different IDs."""
+        canvas_model.addLayer()
+        canvas_model.addLayer()
+        items = canvas_model.getItems()
+        assert items[0].id != items[1].id
+
+    def test_set_parent_assigns_parent_id(self, canvas_model):
+        """setParent should assign parent_id to shape."""
+        canvas_model.addLayer()
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        
+        layer = canvas_model.getItems()[0]
+        canvas_model.setParent(1, layer.id)
+        
+        shape = canvas_model.getItems()[1]
+        assert shape.parent_id == layer.id
+
+    def test_set_parent_empty_string_clears_parent(self, canvas_model):
+        """setParent with empty string should clear parent_id."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10, "parentId": layer.id})
+        
+        shape = canvas_model.getItems()[1]
+        assert shape.parent_id == layer.id
+        
+        canvas_model.setParent(1, "")
+        
+        shape = canvas_model.getItems()[1]
+        assert shape.parent_id is None
+
+    def test_set_parent_on_layer_does_nothing(self, canvas_model):
+        """setParent on a layer should do nothing (layers can't have parents)."""
+        canvas_model.addLayer()
+        canvas_model.addLayer()
+        
+        layer1 = canvas_model.getItems()[0]
+        layer2 = canvas_model.getItems()[1]
+        
+        canvas_model.setParent(1, layer1.id)
+        
+        # Layer 2 should still have no parent-like property
+        assert not hasattr(layer2, 'parent_id') or getattr(layer2, 'parent_id', None) is None
+
+    def test_item_data_includes_parent_id(self, canvas_model):
+        """getItemData should include parentId for shapes."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.setParent(1, layer.id)
+        
+        data = canvas_model.getItemData(1)
+        assert data["parentId"] == layer.id
+
+    def test_layer_data_includes_id(self, canvas_model):
+        """getItemData should include id for layers."""
+        canvas_model.addLayer()
+        data = canvas_model.getItemData(0)
+        
+        assert "id" in data
+        assert data["id"] is not None
+
+    def test_parent_id_role_returns_parent_id(self, canvas_model):
+        """ParentIdRole should return the parent_id of a shape."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.setParent(1, layer.id)
+        
+        index = canvas_model.index(1, 0)
+        parent_id = canvas_model.data(index, canvas_model.ParentIdRole)
+        assert parent_id == layer.id
+
+    def test_item_id_role_returns_layer_id(self, canvas_model):
+        """ItemIdRole should return the id of a layer."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        
+        index = canvas_model.index(0, 0)
+        item_id = canvas_model.data(index, canvas_model.ItemIdRole)
+        assert item_id == layer.id
+
+    def test_parent_id_role_returns_none_for_layers(self, canvas_model):
+        """ParentIdRole should return None for layers."""
+        canvas_model.addLayer()
+        
+        index = canvas_model.index(0, 0)
+        parent_id = canvas_model.data(index, canvas_model.ParentIdRole)
+        assert parent_id is None
+
+    def test_item_id_role_returns_none_for_shapes(self, canvas_model):
+        """ItemIdRole should return None for shapes."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        
+        index = canvas_model.index(0, 0)
+        item_id = canvas_model.data(index, canvas_model.ItemIdRole)
+        assert item_id is None
+
+    def test_get_layer_index_finds_layer(self, canvas_model):
+        """getLayerIndex should return the index of a layer by ID."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.addLayer()
+        canvas_model.addItem({"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10})
+        
+        layer = canvas_model.getItems()[1]
+        index = canvas_model.getLayerIndex(layer.id)
+        assert index == 1
+
+    def test_get_layer_index_returns_negative_for_invalid_id(self, canvas_model):
+        """getLayerIndex should return -1 for non-existent ID."""
+        canvas_model.addLayer()
+        
+        index = canvas_model.getLayerIndex("non-existent-id")
+        assert index == -1
+
+    def test_set_parent_undo_restores_original_parent(self, canvas_model):
+        """Undo of setParent should restore the original parent_id."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        
+        # Shape has no parent initially
+        assert canvas_model.getItems()[1].parent_id is None
+        
+        canvas_model.setParent(1, layer.id)
+        assert canvas_model.getItems()[1].parent_id == layer.id
+        
+        canvas_model.undo()
+        assert canvas_model.getItems()[1].parent_id is None
+
+    def test_set_parent_redo_restores_new_parent(self, canvas_model):
+        """Redo of setParent should restore the new parent_id."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        
+        canvas_model.setParent(1, layer.id)
+        canvas_model.undo()
+        canvas_model.redo()
+        
+        assert canvas_model.getItems()[1].parent_id == layer.id
+
+
+class TestCanvasModelLayerDeletion:
+    """Tests for orphaning children when layers are deleted."""
+
+    def test_delete_layer_orphans_children(self, canvas_model):
+        """Deleting a layer should set children's parent_id to None."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.setParent(1, layer.id)
+        
+        # Verify child is parented
+        assert canvas_model.getItems()[1].parent_id == layer.id
+        
+        # Delete the layer
+        canvas_model.removeItem(0)
+        
+        # Child should be orphaned
+        shape = canvas_model.getItems()[0]
+        assert shape.parent_id is None
+
+    def test_delete_layer_orphans_multiple_children(self, canvas_model):
+        """Deleting a layer should orphan all its children."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.addItem({"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10})
+        canvas_model.addItem({"type": "rectangle", "x": 20, "y": 0, "width": 10, "height": 10})
+        
+        canvas_model.setParent(1, layer.id)
+        canvas_model.setParent(2, layer.id)
+        # Item 3 remains top-level
+        
+        canvas_model.removeItem(0)
+        
+        items = canvas_model.getItems()
+        assert items[0].parent_id is None
+        assert items[1].parent_id is None
+        assert items[2].parent_id is None
+
+    def test_undo_delete_layer_restores_parent_relationships(self, canvas_model):
+        """Undo of layer deletion should restore children's parent_id."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        layer_id = layer.id
+        
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.setParent(1, layer_id)
+        
+        canvas_model.removeItem(0)
+        canvas_model.undo()
+        
+        # Layer should be back
+        assert canvas_model.count() == 2
+        restored_layer = canvas_model.getItems()[0]
+        assert isinstance(restored_layer, LayerItem)
+        
+        # Child should have parent restored
+        shape = canvas_model.getItems()[1]
+        assert shape.parent_id == layer_id
+
+    def test_delete_non_layer_does_not_affect_siblings(self, canvas_model):
+        """Deleting a shape should not affect other shapes' parent_id."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.addItem({"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10})
+        
+        canvas_model.setParent(1, layer.id)
+        canvas_model.setParent(2, layer.id)
+        
+        # Delete the rectangle (index 1)
+        canvas_model.removeItem(1)
+        
+        # Ellipse should still be parented
+        ellipse = canvas_model.getItems()[1]
+        assert ellipse.parent_id == layer.id
+
+
+class TestCanvasModelReparentItem:
+    """Tests for reparentItem which combines setParent + moveItem."""
+
+    def test_reparent_sets_parent_id(self, canvas_model):
+        """reparentItem should set the parent_id on the shape."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        
+        canvas_model.reparentItem(1, layer.id)
+        
+        shape = canvas_model.getItems()[1]
+        assert shape.parent_id == layer.id
+
+    def test_reparent_moves_item_after_layer(self, canvas_model):
+        """reparentItem should move shape to be last child of layer."""
+        # Setup: Layer at 0, shapes at 1, 2, 3
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})  # Rect 1
+        canvas_model.addItem({"type": "rectangle", "x": 10, "y": 0, "width": 10, "height": 10})  # Rect 2
+        canvas_model.addItem({"type": "rectangle", "x": 20, "y": 0, "width": 10, "height": 10})  # Rect 3
+        
+        # Reparent Rect 3 (index 3) to layer
+        canvas_model.reparentItem(3, layer.id)
+        
+        # Rect 3 should now be at index 1 (right after layer)
+        items = canvas_model.getItems()
+        assert items[0].name == "Layer 1"
+        assert items[1].name == "Rectangle 3"
+        assert items[1].parent_id == layer.id
+        assert items[2].name == "Rectangle 1"
+        assert items[3].name == "Rectangle 2"
+
+    def test_reparent_to_layer_with_existing_children(self, canvas_model):
+        """reparentItem should place new child after existing children."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        
+        # Add shapes and parent first two to layer
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})  # Rect 1
+        canvas_model.addItem({"type": "rectangle", "x": 10, "y": 0, "width": 10, "height": 10})  # Rect 2
+        canvas_model.addItem({"type": "rectangle", "x": 20, "y": 0, "width": 10, "height": 10})  # Rect 3
+        
+        # Parent Rect 1 to layer
+        canvas_model.reparentItem(1, layer.id)
+        
+        # Now parent Rect 3 to layer (it should go after Rect 1)
+        canvas_model.reparentItem(3, layer.id)
+        
+        items = canvas_model.getItems()
+        assert items[0].name == "Layer 1"
+        assert items[1].name == "Rectangle 1"
+        assert items[1].parent_id == layer.id
+        assert items[2].name == "Rectangle 3"
+        assert items[2].parent_id == layer.id
+        assert items[3].name == "Rectangle 2"
+        assert items[3].parent_id is None
+
+    def test_reparent_unparent_clears_parent_id(self, canvas_model):
+        """reparentItem with empty string should clear parent_id."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        
+        # Parent then unparent
+        canvas_model.reparentItem(1, layer.id)
+        assert canvas_model.getItems()[1].parent_id == layer.id
+        
+        canvas_model.reparentItem(1, "")
+        assert canvas_model.getItems()[1].parent_id is None
+
+    def test_reparent_on_layer_does_nothing(self, canvas_model):
+        """reparentItem on a layer should do nothing."""
+        canvas_model.addLayer()
+        canvas_model.addLayer()
+        
+        layer1 = canvas_model.getItems()[0]
+        layer2 = canvas_model.getItems()[1]
+        
+        initial_undo_count = len(canvas_model._undo_stack)
+        canvas_model.reparentItem(1, layer1.id)
+        
+        # No command should be added
+        assert len(canvas_model._undo_stack) == initial_undo_count
+
+    def test_reparent_same_parent_does_nothing(self, canvas_model):
+        """reparentItem to same parent should do nothing."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        
+        canvas_model.reparentItem(1, layer.id)
+        initial_undo_count = len(canvas_model._undo_stack)
+        
+        # Reparent to same layer
+        canvas_model.reparentItem(1, layer.id)
+        
+        # No additional command should be added
+        assert len(canvas_model._undo_stack) == initial_undo_count
+
+    def test_reparent_undo_restores_parent_and_position(self, canvas_model):
+        """Undo of reparentItem should restore both parent and position."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})  # Rect 1
+        canvas_model.addItem({"type": "rectangle", "x": 10, "y": 0, "width": 10, "height": 10})  # Rect 2
+        
+        # Rect 2 is at index 2, no parent
+        assert canvas_model.getItems()[2].name == "Rectangle 2"
+        assert canvas_model.getItems()[2].parent_id is None
+        
+        # Reparent Rect 2 to layer
+        canvas_model.reparentItem(2, layer.id)
+        
+        # Rect 2 should be at index 1 with parent
+        assert canvas_model.getItems()[1].name == "Rectangle 2"
+        assert canvas_model.getItems()[1].parent_id == layer.id
+        
+        # Undo
+        canvas_model.undo()
+        
+        # Rect 2 should be back at index 2 with no parent
+        assert canvas_model.getItems()[2].name == "Rectangle 2"
+        assert canvas_model.getItems()[2].parent_id is None
+
+    def test_reparent_redo_restores_parent_and_position(self, canvas_model):
+        """Redo of reparentItem should restore both parent and position."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})  # Rect 1
+        canvas_model.addItem({"type": "rectangle", "x": 10, "y": 0, "width": 10, "height": 10})  # Rect 2
+        
+        canvas_model.reparentItem(2, layer.id)
+        canvas_model.undo()
+        canvas_model.redo()
+        
+        # Rect 2 should be at index 1 with parent
+        assert canvas_model.getItems()[1].name == "Rectangle 2"
+        assert canvas_model.getItems()[1].parent_id == layer.id
+
+    def test_reparent_invalid_index_does_nothing(self, canvas_model):
+        """reparentItem with invalid index should do nothing."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        
+        initial_undo_count = len(canvas_model._undo_stack)
+        canvas_model.reparentItem(-1, layer.id)
+        canvas_model.reparentItem(10, layer.id)
+        
+        assert len(canvas_model._undo_stack) == initial_undo_count
+
+    def test_find_last_child_position_no_children(self, canvas_model):
+        """_findLastChildPosition should return position after layer when no children."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})  # Top-level
+        
+        # Layer at 0, Rect at 1 (top-level)
+        pos = canvas_model._findLastChildPosition(layer.id)
+        assert pos == 1  # Should insert before the top-level rect
+
+    def test_find_last_child_position_with_children(self, canvas_model):
+        """_findLastChildPosition should return position after last child."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        
+        # Add child to layer
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.setParent(1, layer.id)
+        
+        # Add top-level shape
+        canvas_model.addItem({"type": "rectangle", "x": 10, "y": 0, "width": 10, "height": 10})
+        
+        # Layer at 0, child at 1, top-level at 2
+        pos = canvas_model._findLastChildPosition(layer.id)
+        assert pos == 2  # Should insert before the top-level rect
+
+    def test_find_last_child_position_at_end(self, canvas_model):
+        """_findLastChildPosition should return end of list if no top-level after layer."""
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})  # Top-level
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[1]
+        
+        # Top-level at 0, Layer at 1
+        pos = canvas_model._findLastChildPosition(layer.id)
+        assert pos == 2  # Should insert at end
+

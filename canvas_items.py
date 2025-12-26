@@ -10,7 +10,8 @@ This module defines the canvas item hierarchy, including:
 All items use QPainter for rendering and support stroke/fill styling.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+import uuid
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from PySide6.QtCore import QRectF, Qt
 
@@ -43,8 +44,10 @@ class RectangleItem(CanvasItem):
     def __init__(self, x: float, y: float, width: float, height: float, 
                  stroke_width: float = 1, stroke_color: str = "#ffffff", 
                  fill_color: str = "#ffffff", fill_opacity: float = 0.0,
-                 stroke_opacity: float = 1.0, name: str = "") -> None:
+                 stroke_opacity: float = 1.0, name: str = "",
+                 parent_id: Optional[str] = None) -> None:
         self.name = name
+        self.parent_id = parent_id  # ID of parent layer, or None if top-level
         self.x = x
         self.y = y
         # Validate dimensions (must be non-negative)
@@ -114,7 +117,8 @@ class RectangleItem(CanvasItem):
             fill_color=data.get("fillColor", "#ffffff"),
             fill_opacity=fill_opacity,
             stroke_opacity=stroke_opacity,
-            name=data.get("name", "")
+            name=data.get("name", ""),
+            parent_id=data.get("parentId")
         )
 
 
@@ -124,8 +128,10 @@ class EllipseItem(CanvasItem):
     def __init__(self, center_x: float, center_y: float, radius_x: float, radius_y: float, 
                  stroke_width: float = 1, stroke_color: str = "#ffffff", 
                  fill_color: str = "#ffffff", fill_opacity: float = 0.0,
-                 stroke_opacity: float = 1.0, name: str = "") -> None:
+                 stroke_opacity: float = 1.0, name: str = "",
+                 parent_id: Optional[str] = None) -> None:
         self.name = name
+        self.parent_id = parent_id  # ID of parent layer, or None if top-level
         self.center_x = center_x
         self.center_y = center_y
         # Validate radii (must be non-negative)
@@ -199,7 +205,8 @@ class EllipseItem(CanvasItem):
             fill_color=data.get("fillColor", "#ffffff"),
             fill_opacity=fill_opacity,
             stroke_opacity=stroke_opacity,
-            name=data.get("name", "")
+            name=data.get("name", ""),
+            parent_id=data.get("parentId")
         )
 
 
@@ -208,10 +215,13 @@ class LayerItem(CanvasItem):
     
     Layers provide a way to group and organize items for Z-ordering.
     They don't render directly but serve as organizational containers.
+    Each layer has a unique ID that child items reference via parent_id.
     """
     
-    def __init__(self, name: str = "") -> None:
+    def __init__(self, name: str = "", layer_id: Optional[str] = None) -> None:
         self.name = name
+        # Generate unique ID if not provided (for new layers)
+        self.id = layer_id if layer_id else str(uuid.uuid4())
     
     def paint(self, painter: QPainter, zoom_level: float, 
               offset_x: float = CANVAS_OFFSET_X, offset_y: float = CANVAS_OFFSET_Y) -> None:
@@ -221,5 +231,8 @@ class LayerItem(CanvasItem):
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'LayerItem':
         """Create LayerItem from QML data dictionary."""
-        return LayerItem(name=data.get("name", ""))
+        return LayerItem(
+            name=data.get("name", ""),
+            layer_id=data.get("id")
+        )
 

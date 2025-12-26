@@ -4,13 +4,14 @@ Canvas renderer component for DesignVibe.
 This module provides the CanvasRenderer class, which is a QQuickPaintedItem
 that bridges QML and Python, rendering canvas items using QPainter.
 """
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 from PySide6.QtCore import Property, Signal, Slot, QObject
 from PySide6.QtQuick import QQuickPaintedItem
 from PySide6.QtGui import QPainter
 
 if TYPE_CHECKING:
     from canvas_model import CanvasModel
+    from canvas_items import CanvasItem
 
 
 class CanvasRenderer(QQuickPaintedItem):
@@ -46,15 +47,67 @@ class CanvasRenderer(QQuickPaintedItem):
             self.update()
         
     def paint(self, painter: QPainter) -> None:
-        """Render all items from the model using QPainter"""
+        """Render all items from the model using QPainter.
+        
+        Rendering order respects parent-child relationships:
+        - Items are rendered bottom-to-top based on their position in the list
+        - When a layer is encountered, its children are rendered immediately after it
+        - This groups children visually with their parent layer in Z-order
+        """
         if not self._model:
             return
             
         painter.setRenderHint(QPainter.Antialiasing, True)
         
-        # Get items from model and render each one
-        for item in self._model.getItems():
+        # Get ordered items respecting parent-child grouping
+        ordered_items = self._get_render_order()
+        
+        # Render each item
+        for item in ordered_items:
             item.paint(painter, self._zoom_level)
+    
+    def _get_render_order(self) -> List['CanvasItem']:
+        """Get items in render order, with children grouped after their parent layers.
+        
+        Returns:
+            List of CanvasItem in the order they should be painted (bottom to top)
+        """
+        from canvas_items import LayerItem, RectangleItem, EllipseItem
+        
+        items = self._model.getItems()
+        result: List['CanvasItem'] = []
+        rendered_indices: set = set()
+        
+        for i, item in enumerate(items):
+            if i in rendered_indices:
+                continue
+                
+            if isinstance(item, LayerItem):
+                # Layers don't render themselves but mark their position
+                rendered_indices.add(i)
+                
+                # Find and render all children of this layer
+                for j, child in enumerate(items):
+                    if j in rendered_indices:
+                        continue
+                    if isinstance(child, (RectangleItem, EllipseItem)):
+                        if child.parent_id == item.id:
+                            result.append(child)
+                            rendered_indices.add(j)
+            else:
+                # Top-level shape (no parent)
+                if isinstance(item, (RectangleItem, EllipseItem)):
+                    if item.parent_id is None:
+                        result.append(item)
+                        rendered_indices.add(i)
+        
+        # Add any remaining orphaned items (parent_id references non-existent layer)
+        for i, item in enumerate(items):
+            if i not in rendered_indices:
+                if isinstance(item, (RectangleItem, EllipseItem)):
+                    result.append(item)
+        
+        return result
     
     @Property(float, notify=zoomLevelChanged)
     def zoomLevel(self) -> float:

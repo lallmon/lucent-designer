@@ -406,11 +406,41 @@ class TestLayerItem:
         layer = LayerItem()
         assert layer.name == ""
 
+    def test_layer_has_unique_id(self):
+        """LayerItem should have an auto-generated unique ID."""
+        layer = LayerItem(name="Test")
+        assert layer.id is not None
+        assert len(layer.id) > 0
+
+    def test_multiple_layers_have_different_ids(self):
+        """Multiple LayerItems should have different IDs."""
+        layer1 = LayerItem(name="Layer 1")
+        layer2 = LayerItem(name="Layer 2")
+        assert layer1.id != layer2.id
+
+    def test_layer_id_preserved_when_provided(self):
+        """LayerItem should use provided ID if given."""
+        layer = LayerItem(name="Test", layer_id="custom-id-123")
+        assert layer.id == "custom-id-123"
+
     def test_from_dict_with_name(self):
         """Test creating layer from dictionary with name."""
         data = {"type": "layer", "name": "Background"}
         layer = LayerItem.from_dict(data)
         assert layer.name == "Background"
+
+    def test_from_dict_with_id(self):
+        """Test creating layer from dictionary with id."""
+        data = {"type": "layer", "name": "Background", "id": "layer-abc-123"}
+        layer = LayerItem.from_dict(data)
+        assert layer.id == "layer-abc-123"
+
+    def test_from_dict_generates_id_if_missing(self):
+        """Test creating layer from dictionary without id generates one."""
+        data = {"type": "layer", "name": "Background"}
+        layer = LayerItem.from_dict(data)
+        assert layer.id is not None
+        assert len(layer.id) > 0
 
     def test_from_dict_missing_name_defaults_to_empty(self):
         """Test creating layer from dictionary without name defaults to empty."""
@@ -429,4 +459,60 @@ class TestLayerItem:
         # Should not raise any exception when called with None
         # (paint is a no-op, so it doesn't use the painter)
         layer.paint(None, 1.0, 0, 0)
+
+
+class TestShapeParentId:
+    """Tests for parent_id property on shape items."""
+
+    def test_rectangle_no_parent_by_default(self):
+        """RectangleItem should have no parent by default."""
+        rect = RectangleItem(x=0, y=0, width=10, height=10)
+        assert rect.parent_id is None
+
+    def test_rectangle_with_parent_id(self):
+        """RectangleItem can be created with a parent_id."""
+        rect = RectangleItem(x=0, y=0, width=10, height=10, parent_id="layer-123")
+        assert rect.parent_id == "layer-123"
+
+    def test_rectangle_from_dict_with_parent_id(self):
+        """RectangleItem.from_dict should parse parentId."""
+        data = {
+            "type": "rectangle",
+            "x": 0, "y": 0, "width": 10, "height": 10,
+            "parentId": "layer-abc"
+        }
+        rect = RectangleItem.from_dict(data)
+        assert rect.parent_id == "layer-abc"
+
+    def test_rectangle_from_dict_parent_id_defaults_to_none(self):
+        """RectangleItem.from_dict should default parentId to None."""
+        data = {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
+        rect = RectangleItem.from_dict(data)
+        assert rect.parent_id is None
+
+    def test_ellipse_no_parent_by_default(self):
+        """EllipseItem should have no parent by default."""
+        ellipse = EllipseItem(center_x=0, center_y=0, radius_x=10, radius_y=10)
+        assert ellipse.parent_id is None
+
+    def test_ellipse_with_parent_id(self):
+        """EllipseItem can be created with a parent_id."""
+        ellipse = EllipseItem(center_x=0, center_y=0, radius_x=10, radius_y=10, parent_id="layer-456")
+        assert ellipse.parent_id == "layer-456"
+
+    def test_ellipse_from_dict_with_parent_id(self):
+        """EllipseItem.from_dict should parse parentId."""
+        data = {
+            "type": "ellipse",
+            "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10,
+            "parentId": "layer-xyz"
+        }
+        ellipse = EllipseItem.from_dict(data)
+        assert ellipse.parent_id == "layer-xyz"
+
+    def test_ellipse_from_dict_parent_id_defaults_to_none(self):
+        """EllipseItem.from_dict should default parentId to None."""
+        data = {"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10}
+        ellipse = EllipseItem.from_dict(data)
+        assert ellipse.parent_id is None
 
