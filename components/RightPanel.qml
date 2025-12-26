@@ -14,8 +14,8 @@ Pane {
         // Properties section
         Pane {
             Layout.fillWidth: true
-            Layout.preferredHeight: parent.height * 0.5
-            Layout.minimumHeight: 200
+            Layout.preferredHeight: parent.height * 0.35
+            Layout.minimumHeight: 150
             padding: DV.Theme.sizes.rightPanelPadding
 
             ObjectPropertiesInspector {

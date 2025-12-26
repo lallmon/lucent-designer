@@ -9,9 +9,6 @@ ScrollView {
     id: root
     clip: true
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-    leftPadding: 12
-    rightPadding: 12
-    topPadding: 8
 
     property var selectedItem: null
     property string originalStrokeColor: ""
@@ -36,7 +33,7 @@ ScrollView {
 
     ColumnLayout {
         width: root.availableWidth
-        spacing: 12
+        spacing: 8
 
         Label {
             text: qsTr("Properties")
