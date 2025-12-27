@@ -19,8 +19,15 @@ Pane {
             padding: DV.Theme.sizes.rightPanelPadding
 
             ObjectPropertiesInspector {
+                id: propertiesInspector
                 anchors.fill: parent
-                selectedItem: DV.SelectionManager.selectedItem
+                
+                Binding {
+                    target: propertiesInspector
+                    property: "selectedItem"
+                    value: DV.SelectionManager.selectedItem
+                    restoreMode: Binding.RestoreNone
+                }
             }
         }
 

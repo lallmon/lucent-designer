@@ -166,10 +166,22 @@ Item {
                                                         let rowCount = layerRepeater.count
                                                         targetModelIndex = Math.max(0, Math.min(rowCount - 1, targetModelIndex))
                                                         
+                                                        // #region agent log
+                                                        console.log("[DEBUG-DROP] draggedIndex=" + root.draggedIndex + " targetModelIndex=" + targetModelIndex + " dropTargetLayerId=" + root.dropTargetLayerId + " draggedItemType=" + root.draggedItemType + " draggedParentId=" + root.draggedItemParentId + " targetParentId=" + root.dropTargetParentId)
+                                                        // #endregion
+                                                        
                                                         // Determine the action based on drag context
                                                         if (root.dropTargetLayerId !== "" && root.draggedItemType !== "layer") {
-                                                            // Dropping onto a layer - reparent to that layer
-                                                            canvasModel.reparentItem(root.draggedIndex, root.dropTargetLayerId)
+                                                            // Check if dropping onto the SAME parent layer (sibling reorder, not reparent)
+                                                            if (root.dropTargetLayerId === root.draggedItemParentId) {
+                                                                // Same parent - just reorder within the layer
+                                                                if (targetModelIndex !== root.draggedIndex) {
+                                                                    canvasModel.moveItem(root.draggedIndex, targetModelIndex)
+                                                                }
+                                                            } else {
+                                                                // Different layer - reparent to that layer
+                                                                canvasModel.reparentItem(root.draggedIndex, root.dropTargetLayerId)
+                                                            }
                                                         } else if (root.draggedItemParentId && root.dropTargetParentId === root.draggedItemParentId) {
                                                             // Dropping onto a sibling (same parent) - just reorder, keep parent
                                                             if (targetModelIndex !== root.draggedIndex) {
@@ -194,13 +206,17 @@ Item {
                                                 }
                                             } catch (e) {
                                                 console.warn("LayerPanel drag error:", e)
-                                                // Reset state even on error
-                                                delegateRoot.dragOffsetY = 0
-                                                root.draggedIndex = -1
-                                                root.draggedItemType = ""
-                                                root.dropTargetLayerId = ""
-                                                root.draggedItemParentId = null
-                                                root.dropTargetParentId = null
+                                                // Reset state - guard against delegate destruction during model reset
+                                                if (typeof delegateRoot !== 'undefined' && delegateRoot) {
+                                                    delegateRoot.dragOffsetY = 0
+                                                }
+                                                if (typeof root !== 'undefined' && root) {
+                                                    root.draggedIndex = -1
+                                                    root.draggedItemType = ""
+                                                    root.dropTargetLayerId = ""
+                                                    root.draggedItemParentId = null
+                                                    root.dropTargetParentId = null
+                                                }
                                             }
                                         }
 
@@ -222,6 +238,9 @@ Item {
 
                                             // Get the item at target position
                                             let targetItem = layerRepeater.itemAt(targetListIndex)
+                                            // #region agent log
+                                            console.log("[DEBUG-TARGET] targetListIndex=" + targetListIndex + " targetItem=" + (targetItem ? targetItem.name + "/" + targetItem.itemType : "null") + " isLayer=" + (targetItem ? targetItem.isLayer : "n/a"))
+                                            // #endregion
                                             if (targetItem && targetItem.isLayer && root.draggedItemType !== "layer") {
                                                 root.dropTargetLayerId = targetItem.itemId
                                                 root.dropTargetParentId = null

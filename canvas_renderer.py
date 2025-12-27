@@ -54,6 +54,9 @@ class CanvasRenderer(QQuickPaintedItem):
         - When a layer is encountered, its children are rendered immediately after it
         - This groups children visually with their parent layer in Z-order
         """
+        # #region agent log
+        import json; open('/home/lka/Git/DesignVibe/.cursor/debug.log','a').write(json.dumps({"hypothesisId":"PAINT","location":"canvas_renderer.py:paint","message":"paint called","data":{"has_model":self._model is not None},"timestamp":__import__('time').time()*1000,"sessionId":"debug-session"})+'\n')
+        # #endregion
         if not self._model:
             return
             
@@ -62,12 +65,21 @@ class CanvasRenderer(QQuickPaintedItem):
         # Get ordered items respecting parent-child grouping
         ordered_items = self._get_render_order()
         
+        # #region agent log
+        import json; open('/home/lka/Git/DesignVibe/.cursor/debug.log','a').write(json.dumps({"hypothesisId":"PAINT","location":"canvas_renderer.py:paint:order","message":"render order","data":{"items":[{"name":getattr(it,'name',''),"type":type(it).__name__,"parent_id":getattr(it,'parent_id',None)} for it in ordered_items]},"timestamp":__import__('time').time()*1000,"sessionId":"debug-session"})+'\n')
+        # #endregion
+        
         # Render each item
         for item in ordered_items:
             item.paint(painter, self._zoom_level)
     
     def _get_render_order(self) -> List['CanvasItem']:
-        """Get items in render order, with children grouped after their parent layers.
+        """Get items in render order - simply use model order.
+        
+        The model maintains the correct z-order:
+        - Items lower in index render first (bottom)
+        - Items higher in index render later (top)
+        - Layers are skipped (they're organizational, not visual)
         
         Returns:
             List of CanvasItem in the order they should be painted (bottom to top)
@@ -76,36 +88,11 @@ class CanvasRenderer(QQuickPaintedItem):
         
         items = self._model.getItems()
         result: List['CanvasItem'] = []
-        rendered_indices: set = set()
         
-        for i, item in enumerate(items):
-            if i in rendered_indices:
-                continue
-                
-            if isinstance(item, LayerItem):
-                # Layers don't render themselves but mark their position
-                rendered_indices.add(i)
-                
-                # Find and render all children of this layer
-                for j, child in enumerate(items):
-                    if j in rendered_indices:
-                        continue
-                    if isinstance(child, (RectangleItem, EllipseItem)):
-                        if child.parent_id == item.id:
-                            result.append(child)
-                            rendered_indices.add(j)
-            else:
-                # Top-level shape (no parent)
-                if isinstance(item, (RectangleItem, EllipseItem)):
-                    if item.parent_id is None:
-                        result.append(item)
-                        rendered_indices.add(i)
-        
-        # Add any remaining orphaned items (parent_id references non-existent layer)
-        for i, item in enumerate(items):
-            if i not in rendered_indices:
-                if isinstance(item, (RectangleItem, EllipseItem)):
-                    result.append(item)
+        # Render items in model order, skipping layers (they're organizational only)
+        for item in items:
+            if isinstance(item, (RectangleItem, EllipseItem)):
+                result.append(item)
         
         return result
     
