@@ -399,6 +399,19 @@ class CanvasModel(QAbstractListModel):
         self.dataChanged.emit(model_index, model_index, [])
         self.itemModified.emit(index, new_props)
 
+    @Slot(int, str)
+    def renameItem(self, index: int, name: str) -> None:
+        """Rename an item by index, preserving undo/redo semantics."""
+        if not (0 <= index < len(self._items)):
+            return
+
+        new_name = str(name)
+        current_name = getattr(self._items[index], "name", "")
+        if new_name == current_name:
+            return
+
+        self.updateItem(index, {"name": new_name})
+
     @Slot(result=int)
     def count(self) -> int:
         return len(self._items)

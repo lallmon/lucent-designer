@@ -342,6 +342,78 @@ class TestCanvasModelUpdate:
         assert items[0].width == 100
 
 
+class TestCanvasModelRename:
+    """Tests for renaming items in CanvasModel."""
+
+    def test_rename_item_updates_name_and_emits(self, canvas_model, qtbot):
+        """Renaming should update the item name and emit itemModified."""
+        canvas_model.addLayer()
+
+        with qtbot.waitSignal(canvas_model.itemModified, timeout=1000) as blocker:
+            canvas_model.renameItem(0, "Renamed Layer")
+
+        assert blocker.args[0] == 0
+        assert blocker.args[1]["name"] == "Renamed Layer"
+        assert canvas_model.getItems()[0].name == "Renamed Layer"
+
+    def test_rename_item_supports_undo_redo(self, canvas_model):
+        """Rename should be undoable and redoable."""
+        canvas_model.addLayer()
+        original_name = canvas_model.getItems()[0].name
+
+        canvas_model.renameItem(0, "Renamed Layer")
+        assert canvas_model.getItems()[0].name == "Renamed Layer"
+
+        canvas_model.undo()
+        assert canvas_model.getItems()[0].name == original_name
+
+        canvas_model.redo()
+        assert canvas_model.getItems()[0].name == "Renamed Layer"
+
+    def test_rename_invalid_index_is_noop(self, canvas_model):
+        """Renaming with an invalid index should do nothing."""
+        canvas_model.addLayer()
+        original_name = canvas_model.getItems()[0].name
+        initial_can_undo = canvas_model.canUndo
+
+        canvas_model.renameItem(-1, "Ignored")
+        canvas_model.renameItem(5, "Ignored")
+
+        assert canvas_model.getItems()[0].name == original_name
+        assert canvas_model.canUndo == initial_can_undo
+
+    def test_rename_same_name_is_noop(self, canvas_model):
+        """Renaming to the same value should do nothing and not emit."""
+        canvas_model.addLayer()
+        original_name = canvas_model.getItems()[0].name
+        initial_can_undo = canvas_model.canUndo
+
+        emissions = []
+        canvas_model.itemModified.connect(lambda idx, data: emissions.append((idx, data)))
+
+        canvas_model.renameItem(0, original_name)
+
+        assert canvas_model.getItems()[0].name == original_name
+        assert emissions == []
+        assert canvas_model.canUndo == initial_can_undo
+
+    def test_rename_shape_updates_name_and_preserves_parent(self, canvas_model, qtbot):
+        """Shapes can be renamed and keep their parent relationship."""
+        canvas_model.addLayer()
+        layer_id = canvas_model.getItems()[0].id
+        canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        canvas_model.setParent(1, layer_id)
+
+        with qtbot.waitSignal(canvas_model.itemModified, timeout=1000) as blocker:
+            canvas_model.renameItem(1, "Renamed Rect")
+
+        assert blocker.args[0] == 1
+        assert blocker.args[1]["name"] == "Renamed Rect"
+        rect = canvas_model.getItems()[1]
+        assert rect.name == "Renamed Rect"
+        assert rect.parent_id == layer_id
+
+
 class TestCanvasModelQueries:
     """Tests for querying item data from CanvasModel."""
     

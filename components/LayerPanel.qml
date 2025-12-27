@@ -115,7 +115,7 @@ Item {
                             radius: DV.Theme.sizes.radiusSm
                             color: delegateRoot.isDropTarget ? DV.Theme.colors.accentHover
                                  : delegateRoot.isSelected ? DV.Theme.colors.accent 
-                                 : hoverHandler.hovered ? DV.Theme.colors.panelHover 
+                                 : nameHoverHandler.hovered ? DV.Theme.colors.panelHover 
                                  : "transparent"
                             border.width: delegateRoot.isDropTarget ? 2 : 0
                             border.color: DV.Theme.colors.accent
@@ -249,22 +249,98 @@ Item {
                                     }
                                 }
 
-                                Label {
-                                    text: delegateRoot.name
-                                    font.pixelSize: 11
-                                    color: delegateRoot.isSelected ? "white" : DV.Theme.colors.textSubtle
-                                    elide: Text.ElideRight
+                                Item {
+                                    id: nameEditor
                                     Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.minimumWidth: 80
+                                    Layout.preferredWidth: 120
+                                    implicitWidth: Math.max(80, nameLabel.implicitWidth)
+                                    implicitHeight: nameLabel.implicitHeight
+                                    property bool isEditing: false
+                                    property string draftName: delegateRoot.name
+                                    property string originalName: delegateRoot.name
 
-                                    TapHandler {
-                                        onTapped: {
-                                            DV.SelectionManager.selectedItemIndex = delegateRoot.index
-                                            DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.index)
+                                    function startEditing() {
+                                        originalName = delegateRoot.name
+                                        draftName = delegateRoot.name
+                                        isEditing = true
+                                        nameField.text = draftName
+                                        nameField.selectAll()
+                                        nameField.forceActiveFocus()
+                                    }
+
+                                    function commitEditing() {
+                                        if (!isEditing)
+                                            return
+                                        draftName = nameField.text
+                                        isEditing = false
+                                        if (draftName !== delegateRoot.name) {
+                                            canvasModel.renameItem(delegateRoot.index, draftName)
                                         }
                                     }
 
+                                    function cancelEditing() {
+                                        if (!isEditing)
+                                            return
+                                        isEditing = false
+                                        draftName = originalName
+                                        nameField.text = originalName
+                                    }
+
                                     HoverHandler {
-                                        id: hoverHandler
+                                        id: nameHoverHandler
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: !nameEditor.isEditing
+                                        hoverEnabled: true
+                                        acceptedButtons: Qt.LeftButton
+                                        preventStealing: true
+                                        cursorShape: Qt.IBeamCursor
+                                        onClicked: {
+                                            DV.SelectionManager.selectedItemIndex = delegateRoot.index
+                                            DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.index)
+                                        }
+                                        onDoubleClicked: {
+                                            DV.SelectionManager.selectedItemIndex = delegateRoot.index
+                                            DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.index)
+                                            nameEditor.startEditing()
+                                        }
+                                    }
+
+                                    Label {
+                                        id: nameLabel
+                                        visible: !nameEditor.isEditing
+                                        text: delegateRoot.name
+                                        font.pixelSize: 11
+                                        color: delegateRoot.isSelected ? "white" : DV.Theme.colors.textSubtle
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                        Layout.minimumWidth: 40
+                                    }
+
+                                    TextField {
+                                        id: nameField
+                                        visible: nameEditor.isEditing
+                                        text: nameEditor.draftName
+                                        font.pixelSize: 11
+                                        color: delegateRoot.isSelected ? "white" : DV.Theme.colors.textSubtle
+                                        horizontalAlignment: Text.AlignLeft
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        padding: 0
+                                        Layout.fillWidth: true
+                                        background: Rectangle { color: "transparent"; border.color: "transparent" }
+
+                                        Keys.onEscapePressed: nameEditor.cancelEditing()
+                                        onAccepted: nameEditor.commitEditing()
+                                        onActiveFocusChanged: {
+                                            if (!activeFocus && nameEditor.isEditing) {
+                                                nameEditor.cancelEditing()
+                                            }
+                                        }
+                                        onTextChanged: nameEditor.draftName = text
                                     }
                                 }
                             }
