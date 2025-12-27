@@ -343,6 +343,40 @@ Item {
                                         onTextChanged: nameEditor.draftName = text
                                     }
                                 }
+
+                                Item {
+                                    id: deleteButton
+                                    Layout.preferredWidth: 28
+                                    Layout.fillHeight: true
+
+                                    HoverHandler { id: deleteHover }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        acceptedButtons: Qt.LeftButton
+                                        preventStealing: true
+                                        onClicked: {
+                                            // Ensure selection reflects the target being deleted
+                                            DV.SelectionManager.selectedItemIndex = delegateRoot.index
+                                            DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.index)
+                                            canvasModel.removeItem(delegateRoot.index)
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        color: deleteHover.hovered ? DV.Theme.colors.panelHover : "transparent"
+                                        radius: DV.Theme.sizes.radiusSm
+
+                                        DV.PhIcon {
+                                            anchors.centerIn: parent
+                                            name: "trash"
+                                            size: 16
+                                            color: delegateRoot.isSelected ? "white" : DV.Theme.colors.textSubtle
+                                        }
+                                    }
+                                }
                             }
                         }
 

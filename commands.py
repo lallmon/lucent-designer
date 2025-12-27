@@ -72,8 +72,8 @@ class RemoveItemCommand(Command):
         self._model = model
         self._index = index
         self._item_data: Optional[Dict[str, Any]] = None
-        # Track orphaned children for undo (list of (index, old_parent_id))
-        self._orphaned_children: List[tuple] = []
+        # Track removed children for undo (list of (index, child_item_data))
+        self._removed_children: List[tuple] = []
 
     @property
     def description(self) -> str:
@@ -87,18 +87,21 @@ class RemoveItemCommand(Command):
             item = self._model._items[self._index]
             self._item_data = self._model._itemToDict(item)
             
-            # If removing a layer, orphan its children
+            # If removing a layer, also remove its children
             if isinstance(item, LayerItem):
                 layer_id = item.id
-                self._orphaned_children = []
-                for i, child in enumerate(self._model._items):
-                    if isinstance(child, (RectangleItem, EllipseItem)):
-                        if child.parent_id == layer_id:
-                            self._orphaned_children.append((i, child.parent_id))
-                            child.parent_id = None
-                            # Emit change for each orphaned child
-                            child_index = self._model.index(i, 0)
-                            self._model.dataChanged.emit(child_index, child_index, [])
+                self._removed_children = []
+                # Collect child indices descending to remove safely
+                child_indices = [i for i, child in enumerate(self._model._items)
+                                 if isinstance(child, (RectangleItem, EllipseItem)) and child.parent_id == layer_id]
+                child_indices.sort(reverse=True)
+                for child_index in child_indices:
+                    child = self._model._items[child_index]
+                    self._removed_children.append((child_index, self._model._itemToDict(child)))
+                    self._model.beginRemoveRows(QModelIndex(), child_index, child_index)
+                    del self._model._items[child_index]
+                    self._model.endRemoveRows()
+                    # Do not emit itemRemoved for children; primary removal will emit once for the layer
             
             self._model.beginRemoveRows(QModelIndex(), self._index, self._index)
             del self._model._items[self._index]
@@ -107,21 +110,20 @@ class RemoveItemCommand(Command):
 
     def undo(self) -> None:
         if self._item_data:
+            # Reinsert primary item
             self._model.beginInsertRows(QModelIndex(), self._index, self._index)
             self._model._items.insert(self._index, _create_item(self._item_data))
             self._model.endInsertRows()
             self._model.itemAdded.emit(self._index)
-            
-            # Restore parent relationships for previously orphaned children
-            for child_index, old_parent_id in self._orphaned_children:
-                # Adjust index if needed (item was re-inserted before this child)
-                adjusted_index = child_index if child_index < self._index else child_index
-                if 0 <= adjusted_index < len(self._model._items):
-                    child = self._model._items[adjusted_index]
-                    if isinstance(child, (RectangleItem, EllipseItem)):
-                        child.parent_id = old_parent_id
-                        idx = self._model.index(adjusted_index, 0)
-                        self._model.dataChanged.emit(idx, idx, [])
+
+            # Reinsert previously removed children, preserving order
+            # Insert children after the layer to keep grouping reasonable
+            for child_index, child_data in sorted(self._removed_children, key=lambda x: x[0]):
+                insert_at = min(child_index, len(self._model._items))
+                self._model.beginInsertRows(QModelIndex(), insert_at, insert_at)
+                self._model._items.insert(insert_at, _create_item(child_data))
+                self._model.endInsertRows()
+                self._model.itemAdded.emit(insert_at)
 
 
 class UpdateItemCommand(Command):

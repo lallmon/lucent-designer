@@ -12,6 +12,22 @@ QtObject {
                 selectedItem = data
             }
         })
+
+        canvasModel.itemRemoved.connect(function(index) {
+            // Clear selection when the selected item is removed
+            if (index === selectedItemIndex) {
+                selectedItemIndex = -1
+                selectedItem = null
+            } else if (index < selectedItemIndex) {
+                // Shift selection when a preceding item is removed
+                selectedItemIndex = selectedItemIndex - 1
+            }
+        })
+
+        canvasModel.itemsCleared.connect(function() {
+            selectedItemIndex = -1
+            selectedItem = null
+        })
     }
 }
 
