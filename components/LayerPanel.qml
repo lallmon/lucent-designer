@@ -11,6 +11,7 @@ Item {
     property string dropTargetLayerId: ""    // Layer ID we're hovering over for drop
     property var draggedItemParentId: null   // Parent ID of the item being dragged
     property var dropTargetParentId: null    // Parent ID of the item we're hovering over
+    property real lastDragYInFlick: 0
 
     ColumnLayout {
         anchors.fill: parent
@@ -68,23 +69,39 @@ Item {
 
             property int itemHeight: 28
             property int itemSpacing: 2
+            property real dragStartContentY: 0
+            property bool dragActive: false
 
             Flickable {
                 id: layerFlickable
                 anchors.fill: parent
-                contentHeight: layerColumn.height
+                contentHeight: layerColumn.childrenRect.height
                 interactive: root.draggedIndex < 0
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
 
-                function autoScrollIfNeeded(yInFlickable) {
-                    const edge = 30
-                    const step = 12
+                function autoScrollScene(yInFlickable) {
+                    if (contentHeight <= height)
+                        return
+                    const edge = 24
+                    const step = 16
                     if (yInFlickable < edge) {
                         contentY = Math.max(0, contentY - step)
                     } else if (yInFlickable > height - edge) {
                         const maxY = Math.max(0, contentHeight - height)
                         contentY = Math.min(maxY, contentY + step)
+                    }
+                }
+
+                Timer {
+                    id: autoScrollTimer
+                    interval: 30
+                    running: layerContainer.dragActive
+                    repeat: true
+                    onTriggered: {
+                        if (!layerContainer.dragActive)
+                            return
+                        layerFlickable.autoScrollScene(root.lastDragYInFlick)
                     }
                 }
 
@@ -190,7 +207,12 @@ Item {
                                                     root.draggedIndex = delegateRoot.index
                                                     root.draggedItemType = delegateRoot.itemType
                                                     root.draggedItemParentId = delegateRoot.parentId
+                                                layerContainer.dragStartContentY = layerFlickable.contentY
+                                                    layerContainer.dragActive = true
+                                                    autoScrollTimer.start()
                                                 } else {
+                                                    layerContainer.dragActive = false
+                                                    autoScrollTimer.stop()
                                                     if (root.draggedIndex >= 0) {
                                                         // Calculate target model index for potential reordering
                                                         let totalItemHeight = layerContainer.itemHeight + layerContainer.itemSpacing
@@ -251,11 +273,14 @@ Item {
 
                                         onTranslationChanged: {
                                             if (active) {
-                                                delegateRoot.dragOffsetY = translation.y
+                                                // Compensate for flickable contentY changes during auto-scroll
+                                                let compensatedY = translation.y + (layerFlickable.contentY - layerContainer.dragStartContentY)
+                                                delegateRoot.dragOffsetY = compensatedY
                                                 // Calculate which item we're hovering over
                                                 updateDropTarget()
-                                                const p = delegateRoot.mapToItem(layerFlickable, 0, translation.y)
-                                                layerFlickable.autoScrollIfNeeded(p.y)
+                                                // Auto-scroll handled via timer using scene position
+                                                const p = delegateRoot.mapToItem(layerFlickable, 0, dragHandler.centroid.position.y)
+                                                root.lastDragYInFlick = p.y
                                             }
                                         }
 

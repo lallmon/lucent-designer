@@ -1106,6 +1106,18 @@ class TestCanvasModelMoveItem:
         items = canvas_model.getItems()
         assert items[to_index].x == 18
 
+    def test_move_item_many_entries_reverse(self, canvas_model):
+        """Reordering near the top when list is long still works."""
+        for i in range(25):
+            canvas_model.addItem({"type": "rectangle", "x": i, "y": i, "width": 10, "height": 10})
+
+        from_index = 2
+        to_index = 20
+        canvas_model.moveItem(from_index, to_index)
+
+        items = canvas_model.getItems()
+        assert items[to_index].x == 2
+
     def test_move_item_undo(self, canvas_model):
         """Undo should restore original order."""
         canvas_model.addItem({"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
