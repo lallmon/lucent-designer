@@ -1,24 +1,23 @@
-# Lucent
+# Lucent Designer
 
 [![Tests](https://github.com/lallmon/lucent/actions/workflows/test.yml/badge.svg)](https://github.com/lallmon/lucent/actions)
 [![codecov](https://codecov.io/gh/lallmon/lucent/branch/main/graph/badge.svg)](https://codecov.io/gh/lallmon/lucent)
 
+![application screenshot](assets/screenshot.png)
+
 ## What
-A modern, open source hybrid vector/raster digital design application, built with QT. Taking a Linux first approach, but planning to be multi-platform.
+A modern, open source hybrid vector/raster digital design application, built with QT.
 
-## Why
-Mainly because there isn't a good alternative to Affinity Designer on Linux honestly, and with their purchase by Canva and the quick enshittification of that software, it's pushed me to at least take a stab at something.
+## The Experiment
+This exists mainly because there isn't a good alternative to Affinity Designer on Linux, and with it's recent purchase by Canva and the quick enshittification of Affinity, it's pushed me to at least take a stab at some sort of alternative.
 
-# Architecture 
-
-I am currently learing both QTQuick and Python, so we don't have a solid architecture yet, but am open to suggestions and best practices.
+Additionaly I want to see how far I can push current AI assisted coding techniques. Can I build in guardrails and agile principles to the process, in order to get stable, usable software out the other side? What would that look like in the open source model, and how can we accept useful contributions while minimizing AI slop generation and code bloat?
 
 ## Contributing
-There's plenty to do but the end goal is pretty clear for me, so if you want to help out, I'd love it anything I can do.
+There's plenty to do but the end goal is pretty clear for me, so if you want to help out, I'd love any help. Checkout the issues or open an issue if you found some while playing with the application. What tools are missing from the software?
 
 ### Getting Started
-
-## Local setup
+- Clone the Repo
 - Install Python 3.10
 - Create/activate the project venv: `python -m venv .venv && source .venv/bin/activate`
 - Install deps: `pip install -r requirements.txt -r requirements-dev.txt`
@@ -28,11 +27,3 @@ There's plenty to do but the end goal is pretty clear for me, so if you want to 
 Run the app: `python main.py`
 
 Run tests: `pytest -q`
-
-### Repo rename
-- GitHub: rename the repo to `lucent` in settings (GitHub adds redirects).
-- Local: `git remote set-url origin https://github.com/<user>/lucent.git` (or SSH).
-
-#### AI Contributions
-I have used AI on this project, so I am not against it, but you definitely need to wrangle that slop machine. LOL. Just straight vibe coding is definitely not something that will work in the long run.
-
