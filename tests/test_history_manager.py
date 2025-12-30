@@ -1,4 +1,5 @@
 """Tests for HistoryManager undo/redo orchestration."""
+
 import pytest
 
 from lucent.commands import Command, TransactionCommand
@@ -26,8 +27,12 @@ class DummyCommand(Command):
 def test_execute_pushes_undo_and_clears_redo():
     changes = {"undo_changed": 0, "redo_changed": 0}
     history = HistoryManager(
-        on_undo_stack_changed=lambda: changes.__setitem__("undo_changed", changes["undo_changed"] + 1),
-        on_redo_stack_changed=lambda: changes.__setitem__("redo_changed", changes["redo_changed"] + 1),
+        on_undo_stack_changed=lambda: changes.__setitem__(
+            "undo_changed", changes["undo_changed"] + 1
+        ),
+        on_redo_stack_changed=lambda: changes.__setitem__(
+            "redo_changed", changes["redo_changed"] + 1
+        ),
     )
     state = []
     cmd = DummyCommand(state, "a")
@@ -133,5 +138,3 @@ def test_transaction_clears_redo_when_executed():
     history.end_transaction()
 
     assert history.can_redo is False
-
-

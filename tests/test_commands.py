@@ -1,8 +1,13 @@
 """Unit tests for command classes."""
+
 import pytest
 from lucent.commands import (
-    Command, AddItemCommand, RemoveItemCommand,
-    UpdateItemCommand, ClearCommand, TransactionCommand
+    Command,
+    AddItemCommand,
+    RemoveItemCommand,
+    UpdateItemCommand,
+    ClearCommand,
+    TransactionCommand,
 )
 from lucent.canvas_items import RectangleItem, EllipseItem
 from lucent.item_schema import ItemSchemaError
@@ -18,15 +23,21 @@ class TestCommandBase:
 
     def test_command_requires_execute(self):
         """Test that subclasses must implement execute."""
+
         class IncompleteCommand(Command):
-            def undo(self): pass
+            def undo(self):
+                pass
+
         with pytest.raises(TypeError):
             IncompleteCommand()
 
     def test_command_requires_undo(self):
         """Test that subclasses must implement undo."""
+
         class IncompleteCommand(Command):
-            def execute(self): pass
+            def execute(self):
+                pass
+
         with pytest.raises(TypeError):
             IncompleteCommand()
 
@@ -46,7 +57,13 @@ class TestAddItemCommand:
 
     def test_execute_adds_ellipse(self, canvas_model):
         """Test execute adds an ellipse to the model."""
-        item_data = {"type": "ellipse", "centerX": 50, "centerY": 50, "radiusX": 25, "radiusY": 25}
+        item_data = {
+            "type": "ellipse",
+            "centerX": 50,
+            "centerY": 50,
+            "radiusX": 25,
+            "radiusY": 25,
+        }
         cmd = AddItemCommand(canvas_model, item_data)
 
         cmd.execute()
@@ -67,7 +84,10 @@ class TestAddItemCommand:
 
     def test_has_description(self, canvas_model):
         """Test command has a meaningful description."""
-        cmd = AddItemCommand(canvas_model, {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        cmd = AddItemCommand(
+            canvas_model,
+            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10},
+        )
         assert "Add" in cmd.description
 
     def test_execute_invalid_type_does_nothing(self, canvas_model):
@@ -77,7 +97,10 @@ class TestAddItemCommand:
 
     def test_undo_before_execute_does_nothing(self, canvas_model):
         """Test undo before execute does nothing safely."""
-        cmd = AddItemCommand(canvas_model, {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10})
+        cmd = AddItemCommand(
+            canvas_model,
+            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10},
+        )
         cmd.undo()
         assert canvas_model.count() == 0
 
@@ -132,12 +155,30 @@ class TestUpdateItemCommand:
     def test_execute_updates_properties(self, canvas_model):
         """Test execute applies new properties."""
         canvas_model._items.append(RectangleItem(0, 0, 100, 100))
-        old_props = {"type": "rectangle", "x": 0, "y": 0, "width": 100, "height": 100,
-                     "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                     "fillColor": "#ffffff", "fillOpacity": 0.0}
-        new_props = {"type": "rectangle", "x": 50, "y": 75, "width": 100, "height": 100,
-                     "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                     "fillColor": "#ffffff", "fillOpacity": 0.0}
+        old_props = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
+        new_props = {
+            "type": "rectangle",
+            "x": 50,
+            "y": 75,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
         cmd = UpdateItemCommand(canvas_model, 0, old_props, new_props)
 
         cmd.execute()
@@ -148,12 +189,30 @@ class TestUpdateItemCommand:
     def test_undo_restores_old_properties(self, canvas_model):
         """Test undo restores original properties."""
         canvas_model._items.append(RectangleItem(0, 0, 100, 100))
-        old_props = {"type": "rectangle", "x": 0, "y": 0, "width": 100, "height": 100,
-                     "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                     "fillColor": "#ffffff", "fillOpacity": 0.0}
-        new_props = {"type": "rectangle", "x": 50, "y": 75, "width": 100, "height": 100,
-                     "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                     "fillColor": "#ffffff", "fillOpacity": 0.0}
+        old_props = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
+        new_props = {
+            "type": "rectangle",
+            "x": 50,
+            "y": 75,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
         cmd = UpdateItemCommand(canvas_model, 0, old_props, new_props)
         cmd.execute()
 
@@ -182,9 +241,18 @@ class TestUpdateItemCommand:
 
     def test_execute_invalid_index_does_nothing(self, canvas_model):
         """Test execute with out-of-bounds index does nothing."""
-        old_props = {"type": "rectangle", "x": 0, "y": 0, "width": 100, "height": 100,
-                     "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                     "fillColor": "#ffffff", "fillOpacity": 0.0}
+        old_props = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
         cmd = UpdateItemCommand(canvas_model, 99, old_props, old_props)
         cmd.execute()
         assert canvas_model.count() == 0
@@ -231,18 +299,54 @@ class TestTransactionCommand:
         canvas_model._items.append(RectangleItem(0, 0, 100, 100))
         canvas_model._items.append(RectangleItem(50, 50, 100, 100))
 
-        old1 = {"type": "rectangle", "x": 0, "y": 0, "width": 100, "height": 100,
-                "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                "fillColor": "#ffffff", "fillOpacity": 0.0}
-        new1 = {"type": "rectangle", "x": 10, "y": 10, "width": 100, "height": 100,
-                "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                "fillColor": "#ffffff", "fillOpacity": 0.0}
-        old2 = {"type": "rectangle", "x": 50, "y": 50, "width": 100, "height": 100,
-                "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                "fillColor": "#ffffff", "fillOpacity": 0.0}
-        new2 = {"type": "rectangle", "x": 60, "y": 60, "width": 100, "height": 100,
-                "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-                "fillColor": "#ffffff", "fillOpacity": 0.0}
+        old1 = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
+        new1 = {
+            "type": "rectangle",
+            "x": 10,
+            "y": 10,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
+        old2 = {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
+        new2 = {
+            "type": "rectangle",
+            "x": 60,
+            "y": 60,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
 
         cmd1 = UpdateItemCommand(canvas_model, 0, old1, new1)
         cmd2 = UpdateItemCommand(canvas_model, 1, old2, new2)
@@ -257,12 +361,30 @@ class TestTransactionCommand:
         """Test undo reverses all contained commands in reverse order."""
         canvas_model._items.append(RectangleItem(0, 0, 100, 100))
 
-        old = {"type": "rectangle", "x": 0, "y": 0, "width": 100, "height": 100,
-               "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-               "fillColor": "#ffffff", "fillOpacity": 0.0}
-        new = {"type": "rectangle", "x": 50, "y": 50, "width": 100, "height": 100,
-               "strokeWidth": 1, "strokeColor": "#ffffff", "strokeOpacity": 1.0,
-               "fillColor": "#ffffff", "fillOpacity": 0.0}
+        old = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
+        new = {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 100,
+            "height": 100,
+            "strokeWidth": 1,
+            "strokeColor": "#ffffff",
+            "strokeOpacity": 1.0,
+            "fillColor": "#ffffff",
+            "fillOpacity": 0.0,
+        }
 
         cmd = UpdateItemCommand(canvas_model, 0, old, new)
         transaction = TransactionCommand([cmd])
@@ -301,10 +423,11 @@ class TestMoveItemCommand:
             RectangleItem(20, 0, 10, 10, name="Rect 3"),
         ]
         from lucent.commands import MoveItemCommand
+
         cmd = MoveItemCommand(canvas_model, 0, 2)
-        
+
         cmd.execute()
-        
+
         assert canvas_model.getItems()[0].name == "Rect 2"
         assert canvas_model.getItems()[1].name == "Rect 3"
         assert canvas_model.getItems()[2].name == "Rect 1"
@@ -317,10 +440,11 @@ class TestMoveItemCommand:
             RectangleItem(20, 0, 10, 10, name="Rect 3"),
         ]
         from lucent.commands import MoveItemCommand
+
         cmd = MoveItemCommand(canvas_model, 2, 0)
-        
+
         cmd.execute()
-        
+
         assert canvas_model.getItems()[0].name == "Rect 3"
         assert canvas_model.getItems()[1].name == "Rect 1"
         assert canvas_model.getItems()[2].name == "Rect 2"
@@ -333,11 +457,12 @@ class TestMoveItemCommand:
             RectangleItem(20, 0, 10, 10, name="Rect 3"),
         ]
         from lucent.commands import MoveItemCommand
+
         cmd = MoveItemCommand(canvas_model, 0, 2)
         cmd.execute()
-        
+
         cmd.undo()
-        
+
         assert canvas_model.getItems()[0].name == "Rect 1"
         assert canvas_model.getItems()[1].name == "Rect 2"
         assert canvas_model.getItems()[2].name == "Rect 3"
@@ -345,6 +470,6 @@ class TestMoveItemCommand:
     def test_has_description(self, canvas_model):
         """Test command has a meaningful description."""
         from lucent.commands import MoveItemCommand
+
         cmd = MoveItemCommand(canvas_model, 0, 2)
         assert cmd.description
-

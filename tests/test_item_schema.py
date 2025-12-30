@@ -1,4 +1,5 @@
 """Unit tests for item_schema validation and serialization."""
+
 import pytest
 
 from lucent.canvas_items import RectangleItem, EllipseItem, LayerItem, CanvasItem
@@ -145,7 +146,14 @@ class TestLockedSerialization:
 
     def test_validate_rectangle_includes_locked(self):
         """validate_rectangle should include locked in output."""
-        data = {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10, "locked": True}
+        data = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 10,
+            "height": 10,
+            "locked": True,
+        }
         out = validate_rectangle(data)
         assert out["locked"] is True
 
@@ -157,13 +165,26 @@ class TestLockedSerialization:
 
     def test_validate_ellipse_includes_locked(self):
         """validate_ellipse should include locked in output."""
-        data = {"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10, "locked": True}
+        data = {
+            "type": "ellipse",
+            "centerX": 0,
+            "centerY": 0,
+            "radiusX": 10,
+            "radiusY": 10,
+            "locked": True,
+        }
         out = validate_ellipse(data)
         assert out["locked"] is True
 
     def test_validate_ellipse_locked_defaults_false(self):
         """validate_ellipse should default locked to False."""
-        data = {"type": "ellipse", "centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10}
+        data = {
+            "type": "ellipse",
+            "centerX": 0,
+            "centerY": 0,
+            "radiusX": 10,
+            "radiusY": 10,
+        }
         out = validate_ellipse(data)
         assert out["locked"] is False
 
@@ -181,12 +202,16 @@ class TestLockedSerialization:
 
     def test_parse_item_rectangle_preserves_locked(self):
         """parse_item should create RectangleItem with locked property."""
-        rect = parse_item({"type": "rectangle", "width": 10, "height": 10, "locked": True})
+        rect = parse_item(
+            {"type": "rectangle", "width": 10, "height": 10, "locked": True}
+        )
         assert rect.locked is True
 
     def test_parse_item_ellipse_preserves_locked(self):
         """parse_item should create EllipseItem with locked property."""
-        ell = parse_item({"type": "ellipse", "radiusX": 10, "radiusY": 10, "locked": True})
+        ell = parse_item(
+            {"type": "ellipse", "radiusX": 10, "radiusY": 10, "locked": True}
+        )
         assert ell.locked is True
 
     def test_parse_item_layer_preserves_locked(self):
@@ -211,4 +236,3 @@ class TestLockedSerialization:
         layer = LayerItem(name="Test", locked=True)
         out = item_to_dict(layer)
         assert out["locked"] is True
-

@@ -1,4 +1,5 @@
 """Shared item validation and serialization helpers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -239,4 +240,3 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "locked": getattr(item, "locked", False),
         }
     raise ItemSchemaError(f"Cannot serialize unknown item type: {type(item).__name__}")
-

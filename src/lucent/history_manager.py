@@ -1,4 +1,5 @@
 """Undo/redo orchestration independent of the Qt model."""
+
 from __future__ import annotations
 
 from typing import Callable, List, Optional
@@ -96,4 +97,3 @@ class HistoryManager:
 
     def _notify_redo_stack_changed(self) -> None:
         self._on_redo_stack_changed()
-

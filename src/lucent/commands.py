@@ -1,4 +1,5 @@
 """Command pattern classes for undo/redo functionality."""
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Mapping
 from PySide6.QtCore import QModelIndex
@@ -7,7 +8,12 @@ if TYPE_CHECKING:
     from lucent.canvas_model import CanvasModel
 
 from lucent.canvas_items import CanvasItem, RectangleItem, EllipseItem, LayerItem
-from lucent.item_schema import parse_item, parse_item_data, item_to_dict, ItemSchemaError
+from lucent.item_schema import (
+    parse_item,
+    parse_item_data,
+    item_to_dict,
+    ItemSchemaError,
+)
 
 
 def _create_item(item_data: Dict[str, Any]) -> CanvasItem:
@@ -86,23 +92,29 @@ class RemoveItemCommand(Command):
         if 0 <= self._index < len(self._model._items):
             item = self._model._items[self._index]
             self._item_data = self._model._itemToDict(item)
-            
+
             # If removing a layer, also remove its children
             if isinstance(item, LayerItem):
                 layer_id = item.id
                 self._removed_children = []
                 # Collect child indices descending to remove safely
-                child_indices = [i for i, child in enumerate(self._model._items)
-                                 if isinstance(child, (RectangleItem, EllipseItem)) and child.parent_id == layer_id]
+                child_indices = [
+                    i
+                    for i, child in enumerate(self._model._items)
+                    if isinstance(child, (RectangleItem, EllipseItem))
+                    and child.parent_id == layer_id
+                ]
                 child_indices.sort(reverse=True)
                 for child_index in child_indices:
                     child = self._model._items[child_index]
-                    self._removed_children.append((child_index, self._model._itemToDict(child)))
+                    self._removed_children.append(
+                        (child_index, self._model._itemToDict(child))
+                    )
                     self._model.beginRemoveRows(QModelIndex(), child_index, child_index)
                     del self._model._items[child_index]
                     self._model.endRemoveRows()
                     # Do not emit itemRemoved for children; primary removal will emit once for the layer
-            
+
             self._model.beginRemoveRows(QModelIndex(), self._index, self._index)
             del self._model._items[self._index]
             self._model.endRemoveRows()
@@ -118,7 +130,9 @@ class RemoveItemCommand(Command):
 
             # Reinsert previously removed children, preserving order
             # Insert children after the layer to keep grouping reasonable
-            for child_index, child_data in sorted(self._removed_children, key=lambda x: x[0]):
+            for child_index, child_data in sorted(
+                self._removed_children, key=lambda x: x[0]
+            ):
                 insert_at = min(child_index, len(self._model._items))
                 self._model.beginInsertRows(QModelIndex(), insert_at, insert_at)
                 self._model._items.insert(insert_at, _create_item(child_data))
@@ -203,9 +217,12 @@ class MoveItemCommand(Command):
     def execute(self) -> None:
         items = self._model._items
         # For beginMoveRows, destRow is the index BEFORE which the item will be inserted
-        dest_row = self._to_index + 1 if self._to_index > self._from_index else self._to_index
-        self._model.beginMoveRows(QModelIndex(), self._from_index, self._from_index,
-                                   QModelIndex(), dest_row)
+        dest_row = (
+            self._to_index + 1 if self._to_index > self._from_index else self._to_index
+        )
+        self._model.beginMoveRows(
+            QModelIndex(), self._from_index, self._from_index, QModelIndex(), dest_row
+        )
         item = items.pop(self._from_index)
         items.insert(self._to_index, item)
         self._model.endMoveRows()
@@ -213,9 +230,14 @@ class MoveItemCommand(Command):
 
     def undo(self) -> None:
         items = self._model._items
-        dest_row = self._from_index + 1 if self._from_index > self._to_index else self._from_index
-        self._model.beginMoveRows(QModelIndex(), self._to_index, self._to_index,
-                                   QModelIndex(), dest_row)
+        dest_row = (
+            self._from_index + 1
+            if self._from_index > self._to_index
+            else self._from_index
+        )
+        self._model.beginMoveRows(
+            QModelIndex(), self._to_index, self._to_index, QModelIndex(), dest_row
+        )
         item = items.pop(self._to_index)
         items.insert(self._from_index, item)
         self._model.endMoveRows()
@@ -242,4 +264,3 @@ class TransactionCommand(Command):
     def undo(self) -> None:
         for cmd in reversed(self._commands):
             cmd.undo()
-

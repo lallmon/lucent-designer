@@ -1,12 +1,24 @@
 """Canvas model for Lucent - manages canvas items with undo/redo support."""
+
 from typing import List, Optional, Dict, Any
 from PySide6.QtCore import (
-    QAbstractListModel, QModelIndex, Qt, Signal, Slot, Property, QObject
+    QAbstractListModel,
+    QModelIndex,
+    Qt,
+    Signal,
+    Slot,
+    Property,
+    QObject,
 )
 from lucent.canvas_items import CanvasItem, RectangleItem, EllipseItem, LayerItem
 from lucent.commands import (
-    Command, AddItemCommand, RemoveItemCommand,
-    UpdateItemCommand, ClearCommand, MoveItemCommand, TransactionCommand
+    Command,
+    AddItemCommand,
+    RemoveItemCommand,
+    UpdateItemCommand,
+    ClearCommand,
+    MoveItemCommand,
+    TransactionCommand,
 )
 from lucent.history_manager import HistoryManager
 from lucent.item_schema import (
@@ -25,8 +37,8 @@ class CanvasModel(QAbstractListModel):
     NameRole = Qt.UserRole + 1
     TypeRole = Qt.UserRole + 2
     IndexRole = Qt.UserRole + 3
-    ItemIdRole = Qt.UserRole + 4      # Unique ID for layers
-    ParentIdRole = Qt.UserRole + 5    # Parent layer ID for shapes
+    ItemIdRole = Qt.UserRole + 4  # Unique ID for layers
+    ParentIdRole = Qt.UserRole + 5  # Parent layer ID for shapes
     VisibleRole = Qt.UserRole + 6
     EffectiveVisibleRole = Qt.UserRole + 7
     LockedRole = Qt.UserRole + 8
@@ -36,7 +48,7 @@ class CanvasModel(QAbstractListModel):
     itemAdded = Signal(int)
     itemRemoved = Signal(int)
     itemsCleared = Signal()
-    itemModified = Signal(int, 'QVariant')  # index and item data
+    itemModified = Signal(int, "QVariant")  # index and item data
     itemsReordered = Signal()
     undoStackChanged = Signal()
     redoStackChanged = Signal()
@@ -133,7 +145,9 @@ class CanvasModel(QAbstractListModel):
             if index < len(self._items):
                 current_data = self._itemToDict(self._items[index])
                 if current_data != old_data:
-                    commands.append(UpdateItemCommand(self, index, old_data, current_data))
+                    commands.append(
+                        UpdateItemCommand(self, index, old_data, current_data)
+                    )
 
         self._transaction_snapshot = {}
 
@@ -192,7 +206,11 @@ class CanvasModel(QAbstractListModel):
     @Slot(dict)
     def addItem(self, item_data: Dict[str, Any]) -> None:
         item_type = item_data.get("type", "")
-        if item_type not in (ItemType.RECTANGLE.value, ItemType.ELLIPSE.value, ItemType.LAYER.value):
+        if item_type not in (
+            ItemType.RECTANGLE.value,
+            ItemType.ELLIPSE.value,
+            ItemType.LAYER.value,
+        ):
             print(f"Warning: Unknown item type '{item_type}'")
             return
 
@@ -241,38 +259,38 @@ class CanvasModel(QAbstractListModel):
             return
         if not (0 <= to_index < len(self._items)):
             return
-        
+
         item = self._items[from_index]
-        
+
         # Check if moving a layer - need to move children too
         if isinstance(item, LayerItem):
             children_indices = self._getLayerChildrenIndices(item.id)
             if children_indices:
                 self._moveLayerWithChildren(from_index, to_index, children_indices)
                 return
-        
+
         command = MoveItemCommand(self, from_index, to_index)
         self._execute_command(command)
 
     @Slot(int, str)
     def setParent(self, item_index: int, parent_id: str) -> None:
         """Set the parent layer for a shape item.
-        
+
         Args:
             item_index: Index of the shape item to reparent
             parent_id: ID of the layer to set as parent, or empty string to make top-level
         """
         if not (0 <= item_index < len(self._items)):
             return
-        
+
         item = self._items[item_index]
         # Only shapes can have parents
         if not isinstance(item, (RectangleItem, EllipseItem)):
             return
-        
+
         # Convert empty string to None for top-level items
         new_parent_id = parent_id if parent_id else None
-        
+
         # Update via updateItem to get proper undo/redo support
         self.updateItem(item_index, {"parentId": new_parent_id})
 
@@ -286,14 +304,14 @@ class CanvasModel(QAbstractListModel):
 
     def _findLastChildPosition(self, layer_id: str) -> int:
         """Find the position where a new child of the layer should be inserted.
-        
+
         Returns the index just before the next top-level item after the layer,
         or the end of the list if no such item exists.
         """
         layer_index = self.getLayerIndex(layer_id)
         if layer_index < 0:
             return len(self._items)
-        
+
         # Scan from after the layer to find the next top-level item
         for i in range(layer_index + 1, len(self._items)):
             item = self._items[i]
@@ -304,7 +322,7 @@ class CanvasModel(QAbstractListModel):
                 if item.parent_id is None:
                     # Top-level shape found - insert before it
                     return i
-        
+
         # No top-level item found after layer, insert at end
         return len(self._items)
 
@@ -312,46 +330,53 @@ class CanvasModel(QAbstractListModel):
         """Get indices of all children belonging to a layer."""
         children = []
         for i, item in enumerate(self._items):
-            if isinstance(item, (RectangleItem, EllipseItem)) and item.parent_id == layer_id:
+            if (
+                isinstance(item, (RectangleItem, EllipseItem))
+                and item.parent_id == layer_id
+            ):
                 children.append(i)
         return children
 
-    def _moveLayerWithChildren(self, layer_from: int, layer_to: int, children_indices: List[int]) -> None:
+    def _moveLayerWithChildren(
+        self, layer_from: int, layer_to: int, children_indices: List[int]
+    ) -> None:
         """Move a layer along with all its children as a group.
-        
+
         This maintains the parent-child visual grouping by extracting the layer
         and all its children, then reinserting them at the target position.
         """
         # Collect all indices to move (layer + children), sorted descending for safe removal
         all_indices = sorted([layer_from] + children_indices, reverse=True)
-        
+
         # Extract items in order (we'll reverse after extraction)
         extracted_items = []
         for idx in all_indices:
             extracted_items.append(self._items.pop(idx))
-        
+
         # Reverse to get original order (layer first, then children)
         extracted_items.reverse()
-        
+
         # Calculate insertion point
         # The goal: place the group so it ends up at/near the target position
         # When moving up (to lower index): insert at layer_to
         # When moving down (to higher index): insert AFTER the target position
         remaining_count = len(self._items)  # After extraction
-        
+
         if layer_to < layer_from:
             # Moving up - insert at the target position
             insert_at = layer_to
         else:
             # Moving down - account for removed items and insert at end of target area
-            items_removed_before_target = sum(1 for idx in all_indices if idx < layer_to)
+            items_removed_before_target = sum(
+                1 for idx in all_indices if idx < layer_to
+            )
             # +1 to insert AFTER the target position (not before it)
             insert_at = min(layer_to - items_removed_before_target + 1, remaining_count)
-        
+
         # Insert all items at the target position
         for i, item in enumerate(extracted_items):
             self._items.insert(insert_at + i, item)
-        
+
         # Notify model of changes using proper row signals
         self.beginResetModel()
         self.endResetModel()
@@ -360,29 +385,29 @@ class CanvasModel(QAbstractListModel):
     @Slot(int, str)
     def reparentItem(self, item_index: int, parent_id: str) -> None:
         """Set parent and move item to be last child of that layer.
-        
+
         This combines setParent + moveItem into a single undoable operation.
         The item is moved to be just before the next top-level item after the layer.
-        
+
         Args:
             item_index: Index of the shape item to reparent
             parent_id: ID of the layer to set as parent, or empty string to unparent
         """
         if not (0 <= item_index < len(self._items)):
             return
-        
+
         item = self._items[item_index]
         # Only shapes can have parents
         if not isinstance(item, (RectangleItem, EllipseItem)):
             return
-        
+
         # Convert empty string to None for top-level items
         new_parent_id = parent_id if parent_id else None
-        
+
         # If already has this parent and we're not unparenting, skip
         if item.parent_id == new_parent_id:
             return
-        
+
         # Calculate target position
         if new_parent_id:
             # Moving into a layer - position as last child
@@ -393,35 +418,37 @@ class CanvasModel(QAbstractListModel):
         else:
             # Unparenting - keep at current position (just clear parent)
             target_index = item_index
-        
+
         # Use a transaction to group both operations for single undo
         # Store old state
         old_props = self._itemToDict(item)
         old_index = item_index
-        
+
         # Set parent
         item.parent_id = new_parent_id
         new_props = self._itemToDict(item)
-        
+
         # Create commands
         commands: List[Command] = []
-        
+
         # Add update command for parent change
         commands.append(UpdateItemCommand(self, item_index, old_props, new_props))
-        
+
         # Add move command if position changes
         if target_index != item_index:
             commands.append(MoveItemCommand(self, item_index, target_index))
-        
+
         # Execute as transaction
         if len(commands) == 1:
             self._execute_command(commands[0])
         else:
             transaction = TransactionCommand(commands, "Reparent Item")
             self._execute_command(transaction)
-        
+
         # Emit signals for UI update
-        model_index = self.index(target_index if target_index != item_index else item_index, 0)
+        model_index = self.index(
+            target_index if target_index != item_index else item_index, 0
+        )
         self.dataChanged.emit(model_index, model_index, [])
 
     @Slot(int, dict)
@@ -517,13 +544,13 @@ class CanvasModel(QAbstractListModel):
     def getItems(self) -> List[CanvasItem]:
         return self._items
 
-    @Slot(int, result='QVariant')
+    @Slot(int, result="QVariant")
     def getItemData(self, index: int) -> Optional[Dict[str, Any]]:
         if 0 <= index < len(self._items):
             return self._itemToDict(self._items[index])
         return None
 
-    @Slot(result='QVariantList')
+    @Slot(result="QVariantList")
     def getItemsForHitTest(self) -> List[Dict[str, Any]]:
         visible_items: List[Dict[str, Any]] = []
         for idx, item in enumerate(self._items):
@@ -533,7 +560,7 @@ class CanvasModel(QAbstractListModel):
 
     def getRenderItems(self) -> List[CanvasItem]:
         """Return items in render order (front to back) skipping layers.
-        
+
         Groups children under their layer, reversing order within each group so
         the latest-added child paints above earlier siblings. Layers retain
         their model order.

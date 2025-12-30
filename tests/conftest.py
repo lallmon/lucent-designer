@@ -1,4 +1,5 @@
 """Pytest configuration and shared fixtures for Lucent tests."""
+
 import pytest
 from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
@@ -9,7 +10,7 @@ from lucent.canvas_renderer import CanvasRenderer
 @pytest.fixture(scope="session")
 def qapp():
     """Create a QApplication instance for the test session.
-    
+
     Qt requires a QApplication instance to be created before any Qt objects.
     This fixture creates one that lasts for the entire test session.
     """
@@ -38,4 +39,3 @@ def qml_engine(qapp):
     engine = QQmlApplicationEngine()
     yield engine
     engine.deleteLater()
-
