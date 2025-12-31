@@ -50,10 +50,10 @@ class CanvasRenderer(QQuickPaintedItem):
     def paint(self, painter: QPainter) -> None:
         """Render all items from the model using QPainter.
 
-        Rendering order respects parent-child relationships:
-        - Items are rendered bottom-to-top based on their position in the list
-        - When a layer is encountered, its children are rendered immediately after it
-        - This groups children visually with their parent layer in Z-order
+        Rendering order follows CanvasModel model order:
+        - Lower indices are painted first (further back)
+        - Higher indices are painted later (on top)
+        - Layers themselves are skipped by getRenderItems
         """
         if not self._model:
             return

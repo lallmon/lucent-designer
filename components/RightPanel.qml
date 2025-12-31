@@ -21,13 +21,8 @@ Pane {
             ObjectPropertiesInspector {
                 id: propertiesInspector
                 anchors.fill: parent
-                Binding {
-                    target: propertiesInspector
-                    property: "selectedItem"
-                    value: DV.SelectionManager.selectedItem
-                    when: DV.SelectionManager.selectedItem !== propertiesInspector.selectedItem
-                    restoreMode: Binding.RestoreNone
-                }
+                // Direct binding avoids binding loop warnings seen with Binding element
+                selectedItem: DV.SelectionManager.selectedItem
             }
         }
 

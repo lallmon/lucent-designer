@@ -1,0 +1,26 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 90%
+        threshold: 2%
+        base: auto
+        if_no_uploads: error
+        informational: false
+    
+    patch:
+      default:
+        target: 90%
+        threshold: 0%
+        base: auto
+        if_no_uploads: error
+        informational: false
+
+codecov:
+  require_ci_to_pass: true
+  comment:
+    layout: "diff,flags"
+    behavior: default
+    require_changes: false
+    hide_comment: false
+    hide_project_coverage: false

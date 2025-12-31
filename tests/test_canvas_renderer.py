@@ -24,8 +24,8 @@ class TestCanvasRendererZOrder:
         renderer.setModel(canvas_model)
         return renderer
 
-    def test_render_order_reverses_model_order(self, canvas_renderer, canvas_model):
-        """Render order should be reversed from model order (lower index = on top)."""
+    def test_render_order_matches_model_order(self, canvas_renderer, canvas_model):
+        """Render order follows model order (higher index paints on top)."""
         canvas_model.addItem(
             {
                 "type": "rectangle",
@@ -60,11 +60,11 @@ class TestCanvasRendererZOrder:
         # Model order: [First (0), Second (1), Third (2)]
         render_order = canvas_renderer._get_render_order()
 
-        # Render order reversed: Third first (behind), First last (on top)
+        # Render order matches model order (painting later items on top)
         assert len(render_order) == 3
-        assert render_order[0].name == "Third"
+        assert render_order[0].name == "First"
         assert render_order[1].name == "Second"
-        assert render_order[2].name == "First"
+        assert render_order[2].name == "Third"
 
     def test_render_order_skips_layers(self, canvas_renderer, canvas_model):
         """Layers should be skipped in render order (they're organizational only)."""
@@ -100,7 +100,7 @@ class TestCanvasRendererZOrder:
         assert render_order[1].name == "Ellipse1"
 
     def test_render_order_with_parented_items(self, canvas_renderer, canvas_model):
-        """Parented items should render in reversed model order."""
+        """Parented items render in model order."""
         canvas_model.addLayer()
         layer = canvas_model.getItems()[0]
         canvas_model.addItem(
@@ -129,10 +129,10 @@ class TestCanvasRendererZOrder:
         # Model: [Layer, Child1, Child2]
         render_order = canvas_renderer._get_render_order()
 
-        # Reversed: Child2 renders first (behind), Child1 renders last (on top)
+        # Model order preserved
         assert len(render_order) == 2
-        assert render_order[0].name == "Child2"
-        assert render_order[1].name == "Child1"
+        assert render_order[0].name == "Child1"
+        assert render_order[1].name == "Child2"
 
     def test_render_order_after_layer_move(self, canvas_renderer, canvas_model):
         """After moving a layer, render order should reflect new model order."""

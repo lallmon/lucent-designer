@@ -6,6 +6,13 @@ import "." as DV
 Item {
     id: root
 
+    // Map between visual order (top-to-bottom) and model order (append order).
+    // Top of the list should correspond to the highest Z on canvas, so visual
+    // index 0 maps to model index (count - 1).
+    function modelIndexForDisplay(displayIndex) {
+        return layerRepeater.count - 1 - displayIndex;
+    }
+
     property int draggedIndex: -1
     property string draggedItemType: ""
     property string dropTargetLayerId: ""
@@ -77,7 +84,7 @@ Item {
                 id: layerFlickable
                 anchors.fill: parent
                 // Ensure content area is at least viewport height so empty-state label can center vertically
-                contentHeight: Math.max(layerColumn.childrenRect.height, height)
+                contentHeight: Math.max(layerColumn.contentHeight, height)
                 property real autoScrollStep: 8
                 interactive: root.draggedIndex < 0
                 boundsBehavior: Flickable.StopAtBounds
@@ -107,10 +114,15 @@ Item {
                     }
                 }
 
-                Column {
+                Item {
                     id: layerColumn
                     width: layerFlickable.width
-                    spacing: layerContainer.itemSpacing
+                    property real contentHeight: {
+                        const count = layerRepeater.count;
+                        if (count <= 0)
+                            return 0;
+                        return count * layerContainer.itemHeight + Math.max(0, count - 1) * layerContainer.itemSpacing;
+                    }
 
                     Repeater {
                         id: layerRepeater
@@ -121,6 +133,7 @@ Item {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             height: layerContainer.itemHeight
+                            y: displayIndex * (layerContainer.itemHeight + layerContainer.itemSpacing)
 
                             // Model role properties (auto-bound from QAbstractListModel)
                             required property int index
@@ -132,12 +145,12 @@ Item {
                             required property bool modelVisible
                             required property bool modelLocked
 
-                            // Use layerRepeater.count (reactive property) not canvasModel.rowCount() (method)
-                            // Methods don't trigger binding updates; properties do
-                            property int displayIndex: layerRepeater.count - 1 - index
-                            // Use model index for selection comparison (not displayIndex)
-                            property bool isSelected: index === DV.SelectionManager.selectedItemIndex
-                            property bool isBeingDragged: root.draggedIndex === index
+                            // Model index is the source-of-truth for data operations.
+                            property int modelIndex: index
+                            // Visual order is reversed so top of the list is highest Z.
+                            property int displayIndex: layerRepeater.count - 1 - modelIndex
+                            property bool isSelected: modelIndex === DV.SelectionManager.selectedItemIndex
+                            property bool isBeingDragged: root.draggedIndex === modelIndex
                             property real dragOffsetY: 0
                             property bool hasParent: !!parentId
                             property bool isLayer: itemType === "layer"
@@ -159,13 +172,13 @@ Item {
 
                                 Rectangle {
                                     // Separator between items; thickens and highlights when this is the insertion target
-                                    property bool isInsertTarget: delegateRoot.index === root.dropInsertIndex
+                                    property bool isInsertTarget: delegateRoot.displayIndex === root.dropInsertIndex
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
                                     height: isInsertTarget ? 3 : 1
                                     color: isInsertTarget ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
-                                    visible: delegateRoot.index > 0 || isInsertTarget
+                                    visible: delegateRoot.displayIndex > 0 || isInsertTarget
                                 }
 
                                 RowLayout {
@@ -203,7 +216,7 @@ Item {
                                             onActiveChanged: {
                                                 try {
                                                     if (active) {
-                                                        root.draggedIndex = delegateRoot.index;
+                                                        root.draggedIndex = delegateRoot.modelIndex;
                                                         root.draggedItemType = delegateRoot.itemType;
                                                         root.draggedItemParentId = delegateRoot.parentId;
                                                         layerContainer.dragStartContentY = layerFlickable.contentY;
@@ -216,9 +229,10 @@ Item {
                                                             // Calculate target model index for potential reordering
                                                             let totalItemHeight = layerContainer.itemHeight + layerContainer.itemSpacing;
                                                             let indexDelta = Math.round(delegateRoot.dragOffsetY / totalItemHeight);
-                                                            let targetModelIndex = delegateRoot.index + indexDelta;
+                                                            let targetDisplayIndex = root.dropInsertIndex >= 0 ? root.dropInsertIndex : delegateRoot.displayIndex + indexDelta;
                                                             let rowCount = layerRepeater.count;
-                                                            targetModelIndex = Math.max(0, Math.min(rowCount - 1, targetModelIndex));
+                                                            targetDisplayIndex = Math.max(0, Math.min(rowCount - 1, targetDisplayIndex));
+                                                            let targetModelIndex = root.modelIndexForDisplay(targetDisplayIndex);
 
                                                             // Determine the action based on drag context
                                                             if (root.dropTargetLayerId !== "" && root.draggedItemType !== "layer") {
@@ -230,7 +244,21 @@ Item {
                                                                     }
                                                                 } else {
                                                                     // Different layer - reparent to that layer
-                                                                    canvasModel.reparentItem(root.draggedIndex, root.dropTargetLayerId);
+                                                                    // Insert directly below the layer by default, or at the drop gap if provided
+                                                                    let layerIndex = canvasModel.getLayerIndex(root.dropTargetLayerId);
+                                                                    let insertModelIndex = (root.dropInsertIndex >= 0) ? targetModelIndex : layerIndex;
+                                                                    canvasModel.reparentItem(root.draggedIndex, root.dropTargetLayerId, insertModelIndex);
+                                                                }
+                                                            } else if (root.dropTargetParentId && root.draggedItemType !== "layer") {
+                                                                // Dropping onto a gap between children of a layer
+                                                                const isSameParent = root.draggedItemParentId === root.dropTargetParentId;
+                                                                let insertModelIndex = targetModelIndex;
+                                                                if (isSameParent) {
+                                                                    if (insertModelIndex !== root.draggedIndex) {
+                                                                        canvasModel.moveItem(root.draggedIndex, insertModelIndex);
+                                                                    }
+                                                                } else {
+                                                                    canvasModel.reparentItem(root.draggedIndex, root.dropTargetParentId, insertModelIndex);
                                                                 }
                                                             } else if (root.draggedItemParentId && root.dropTargetParentId === root.draggedItemParentId) {
                                                                 // Dropping onto a sibling (same parent) - just reorder, keep parent
@@ -239,7 +267,7 @@ Item {
                                                                 }
                                                             } else if (root.draggedItemParentId && !root.dropTargetParentId && root.dropTargetLayerId === "") {
                                                                 // Dropping a child onto a top-level item - unparent
-                                                                canvasModel.reparentItem(root.draggedIndex, "");
+                                                                canvasModel.reparentItem(root.draggedIndex, "", targetModelIndex);
                                                             } else {
                                                                 // Normal z-order reordering for top-level items
                                                                 if (targetModelIndex !== root.draggedIndex) {
@@ -286,19 +314,29 @@ Item {
                                             }
 
                                             function updateDropTarget() {
-                                                // Find which row we're over based on drag offset
-                                                let totalItemHeight = layerContainer.itemHeight + layerContainer.itemSpacing;
-                                                let indexDelta = Math.round(delegateRoot.dragOffsetY / totalItemHeight);
-                                                let targetListIndex = delegateRoot.index + indexDelta;
-                                                let rowCount = layerRepeater.count;
-                                                targetListIndex = Math.max(0, Math.min(rowCount - 1, targetListIndex));
+                                                if (layerRepeater.count === 0)
+                                                    return;
+                                                if (!dragHandler.centroid || !dragHandler.centroid.position)
+                                                    return;
 
-                                                // Calculate fractional position within the target row
-                                                let exactOffset = delegateRoot.dragOffsetY / totalItemHeight;
-                                                let fractionalPart = exactOffset - Math.floor(exactOffset);
-                                                let isLayerParentingZone = fractionalPart > 0.25 && fractionalPart < 0.75;
+                                                // Use pointer position within the list to determine target row
+                                                const totalItemHeight = layerContainer.itemHeight + layerContainer.itemSpacing;
+                                                const rowCount = layerRepeater.count;
+                                                const p = delegateRoot.mapToItem(layerColumn, 0, dragHandler.centroid.position.y);
+                                                let yInColumn = p.y;
+                                                // Clamp to column bounds
+                                                yInColumn = Math.max(0, Math.min(layerColumn.contentHeight - 1, yInColumn));
 
-                                                let targetItem = layerRepeater.itemAt(targetListIndex);
+                                                let targetDisplayIndex = Math.floor(yInColumn / totalItemHeight);
+                                                targetDisplayIndex = Math.max(0, Math.min(rowCount - 1, targetDisplayIndex));
+
+                                                // Calculate fractional position within the target row using absolute pointer
+                                                const positionInRow = yInColumn / totalItemHeight;
+                                                const fractionalPart = positionInRow - Math.floor(positionInRow);
+                                                const isLayerParentingZone = fractionalPart > 0.25 && fractionalPart < 0.75;
+
+                                                const targetModelIndex = root.modelIndexForDisplay(targetDisplayIndex);
+                                                const targetItem = layerRepeater.itemAt(targetModelIndex);
                                                 if (targetItem && targetItem.isLayer && root.draggedItemType !== "layer" && isLayerParentingZone) {
                                                     // Center of a layer - show as drop target for parenting
                                                     root.dropTargetLayerId = targetItem.itemId;
@@ -311,13 +349,14 @@ Item {
                                                     // Insert indicator shows on the item below the insertion gap
                                                     if (fractionalPart >= 0.5) {
                                                         // Dropping below target row, indicator on next item
-                                                        root.dropInsertIndex = Math.min(targetListIndex + 1, rowCount - 1);
+                                                        root.dropInsertIndex = Math.min(targetDisplayIndex + 1, rowCount - 1);
                                                     } else {
                                                         // Dropping above target row, indicator on target item
-                                                        root.dropInsertIndex = targetListIndex;
+                                                        root.dropInsertIndex = targetDisplayIndex;
                                                     }
                                                     // Hide indicator when dragging over self or adjacent position (no move would occur)
-                                                    if (root.dropInsertIndex === root.draggedIndex || root.dropInsertIndex === root.draggedIndex + 1) {
+                                                    const draggedDisplayIndex = delegateRoot.displayIndex;
+                                                    if (root.dropInsertIndex === draggedDisplayIndex || root.dropInsertIndex === draggedDisplayIndex + 1) {
                                                         root.dropInsertIndex = -1;
                                                     }
                                                 }
@@ -356,7 +395,7 @@ Item {
                                             draftName = nameField.text;
                                             isEditing = false;
                                             if (draftName !== delegateRoot.name) {
-                                                canvasModel.renameItem(delegateRoot.index, draftName);
+                                                canvasModel.renameItem(delegateRoot.modelIndex, draftName);
                                             }
                                         }
 
@@ -380,12 +419,12 @@ Item {
                                             preventStealing: true
                                             cursorShape: Qt.IBeamCursor
                                             onClicked: {
-                                                DV.SelectionManager.selectedItemIndex = delegateRoot.index;
-                                                DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.index);
+                                                DV.SelectionManager.selectedItemIndex = delegateRoot.modelIndex;
+                                                DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.modelIndex);
                                             }
                                             onDoubleClicked: {
-                                                DV.SelectionManager.selectedItemIndex = delegateRoot.index;
-                                                DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.index);
+                                                DV.SelectionManager.selectedItemIndex = delegateRoot.modelIndex;
+                                                DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.modelIndex);
                                                 nameEditor.startEditing();
                                             }
                                         }
@@ -442,7 +481,7 @@ Item {
                                             acceptedButtons: Qt.LeftButton
                                             preventStealing: true
                                             onClicked: {
-                                                canvasModel.toggleVisibility(delegateRoot.index);
+                                                canvasModel.toggleVisibility(delegateRoot.modelIndex);
                                             }
                                         }
 
@@ -475,7 +514,7 @@ Item {
                                             acceptedButtons: Qt.LeftButton
                                             preventStealing: true
                                             onClicked: {
-                                                canvasModel.toggleLocked(delegateRoot.index);
+                                                canvasModel.toggleLocked(delegateRoot.modelIndex);
                                             }
                                         }
 
@@ -509,9 +548,9 @@ Item {
                                             preventStealing: true
                                             onClicked: {
                                                 // Ensure selection reflects the target being deleted
-                                                DV.SelectionManager.selectedItemIndex = delegateRoot.index;
-                                                DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.index);
-                                                canvasModel.removeItem(delegateRoot.index);
+                                                DV.SelectionManager.selectedItemIndex = delegateRoot.modelIndex;
+                                                DV.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.modelIndex);
+                                                canvasModel.removeItem(delegateRoot.modelIndex);
                                             }
                                         }
 
