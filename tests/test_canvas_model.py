@@ -2220,6 +2220,53 @@ class TestCanvasModelReparentItem:
         assert names[0] == "B"
         assert canvas_model.getItems()[0].parent_id is None
 
+    def test_reparent_insert_clamps_to_layer_position(self, canvas_model):
+        """Insert indices beyond layer should clamp to directly above the layer."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "A",
+            }
+        )
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "B",
+            }
+        )
+
+        # Insert index 99 should clamp to layer position (0) and place B
+        # before the layer
+        canvas_model.reparentItem(2, layer.id, 99)
+
+        names = [item.name for item in canvas_model.getItems()]
+        assert names == ["B", "Layer 1", "A"]
+        assert canvas_model.getItems()[0].parent_id == layer.id
+
+    def test_reparent_invalid_layer_is_noop(self, canvas_model):
+        """Reparenting to a non-existent layer should do nothing."""
+        canvas_model.addItem(
+            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
+        )
+        initial = canvas_model.getItems()
+        initial_can_undo = canvas_model.canUndo
+
+        canvas_model.reparentItem(0, "missing-layer-id", 0)
+
+        after = canvas_model.getItems()
+        assert [item.name for item in after] == [item.name for item in initial]
+        assert initial_can_undo == canvas_model.canUndo
+
     def test_reparent_unparent_clears_parent_id(self, canvas_model):
         """reparentItem with empty string should clear parent_id."""
         canvas_model.addLayer()
