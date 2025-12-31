@@ -2134,6 +2134,92 @@ class TestCanvasModelReparentItem:
         assert names == ["A", "C", "B", layer.name]
         assert canvas_model.getItems()[1].parent_id == layer.id
 
+    def test_reparent_same_parent_with_insert_moves_only(self, canvas_model):
+        """reparentItem with same parent and insert index should just move."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "A",
+            }
+        )
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "B",
+            }
+        )
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "C",
+            }
+        )
+
+        canvas_model.reparentItem(1, layer.id)  # A under layer
+        canvas_model.reparentItem(2, layer.id)  # B under layer
+        canvas_model.reparentItem(3, layer.id)  # C under layer
+
+        # Move C to between A and B using same parent insert
+        canvas_model.reparentItem(2, layer.id, 1)
+
+        names = [item.name for item in canvas_model.getItems()]
+        assert names == ["A", "C", "B", layer.name]
+        assert canvas_model.getItems()[1].parent_id == layer.id
+
+    def test_reparent_unparent_with_insert(self, canvas_model):
+        """Unparenting with insert index should clear parent and move."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "A",
+            }
+        )
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "B",
+            }
+        )
+
+        canvas_model.reparentItem(1, layer.id)  # A under layer
+        canvas_model.reparentItem(2, layer.id)  # B under layer
+
+        # Unparent B and place at start of list
+        b_index = next(
+            i
+            for i, item in enumerate(canvas_model.getItems())
+            if getattr(item, "name", "") == "B"
+        )
+        canvas_model.reparentItem(b_index, "", 0)
+
+        names = [item.name for item in canvas_model.getItems()]
+        assert names[0] == "B"
+        assert canvas_model.getItems()[0].parent_id is None
+
     def test_reparent_unparent_clears_parent_id(self, canvas_model):
         """reparentItem with empty string should clear parent_id."""
         canvas_model.addLayer()
