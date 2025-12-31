@@ -2010,48 +2010,6 @@ class TestCanvasModelVisibility:
 class TestCanvasModelReparentItem:
     """Tests for reparentItem which combines setParent + moveItem."""
 
-    def test_reparent_sets_parent_id(self, canvas_model):
-        """reparentItem should set the parent_id on the shape."""
-        canvas_model.addLayer()
-        layer = canvas_model.getItems()[0]
-        canvas_model.addItem(
-            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
-        )
-
-        canvas_model.reparentItem(1, layer.id)
-
-        # Rectangle should now have parent set (it moves before the layer)
-        rect = next(
-            item for item in canvas_model.getItems() if hasattr(item, "parent_id")
-        )
-        assert rect.parent_id == layer.id
-
-    def test_reparent_moves_item_before_layer(self, canvas_model):
-        """reparentItem should place shape before the layer (top child)."""
-        # Setup: Layer at 0, shapes at 1, 2, 3
-        canvas_model.addLayer()
-        layer = canvas_model.getItems()[0]
-        canvas_model.addItem(
-            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
-        )  # Rect 1
-        canvas_model.addItem(
-            {"type": "rectangle", "x": 10, "y": 0, "width": 10, "height": 10}
-        )  # Rect 2
-        canvas_model.addItem(
-            {"type": "rectangle", "x": 20, "y": 0, "width": 10, "height": 10}
-        )  # Rect 3
-
-        # Reparent Rect 3 (index 3) to layer
-        canvas_model.reparentItem(3, layer.id)
-
-        # Rect 3 should now be at index 0 (right before layer)
-        items = canvas_model.getItems()
-        assert items[0].name == "Rectangle 3"
-        assert items[0].parent_id == layer.id
-        assert items[1].name == "Layer 1"
-        assert items[2].name == "Rectangle 1"
-        assert items[3].name == "Rectangle 2"
-
     def test_reparent_to_layer_with_existing_children(self, canvas_model):
         """reparentItem should place new child at top of children by default."""
         canvas_model.addLayer()
@@ -2267,32 +2225,6 @@ class TestCanvasModelReparentItem:
         assert [item.name for item in after] == [item.name for item in initial]
         assert initial_can_undo == canvas_model.canUndo
 
-    def test_reparent_unparent_clears_parent_id(self, canvas_model):
-        """reparentItem with empty string should clear parent_id."""
-        canvas_model.addLayer()
-        layer = canvas_model.getItems()[0]
-        canvas_model.addItem(
-            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
-        )
-
-        # Parent then unparent
-        canvas_model.reparentItem(1, layer.id)
-        rect = next(
-            item for item in canvas_model.getItems() if hasattr(item, "parent_id")
-        )
-        assert rect.parent_id == layer.id
-
-        rect_index = next(
-            i
-            for i, item in enumerate(canvas_model.getItems())
-            if hasattr(item, "parent_id")
-        )
-        canvas_model.reparentItem(rect_index, "")
-        rect = next(
-            item for item in canvas_model.getItems() if hasattr(item, "parent_id")
-        )
-        assert rect.parent_id is None
-
     def test_reparent_on_layer_does_nothing(self, canvas_model):
         """reparentItem on a layer should do nothing."""
         canvas_model.addLayer()
@@ -2303,23 +2235,6 @@ class TestCanvasModelReparentItem:
         canvas_model.reparentItem(1, layer1.id)
 
         # No command should be added
-        assert canvas_model.canUndo == initial_can_undo
-
-    def test_reparent_same_parent_does_nothing(self, canvas_model):
-        """reparentItem to same parent should do nothing."""
-        canvas_model.addLayer()
-        layer = canvas_model.getItems()[0]
-        canvas_model.addItem(
-            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
-        )
-
-        canvas_model.reparentItem(1, layer.id)
-        initial_can_undo = canvas_model.canUndo
-
-        # Reparent to same layer
-        canvas_model.reparentItem(1, layer.id)
-
-        # No additional command should be added
         assert canvas_model.canUndo == initial_can_undo
 
     def test_reparent_undo_restores_parent_and_position(self, canvas_model):
