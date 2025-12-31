@@ -2020,11 +2020,14 @@ class TestCanvasModelReparentItem:
 
         canvas_model.reparentItem(1, layer.id)
 
-        shape = canvas_model.getItems()[1]
-        assert shape.parent_id == layer.id
+        # Rectangle should now have parent set (it moves before the layer)
+        rect = next(
+            item for item in canvas_model.getItems() if hasattr(item, "parent_id")
+        )
+        assert rect.parent_id == layer.id
 
-    def test_reparent_moves_item_after_layer(self, canvas_model):
-        """reparentItem should move shape to be last child of layer."""
+    def test_reparent_moves_item_before_layer(self, canvas_model):
+        """reparentItem should place shape before the layer (top child)."""
         # Setup: Layer at 0, shapes at 1, 2, 3
         canvas_model.addLayer()
         layer = canvas_model.getItems()[0]
@@ -2041,16 +2044,16 @@ class TestCanvasModelReparentItem:
         # Reparent Rect 3 (index 3) to layer
         canvas_model.reparentItem(3, layer.id)
 
-        # Rect 3 should now be at index 1 (right after layer)
+        # Rect 3 should now be at index 0 (right before layer)
         items = canvas_model.getItems()
-        assert items[0].name == "Layer 1"
-        assert items[1].name == "Rectangle 3"
-        assert items[1].parent_id == layer.id
+        assert items[0].name == "Rectangle 3"
+        assert items[0].parent_id == layer.id
+        assert items[1].name == "Layer 1"
         assert items[2].name == "Rectangle 1"
         assert items[3].name == "Rectangle 2"
 
     def test_reparent_to_layer_with_existing_children(self, canvas_model):
-        """reparentItem should place new child after existing children."""
+        """reparentItem should place new child at top of children by default."""
         canvas_model.addLayer()
         layer = canvas_model.getItems()[0]
 
@@ -2068,17 +2071,68 @@ class TestCanvasModelReparentItem:
         # Parent Rect 1 to layer
         canvas_model.reparentItem(1, layer.id)
 
-        # Now parent Rect 3 to layer (it should go after Rect 1)
+        # Now parent Rect 3 (currently at index 3) to layer (it should go above
+        # Rect 1, directly under layer)
         canvas_model.reparentItem(3, layer.id)
 
         items = canvas_model.getItems()
-        assert items[0].name == "Layer 1"
-        assert items[1].name == "Rectangle 1"
+        assert [item.name for item in items] == [
+            "Rectangle 1",
+            "Rectangle 3",
+            "Layer 1",
+            "Rectangle 2",
+        ]
+        assert items[0].parent_id == layer.id
         assert items[1].parent_id == layer.id
-        assert items[2].name == "Rectangle 3"
-        assert items[2].parent_id == layer.id
-        assert items[3].name == "Rectangle 2"
         assert items[3].parent_id is None
+
+    def test_reparent_inserts_between_children(self, canvas_model):
+        """reparentItem with insert_index inserts among existing children."""
+        canvas_model.addLayer()
+        layer = canvas_model.getItems()[0]
+
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "A",
+            }
+        )
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "B",
+            }
+        )
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "C",
+            }
+        )
+
+        canvas_model.reparentItem(1, layer.id)  # A -> order: A, Layer, B, C
+        canvas_model.reparentItem(
+            2, layer.id
+        )  # B (current index 2) -> order: A, B, Layer, C
+
+        # Insert C (current index 3) between A and B (model index 1)
+        canvas_model.reparentItem(3, layer.id, 1)
+
+        names = [item.name for item in canvas_model.getItems()]
+        assert names == ["A", "C", "B", layer.name]
+        assert canvas_model.getItems()[1].parent_id == layer.id
 
     def test_reparent_unparent_clears_parent_id(self, canvas_model):
         """reparentItem with empty string should clear parent_id."""
@@ -2090,10 +2144,21 @@ class TestCanvasModelReparentItem:
 
         # Parent then unparent
         canvas_model.reparentItem(1, layer.id)
-        assert canvas_model.getItems()[1].parent_id == layer.id
+        rect = next(
+            item for item in canvas_model.getItems() if hasattr(item, "parent_id")
+        )
+        assert rect.parent_id == layer.id
 
-        canvas_model.reparentItem(1, "")
-        assert canvas_model.getItems()[1].parent_id is None
+        rect_index = next(
+            i
+            for i, item in enumerate(canvas_model.getItems())
+            if hasattr(item, "parent_id")
+        )
+        canvas_model.reparentItem(rect_index, "")
+        rect = next(
+            item for item in canvas_model.getItems() if hasattr(item, "parent_id")
+        )
+        assert rect.parent_id is None
 
     def test_reparent_on_layer_does_nothing(self, canvas_model):
         """reparentItem on a layer should do nothing."""
@@ -2142,9 +2207,13 @@ class TestCanvasModelReparentItem:
         # Reparent Rect 2 to layer
         canvas_model.reparentItem(2, layer.id)
 
-        # Rect 2 should be at index 1 with parent
-        assert canvas_model.getItems()[1].name == "Rectangle 2"
-        assert canvas_model.getItems()[1].parent_id == layer.id
+        # Rect 2 should be before the layer with parent
+        rect2 = next(
+            item
+            for item in canvas_model.getItems()
+            if getattr(item, "name", "") == "Rectangle 2"
+        )
+        assert rect2.parent_id == layer.id
 
         # Undo
         canvas_model.undo()
@@ -2168,9 +2237,12 @@ class TestCanvasModelReparentItem:
         canvas_model.undo()
         canvas_model.redo()
 
-        # Rect 2 should be at index 1 with parent
-        assert canvas_model.getItems()[1].name == "Rectangle 2"
-        assert canvas_model.getItems()[1].parent_id == layer.id
+        rect2 = next(
+            item
+            for item in canvas_model.getItems()
+            if getattr(item, "name", "") == "Rectangle 2"
+        )
+        assert rect2.parent_id == layer.id
 
     def test_reparent_invalid_index_does_nothing(self, canvas_model):
         """reparentItem with invalid index should do nothing."""
@@ -2902,9 +2974,12 @@ class TestCoverageEdgeCases:
         canvas_model.reparentItem(0, layer_id)
 
         # Verify rect0 is now a child of the layer
-        rect_parent = canvas_model.data(
-            canvas_model.index(1, 0), canvas_model.ParentIdRole
-        )
+        rect_parent = [
+            canvas_model.data(canvas_model.index(i, 0), canvas_model.ParentIdRole)
+            for i in range(canvas_model.rowCount())
+            if canvas_model.data(canvas_model.index(i, 0), canvas_model.TypeRole)
+            == "rectangle"
+        ][0]
         assert rect_parent == layer_id
 
     def test_is_effectively_visible_invalid_index(self, canvas_model):

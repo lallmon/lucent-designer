@@ -392,16 +392,24 @@ class CanvasModel(QAbstractListModel):
         self.endResetModel()
         self.itemsReordered.emit()
 
+    @Slot(int, str, int)
     @Slot(int, str)
-    def reparentItem(self, item_index: int, parent_id: str) -> None:
+    def reparentItem(
+        self, item_index: int, parent_id: str, insert_index: int = -1
+    ) -> None:
         """Set parent and move item to be last child of that layer.
 
         This combines setParent + moveItem into a single undoable operation.
-        The item is moved to be just before the next top-level item after the layer.
+        The item is moved to the requested insert position. For layers, the
+        default insert position is directly below the layer (top of its child
+        list in the UI).
 
         Args:
             item_index: Index of the shape item to reparent
             parent_id: ID of the layer to set as parent, or empty string to unparent
+            insert_index: Optional target model index to place the item. Defaults
+                to directly below the layer for a new parent, or to current
+                position when unparenting.
         """
         if not (0 <= item_index < len(self._items)):
             return
@@ -414,34 +422,41 @@ class CanvasModel(QAbstractListModel):
         # Convert empty string to None for top-level items
         new_parent_id = parent_id if parent_id else None
 
-        # If already has this parent and we're not unparenting, skip
-        if item.parent_id == new_parent_id:
-            return
-
         # Calculate target position
         if new_parent_id:
-            # Moving into a layer - position as last child
-            target_index = self._findLastChildPosition(new_parent_id)
+            layer_index = self.getLayerIndex(new_parent_id)
+            if layer_index < 0:
+                return
+
+            # Default: insert directly below the layer (so it shows under the
+            # layer in the UI)
+            target_index = insert_index if insert_index >= 0 else layer_index
+
+            # Clamp target to be at or before the layer to keep children under it
+            target_index = max(0, min(target_index, layer_index))
+
             # Adjust if item is before target (it will be removed first)
             if item_index < target_index:
                 target_index -= 1
         else:
-            # Unparenting - keep at current position (just clear parent)
-            target_index = item_index
+            # Unparenting - keep at current position unless insert provided
+            target_index = insert_index if insert_index >= 0 else item_index
 
         # Use a transaction to group both operations for single undo
         # Store old state
         old_props = self._itemToDict(item)
 
-        # Set parent
-        item.parent_id = new_parent_id
+        parent_changed = item.parent_id != new_parent_id
+        if parent_changed:
+            item.parent_id = new_parent_id
         new_props = self._itemToDict(item)
 
         # Create commands
         commands: List[Command] = []
 
         # Add update command for parent change
-        commands.append(UpdateItemCommand(self, item_index, old_props, new_props))
+        if parent_changed:
+            commands.append(UpdateItemCommand(self, item_index, old_props, new_props))
 
         # Add move command if position changes
         if target_index != item_index:

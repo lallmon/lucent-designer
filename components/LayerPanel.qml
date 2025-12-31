@@ -229,7 +229,7 @@ Item {
                                                             // Calculate target model index for potential reordering
                                                             let totalItemHeight = layerContainer.itemHeight + layerContainer.itemSpacing;
                                                             let indexDelta = Math.round(delegateRoot.dragOffsetY / totalItemHeight);
-                                                            let targetDisplayIndex = delegateRoot.displayIndex + indexDelta;
+                                                            let targetDisplayIndex = root.dropInsertIndex >= 0 ? root.dropInsertIndex : delegateRoot.displayIndex + indexDelta;
                                                             let rowCount = layerRepeater.count;
                                                             targetDisplayIndex = Math.max(0, Math.min(rowCount - 1, targetDisplayIndex));
                                                             let targetModelIndex = root.modelIndexForDisplay(targetDisplayIndex);
@@ -244,7 +244,21 @@ Item {
                                                                     }
                                                                 } else {
                                                                     // Different layer - reparent to that layer
-                                                                    canvasModel.reparentItem(root.draggedIndex, root.dropTargetLayerId);
+                                                                    // Insert directly below the layer by default, or at the drop gap if provided
+                                                                    let layerIndex = canvasModel.getLayerIndex(root.dropTargetLayerId);
+                                                                    let insertModelIndex = (root.dropInsertIndex >= 0) ? targetModelIndex : layerIndex;
+                                                                    canvasModel.reparentItem(root.draggedIndex, root.dropTargetLayerId, insertModelIndex);
+                                                                }
+                                                            } else if (root.dropTargetParentId && root.draggedItemType !== "layer") {
+                                                                // Dropping onto a gap between children of a layer
+                                                                const isSameParent = root.draggedItemParentId === root.dropTargetParentId;
+                                                                let insertModelIndex = targetModelIndex;
+                                                                if (isSameParent) {
+                                                                    if (insertModelIndex !== root.draggedIndex) {
+                                                                        canvasModel.moveItem(root.draggedIndex, insertModelIndex);
+                                                                    }
+                                                                } else {
+                                                                    canvasModel.reparentItem(root.draggedIndex, root.dropTargetParentId, insertModelIndex);
                                                                 }
                                                             } else if (root.draggedItemParentId && root.dropTargetParentId === root.draggedItemParentId) {
                                                                 // Dropping onto a sibling (same parent) - just reorder, keep parent
@@ -253,7 +267,7 @@ Item {
                                                                 }
                                                             } else if (root.draggedItemParentId && !root.dropTargetParentId && root.dropTargetLayerId === "") {
                                                                 // Dropping a child onto a top-level item - unparent
-                                                                canvasModel.reparentItem(root.draggedIndex, "");
+                                                                canvasModel.reparentItem(root.draggedIndex, "", targetModelIndex);
                                                             } else {
                                                                 // Normal z-order reordering for top-level items
                                                                 if (targetModelIndex !== root.draggedIndex) {
