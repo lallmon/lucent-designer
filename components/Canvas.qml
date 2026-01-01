@@ -334,4 +334,11 @@ Item {
             canvasModel.removeItem(index);
         }
     }
+
+    // Cancel the current drawing tool operation
+    function cancelCurrentTool() {
+        if (currentToolLoader.item) {
+            currentToolLoader.item.reset();
+        }
+    }
 }
