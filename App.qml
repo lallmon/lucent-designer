@@ -43,6 +43,7 @@ ApplicationWindow {
             ToolPalette {
                 id: toolPalette
                 Layout.fillHeight: true
+                activeTool: canvas.drawingMode === "" ? "select" : canvas.drawingMode
 
                 onToolSelected: toolName => {
                     canvas.setDrawingMode(toolName);

@@ -35,13 +35,7 @@ Pane {
             }
 
             onClicked: {
-                if (checked) {
-                    root.activeTool = "select";
-                    root.toolSelected("select");
-                } else {
-                    root.activeTool = "";
-                    root.toolSelected("");
-                }
+                root.toolSelected(checked ? "select" : "");
             }
 
             background: Rectangle {
@@ -75,13 +69,7 @@ Pane {
                 }
             }
             onClicked: {
-                if (checked) {
-                    root.activeTool = "rectangle";
-                    root.toolSelected("rectangle");
-                } else {
-                    root.activeTool = "";
-                    root.toolSelected("");
-                }
+                root.toolSelected(checked ? "rectangle" : "");
             }
             background: Rectangle {
                 color: rectButton.checked ? DV.Theme.colors.panelActive : (rectButton.hovered ? DV.Theme.colors.panelHover : DV.Theme.colors.panelBackground)
@@ -113,13 +101,7 @@ Pane {
             }
 
             onClicked: {
-                if (checked) {
-                    root.activeTool = "ellipse";
-                    root.toolSelected("ellipse");
-                } else {
-                    root.activeTool = "";
-                    root.toolSelected("");
-                }
+                root.toolSelected(checked ? "ellipse" : "");
             }
 
             // Visual feedback for active state
