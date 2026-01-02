@@ -92,6 +92,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install nuitka ordered-set zstandard imageio
+          pip install -e .
       
       - name: Install patchelf (Linux only)
         if: matrix.os == 'ubuntu-latest'
