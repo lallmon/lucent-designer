@@ -22,21 +22,15 @@ Item {
     // Drawing mode
     property string drawingMode: ""  // "" for pan, "rectangle" for drawing rectangles, "ellipse" for drawing ellipses
 
+    ToolDefaults {
+        id: toolDefaults
+    }
+    HitTestHelper {
+        id: hitTestHelper
+    }
+
     // Tool settings model - organized by tool type
-    property var toolSettings: ({
-            "rectangle": {
-                strokeWidth: 1,
-                strokeColor: "#ffffff",
-                fillColor: "#ffffff",
-                fillOpacity: 0.0
-            },
-            "ellipse": {
-                strokeWidth: 1,
-                strokeColor: "#ffffff",
-                fillColor: "#ffffff",
-                fillOpacity: 0.0
-            }
-        })
+    property var toolSettings: toolDefaults.values
 
     // Current cursor shape (for dynamic cursor changes)
     property int currentCursorShape: Qt.OpenHandCursor
@@ -65,62 +59,12 @@ Item {
         }
 
         // Selection indicator overlay
-        Rectangle {
-            property real selectionPadding: 8  // Padding around selected object in canvas units
-            visible: DV.SelectionManager.selectedItemIndex >= 0 && DV.SelectionManager.selectedItem
-
-            // Calculate bounding box based on item type
-            x: {
-                if (!visible)
-                    return 0;
-                var item = DV.SelectionManager.selectedItem;
-                if (item.type === "rectangle") {
-                    return item.x - selectionPadding;
-                } else if (item.type === "ellipse") {
-                    return item.centerX - item.radiusX - selectionPadding;
-                }
-                return 0;
-            }
-
-            y: {
-                if (!visible)
-                    return 0;
-                var item = DV.SelectionManager.selectedItem;
-                if (item.type === "rectangle") {
-                    return item.y - selectionPadding;
-                } else if (item.type === "ellipse") {
-                    return item.centerY - item.radiusY - selectionPadding;
-                }
-                return 0;
-            }
-
-            width: {
-                if (!visible)
-                    return 0;
-                var item = DV.SelectionManager.selectedItem;
-                if (item.type === "rectangle") {
-                    return item.width + selectionPadding * 2;
-                } else if (item.type === "ellipse") {
-                    return item.radiusX * 2 + selectionPadding * 2;
-                }
-                return 0;
-            }
-
-            height: {
-                if (!visible)
-                    return 0;
-                var item = DV.SelectionManager.selectedItem;
-                if (item.type === "rectangle") {
-                    return item.height + selectionPadding * 2;
-                } else if (item.type === "ellipse") {
-                    return item.radiusY * 2 + selectionPadding * 2;
-                }
-                return 0;
-            }
-
-            color: "transparent"
-            border.color: DV.Theme.colors.accent  // Light blue
-            border.width: 2 / root.zoomLevel  // Inverse scale with zoom
+        SelectionOverlay {
+            id: selectionOverlay
+            selectionPadding: 8  // Padding around selected object in canvas units
+            selectedItem: DV.SelectionManager.selectedItem
+            zoomLevel: root.zoomLevel
+            accentColor: DV.Theme.colors.accent
         }
 
         // Select tool for object selection (panning handled by Viewport)
@@ -244,8 +188,7 @@ Item {
 
         // Select the newly created item (it's at the end of the list)
         var newIndex = canvasModel.count() - 1;
-        DV.SelectionManager.selectedItemIndex = newIndex;
-        DV.SelectionManager.selectedItem = canvasModel.getItemData(newIndex);
+        hitTestHelper.applySelection(DV.SelectionManager, canvasModel, newIndex);
     }
 
     // Set the drawing mode
@@ -276,34 +219,13 @@ Item {
 
     // Hit test to find item at canvas coordinates
     function hitTest(canvasX, canvasY) {
-        // Get items from model for hit testing
-        var items = canvasModel.getItemsForHitTest();
-
-        // Iterate backwards (topmost items first)
-        for (var i = items.length - 1; i >= 0; i--) {
-            var item = items[i];
-            if (item.type === "rectangle") {
-                // Check if point is within rectangle bounds
-                if (canvasX >= item.x && canvasX <= item.x + item.width && canvasY >= item.y && canvasY <= item.y + item.height) {
-                    return i;
-                }
-            } else if (item.type === "ellipse") {
-                // Check if point is within ellipse using the ellipse equation
-                var dx = (canvasX - item.centerX) / item.radiusX;
-                var dy = (canvasY - item.centerY) / item.radiusY;
-                if (dx * dx + dy * dy <= 1.0) {
-                    return i;
-                }
-            }
-        }
-        return -1; // No hit
+        return hitTestHelper.hitTest(canvasModel.getItemsForHitTest(), canvasX, canvasY);
     }
 
     // Select item at canvas coordinates
     function selectItemAt(canvasX, canvasY) {
         var hitIndex = hitTest(canvasX, canvasY);
-        DV.SelectionManager.selectedItemIndex = hitIndex;
-        DV.SelectionManager.selectedItem = (hitIndex >= 0) ? canvasModel.getItemData(hitIndex) : null;
+        hitTestHelper.applySelection(DV.SelectionManager, canvasModel, hitIndex);
     }
 
     function updateSelectedItemPosition(canvasDx, canvasDy) {
