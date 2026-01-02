@@ -36,4 +36,6 @@ Run tests: `pytest -q`
 - Type check: `mypy --config-file mypy.ini src tests main.py`
 - All hooks: `pre-commit run --all-files`
 
-**Note: the CI/CD Pipeline will fail the build if these don't pass, so make sure you're installing pre-commit as stated above.**
+Notes: 
+- The CI/CD Pipeline will fail the build if these don't pass, so make sure you're installing pre-commit as stated above.
+- If a commit fails because of a formatter, commit again because the formatter automatically formatted the code (it will say how many files it modified)
