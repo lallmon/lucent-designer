@@ -2390,6 +2390,108 @@ class TestLayerVisibilityLocking:
         assert canvas_model._is_effectively_locked(1) is False
 
 
+class TestGroupHierarchy:
+    """Grouping semantics without altering legacy layer behavior."""
+
+    def test_add_group(self, canvas_model):
+        canvas_model.addItem({"type": "group", "name": "Group A"})
+        assert canvas_model.count() == 1
+        assert canvas_model.getItems()[0].name == "Group A"
+        assert (
+            canvas_model.data(canvas_model.index(0, 0), canvas_model.TypeRole)
+            == "group"
+        )
+
+    def test_group_inherits_visibility_and_lock(self, canvas_model):
+        canvas_model.addLayer()
+        layer_id = canvas_model.getItems()[0].id
+        canvas_model.addItem({"type": "group", "parentId": layer_id, "name": "G1"})
+        group_id = canvas_model.getItems()[1].id
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 1,
+                "height": 1,
+                "parentId": group_id,
+            }
+        )
+
+        # All visible/unlocked by default
+        assert canvas_model._is_effectively_visible(2) is True
+        assert canvas_model._is_effectively_locked(2) is False
+
+        # Hide group -> shape hidden
+        canvas_model.updateItem(1, {"visible": False})
+        assert canvas_model._is_effectively_visible(2) is False
+
+        # Show group, hide layer -> shape hidden via layer
+        canvas_model.updateItem(1, {"visible": True})
+        canvas_model.updateItem(0, {"visible": False})
+        assert canvas_model._is_effectively_visible(2) is False
+
+        # Lock group -> shape locked
+        canvas_model.updateItem(0, {"visible": True})
+        canvas_model.updateItem(1, {"locked": True})
+        assert canvas_model._is_effectively_locked(2) is True
+
+        # Unlock group, lock layer -> shape locked via layer
+        canvas_model.updateItem(1, {"locked": False})
+        canvas_model.updateItem(0, {"locked": True})
+        assert canvas_model._is_effectively_locked(2) is True
+
+    def test_move_group_moves_children(self, canvas_model):
+        canvas_model.addItem({"type": "group", "name": "G"})
+        group_id = canvas_model.getItems()[0].id
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 1,
+                "height": 1,
+                "parentId": group_id,
+            }
+        )
+        canvas_model.addItem(
+            {
+                "type": "ellipse",
+                "centerX": 1,
+                "centerY": 1,
+                "radiusX": 1,
+                "radiusY": 1,
+                "parentId": group_id,
+            }
+        )
+        canvas_model.addItem(
+            {"type": "rectangle", "x": 10, "y": 10, "width": 1, "height": 1}
+        )  # top-level sibling
+
+        # Order: group, child1, child2, sibling
+        canvas_model.moveItem(0, 3)
+
+        items = canvas_model.getItems()
+        assert items[0].parent_id is None  # sibling first
+        assert items[1].id == group_id
+        assert items[2].parent_id == group_id
+        assert items[3].parent_id == group_id
+
+    def test_reparent_group_to_layer_and_top_level(self, canvas_model):
+        canvas_model.addLayer()
+        layer_id = canvas_model.getItems()[0].id
+        canvas_model.addItem({"type": "group", "name": "G"})
+        group_index = 1
+
+        # Parent group to layer
+        canvas_model.reparentItem(group_index, layer_id)
+        assert canvas_model.getItems()[group_index].parent_id == layer_id
+
+        # Unparent back to top-level
+        canvas_model.reparentItem(group_index, "")
+        assert canvas_model.getItems()[group_index].parent_id is None
+
+
 class TestLayerMoveWithChildren:
     """Tests for moving layers with their children as a group."""
 

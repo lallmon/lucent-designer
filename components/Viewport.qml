@@ -141,13 +141,13 @@ Item {
         onPressed: mouse => {
             forceActiveFocus();
             if (canvasComponent) {
-                canvasComponent.handleMousePress(mouse.x, mouse.y, mouse.button);
+                canvasComponent.handleMousePress(mouse.x, mouse.y, mouse.button, mouse.modifiers);
             }
         }
 
         onReleased: mouse => {
             if (canvasComponent) {
-                canvasComponent.handleMouseRelease(mouse.x, mouse.y, mouse.button);
+                canvasComponent.handleMouseRelease(mouse.x, mouse.y, mouse.button, mouse.modifiers);
             }
         }
 

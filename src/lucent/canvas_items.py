@@ -296,3 +296,47 @@ class LayerItem(CanvasItem):
             visible=data.get("visible", True),
             locked=data.get("locked", False),
         )
+
+
+class GroupItem(CanvasItem):
+    """Group item for nesting shapes or other groups under a parent container.
+
+    Groups are non-rendering; they carry visibility/locking state and an ID for
+    parent-child relationships. A group can be parented to a layer or another
+    group. Rendering skips groups; only leaf shapes paint.
+    """
+
+    def __init__(
+        self,
+        name: str = "",
+        group_id: Optional[str] = None,
+        parent_id: Optional[str] = None,
+        visible: bool = True,
+        locked: bool = False,
+    ) -> None:
+        self.name = name
+        self.visible = bool(visible)
+        self.locked = bool(locked)
+        self.parent_id = parent_id
+        self.id = group_id if group_id else str(uuid.uuid4())
+
+    def paint(
+        self,
+        painter: QPainter,
+        zoom_level: float,
+        offset_x: float = CANVAS_OFFSET_X,
+        offset_y: float = CANVAS_OFFSET_Y,
+    ) -> None:
+        """Groups do not render directly."""
+        pass
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "GroupItem":
+        """Create GroupItem from data dictionary."""
+        return GroupItem(
+            name=data.get("name", ""),
+            group_id=data.get("id"),
+            parent_id=data.get("parentId"),
+            visible=data.get("visible", True),
+            locked=data.get("locked", False),
+        )

@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict
 
-from lucent.canvas_items import CanvasItem, RectangleItem, EllipseItem, LayerItem
+from lucent.canvas_items import (
+    CanvasItem,
+    RectangleItem,
+    EllipseItem,
+    LayerItem,
+    GroupItem,
+)
 
 
 class ItemSchemaError(ValueError):
@@ -17,6 +23,7 @@ class ItemType(str, Enum):
     RECTANGLE = "rectangle"
     ELLIPSE = "ellipse"
     LAYER = "layer"
+    GROUP = "group"
 
 
 @dataclass
@@ -136,6 +143,22 @@ def validate_layer(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def validate_group(data: Dict[str, Any]) -> Dict[str, Any]:
+    name = str(data.get("name", ""))
+    group_id = data.get("id") or None
+    parent_id = data.get("parentId") or None
+    visible = bool(data.get("visible", True))
+    locked = bool(data.get("locked", False))
+    return {
+        "type": ItemType.GROUP.value,
+        "id": group_id,
+        "name": name,
+        "parentId": parent_id,
+        "visible": visible,
+        "locked": locked,
+    }
+
+
 def parse_item_data(data: Dict[str, Any]) -> ParsedItem:
     item_type = _parse_type(data.get("type"))
     if item_type is ItemType.RECTANGLE:
@@ -144,6 +167,8 @@ def parse_item_data(data: Dict[str, Any]) -> ParsedItem:
         validated = validate_ellipse(data)
     elif item_type is ItemType.LAYER:
         validated = validate_layer(data)
+    elif item_type is ItemType.GROUP:
+        validated = validate_group(data)
     else:  # pragma: no cover - exhaustive Enum
         raise ItemSchemaError(f"Unsupported item type: {item_type}")
 
@@ -193,6 +218,14 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
             visible=d.get("visible", True),
             locked=d.get("locked", False),
         )
+    if t is ItemType.GROUP:
+        return GroupItem(
+            name=d["name"],
+            group_id=d.get("id"),
+            parent_id=d.get("parentId"),
+            visible=d.get("visible", True),
+            locked=d.get("locked", False),
+        )
     raise ItemSchemaError(f"Unsupported item type: {parsed.type}")
 
 
@@ -236,6 +269,15 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "type": ItemType.LAYER.value,
             "id": item.id,
             "name": item.name,
+            "visible": getattr(item, "visible", True),
+            "locked": getattr(item, "locked", False),
+        }
+    if isinstance(item, GroupItem):
+        return {
+            "type": ItemType.GROUP.value,
+            "id": item.id,
+            "name": item.name,
+            "parentId": item.parent_id,
             "visible": getattr(item, "visible", True),
             "locked": getattr(item, "locked", False),
         }

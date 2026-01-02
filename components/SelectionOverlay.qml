@@ -5,15 +5,21 @@ Rectangle {
     id: selectionOverlay
 
     property var selectedItem
+    property var boundsOverride
     property real zoomLevel: 1.0
     property real selectionPadding: 8
     property color accentColor: "lightblue"
+
+    readonly property bool _hasBounds: boundsOverride !== null && boundsOverride !== undefined
 
     visible: selectedItem !== null && selectedItem !== undefined
 
     x: {
         if (!visible)
             return 0;
+        if (_hasBounds) {
+            return boundsOverride.x - selectionPadding;
+        }
         if (selectedItem.type === "rectangle") {
             return selectedItem.x - selectionPadding;
         } else if (selectedItem.type === "ellipse") {
@@ -25,6 +31,9 @@ Rectangle {
     y: {
         if (!visible)
             return 0;
+        if (_hasBounds) {
+            return boundsOverride.y - selectionPadding;
+        }
         if (selectedItem.type === "rectangle") {
             return selectedItem.y - selectionPadding;
         } else if (selectedItem.type === "ellipse") {
@@ -36,6 +45,9 @@ Rectangle {
     width: {
         if (!visible)
             return 0;
+        if (_hasBounds) {
+            return boundsOverride.width + selectionPadding * 2;
+        }
         if (selectedItem.type === "rectangle") {
             return selectedItem.width + selectionPadding * 2;
         } else if (selectedItem.type === "ellipse") {
@@ -47,6 +59,9 @@ Rectangle {
     height: {
         if (!visible)
             return 0;
+        if (_hasBounds) {
+            return boundsOverride.height + selectionPadding * 2;
+        }
         if (selectedItem.type === "rectangle") {
             return selectedItem.height + selectionPadding * 2;
         } else if (selectedItem.type === "ellipse") {

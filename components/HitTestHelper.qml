@@ -4,7 +4,7 @@ import QtQuick
 QtObject {
     id: helper
 
-    function hitTest(items, canvasX, canvasY) {
+    function hitTest(items, canvasX, canvasY, boundingBoxCallback) {
         if (!items)
             return -1;
 
@@ -23,6 +23,15 @@ QtObject {
                 var dy = (canvasY - item.centerY) / item.radiusY;
                 if (dx * dx + dy * dy <= 1.0) {
                     return i;
+                }
+            } else if (item.type === "group" || item.type === "layer") {
+                if (boundingBoxCallback) {
+                    var bounds = boundingBoxCallback(i);
+                    if (bounds && bounds.width >= 0 && bounds.height >= 0) {
+                        if (canvasX >= bounds.x && canvasX <= bounds.x + bounds.width && canvasY >= bounds.y && canvasY <= bounds.y + bounds.height) {
+                            return i;
+                        }
+                    }
                 }
             }
         }

@@ -12,7 +12,13 @@ from PySide6.QtCore import (
     QObject,
     QByteArray,
 )
-from lucent.canvas_items import CanvasItem, RectangleItem, EllipseItem, LayerItem
+from lucent.canvas_items import (
+    CanvasItem,
+    RectangleItem,
+    EllipseItem,
+    LayerItem,
+    GroupItem,
+)
 from lucent.commands import (
     Command,
     AddItemCommand,
@@ -21,6 +27,7 @@ from lucent.commands import (
     ClearCommand,
     MoveItemCommand,
     TransactionCommand,
+    GroupItemsCommand,
 )
 from lucent.history_manager import HistoryManager
 from lucent.item_schema import (
@@ -92,17 +99,17 @@ class CanvasModel(QAbstractListModel):
                 return "ellipse"
             elif isinstance(item, LayerItem):
                 return "layer"
+            elif isinstance(item, GroupItem):
+                return "group"
             return "unknown"
         elif role == self.IndexRole:
             return index.row()
         elif role == self.ItemIdRole:
-            # Only layers have IDs
-            if isinstance(item, LayerItem):
+            if isinstance(item, (LayerItem, GroupItem)):
                 return item.id
             return None
         elif role == self.ParentIdRole:
-            # Only shapes have parent IDs
-            if isinstance(item, (RectangleItem, EllipseItem)):
+            if isinstance(item, (RectangleItem, EllipseItem, GroupItem)):
                 return item.parent_id
             return None
         elif role == self.VisibleRole:
@@ -170,46 +177,145 @@ class CanvasModel(QAbstractListModel):
         self._type_counters[item_type] = self._type_counters.get(item_type, 0) + 1
         return f"{type_name} {self._type_counters[item_type]}"
 
+    def _get_container_by_id(self, container_id: Optional[str]) -> Optional[CanvasItem]:
+        if not container_id:
+            return None
+        for candidate in self._items:
+            if (
+                isinstance(candidate, (LayerItem, GroupItem))
+                and candidate.id == container_id
+            ):
+                return candidate
+        return None
+
+    def _is_layer_visible(self, layer_id: str) -> bool:
+        container = self._get_container_by_id(layer_id)
+        return getattr(container, "visible", True) if container else True
+
+    def _is_layer_locked(self, layer_id: str) -> bool:
+        container = self._get_container_by_id(layer_id)
+        return getattr(container, "locked", False) if container else False
+
+    def _is_descendant_of(self, candidate_id: Optional[str], ancestor_id: str) -> bool:
+        """Check if container with candidate_id is a descendant of ancestor_id."""
+        current = self._get_container_by_id(candidate_id)
+        visited = set()
+        while current and current.id not in visited:
+            visited.add(current.id)
+            parent_id = getattr(current, "parent_id", None)
+            if parent_id == ancestor_id:
+                return True
+            current = self._get_container_by_id(parent_id)
+        return False
+
+    def _get_direct_children_indices(self, container_id: str) -> List[int]:
+        return [
+            i
+            for i, child in enumerate(self._items)
+            if getattr(child, "parent_id", None) == container_id
+        ]
+
+    def _get_descendant_indices(self, container_id: str) -> List[int]:
+        """Return indices of all descendants (any depth) of a container."""
+        result: List[int] = []
+        queue = list(self._get_direct_children_indices(container_id))
+        while queue:
+            idx = queue.pop(0)
+            result.append(idx)
+            child = self._items[idx]
+            child_id = getattr(child, "id", None)
+            if isinstance(child, (GroupItem, LayerItem)) and child_id:
+                queue.extend(self._get_direct_children_indices(child_id))
+        return result
+
+    @Slot(int, float, float)
+    def moveGroup(self, group_index: int, dx: float, dy: float) -> None:
+        """Translate all descendant shapes of a group/layer by dx, dy."""
+        if not (0 <= group_index < len(self._items)):
+            return
+        container = self._items[group_index]
+        if not isinstance(container, (GroupItem, LayerItem)):
+            return
+        # Apply deltas to descendant shapes
+        for idx in self._get_descendant_indices(container.id):
+            item = self._items[idx]
+            if isinstance(item, RectangleItem):
+                self.updateItem(idx, {"x": item.x + dx, "y": item.y + dy})
+            elif isinstance(item, EllipseItem):
+                self.updateItem(
+                    idx,
+                    {
+                        "centerX": item.center_x + dx,
+                        "centerY": item.center_y + dy,
+                    },
+                )
+
+    @Slot(int)
+    def ungroup(self, group_index: int) -> None:
+        """Ungroup a group: move its children to the group's parent and remove it."""
+        if not (0 <= group_index < len(self._items)):
+            return
+        group = self._items[group_index]
+        if not isinstance(group, GroupItem):
+            return
+        parent_id = getattr(group, "parent_id", None) or ""
+
+        # Reparent direct children to the group's parent
+        child_indices = []
+        for i in range(len(self._items)):
+            child = self._items[i]
+            if getattr(child, "parent_id", None) == group.id:
+                child_indices.append(i)
+
+        # Reparent children (bottom-up to keep indices stable)
+        for idx in reversed(child_indices):
+            self.reparentItem(idx, parent_id)
+
+        # Remove the group itself
+        self.removeItem(group_index)
+
+    @Slot(list, result=int)
+    def groupItems(self, indices: list[int]) -> int:
+        """Group items in one undoable action; returns group index or -1."""
+        command = GroupItemsCommand(self, indices)
+        self._execute_command(command)
+        return command.result_index if command.result_index is not None else -1
+
     def _is_effectively_visible(self, index: int) -> bool:
         if not (0 <= index < len(self._items)):
             return False
         item = self._items[index]
-        visible = getattr(item, "visible", True)
-        if not visible:
+        if not getattr(item, "visible", True):
             return False
-        # Shapes respect parent layer visibility
-        if isinstance(item, (RectangleItem, EllipseItem)):
-            parent_id = item.parent_id
-            if parent_id:
-                parent_visible = self._is_layer_visible(parent_id)
-                return parent_visible and visible
-        return visible
-
-    def _is_layer_visible(self, layer_id: str) -> bool:
-        for candidate in self._items:
-            if isinstance(candidate, LayerItem) and candidate.id == layer_id:
-                return getattr(candidate, "visible", True)
-        return True
+        parent_id = getattr(item, "parent_id", None)
+        if not parent_id:
+            return True
+        parent = self._get_container_by_id(parent_id)
+        if not parent:
+            return True
+        try:
+            parent_index = self._items.index(parent)
+        except ValueError:
+            return True
+        return self._is_effectively_visible(parent_index)
 
     def _is_effectively_locked(self, index: int) -> bool:
         if not (0 <= index < len(self._items)):
             return False
         item = self._items[index]
-        locked = getattr(item, "locked", False)
-        if locked:
+        if getattr(item, "locked", False):
             return True
-        # Shapes respect parent layer locked state
-        if isinstance(item, (RectangleItem, EllipseItem)):
-            parent_id = item.parent_id
-            if parent_id:
-                return self._is_layer_locked(parent_id)
-        return locked
-
-    def _is_layer_locked(self, layer_id: str) -> bool:
-        for candidate in self._items:
-            if isinstance(candidate, LayerItem) and candidate.id == layer_id:
-                return getattr(candidate, "locked", False)
-        return False
+        parent_id = getattr(item, "parent_id", None)
+        if not parent_id:
+            return False
+        parent = self._get_container_by_id(parent_id)
+        if not parent:
+            return False
+        try:
+            parent_index = self._items.index(parent)
+        except ValueError:
+            return False
+        return self._is_effectively_locked(parent_index)
 
     @Slot(dict)
     def addItem(self, item_data: Dict[str, Any]) -> None:
@@ -218,6 +324,7 @@ class CanvasModel(QAbstractListModel):
             ItemType.RECTANGLE.value,
             ItemType.ELLIPSE.value,
             ItemType.LAYER.value,
+            ItemType.GROUP.value,
         ):
             print(f"Warning: Unknown item type '{item_type}'")
             return
@@ -270,11 +377,11 @@ class CanvasModel(QAbstractListModel):
 
         item = self._items[from_index]
 
-        # Check if moving a layer - need to move children too
-        if isinstance(item, LayerItem):
-            children_indices = self._getLayerChildrenIndices(item.id)
-            if children_indices:
-                self._moveLayerWithChildren(from_index, to_index, children_indices)
+        # If moving a container, move its descendants together to keep grouping tidy
+        if isinstance(item, (LayerItem, GroupItem)):
+            descendants = self._get_descendant_indices(item.id)
+            if descendants:
+                self._moveContainerWithChildren(from_index, to_index, descendants)
                 return
 
         command = MoveItemCommand(self, from_index, to_index)
@@ -306,88 +413,61 @@ class CanvasModel(QAbstractListModel):
     @Slot(str, result=int)
     def getLayerIndex(self, layer_id: str) -> int:
         """Get the index of a layer by its ID."""
+        return self._get_container_index(layer_id, LayerItem)
+
+    def _get_container_index(
+        self, container_id: str, container_type: Optional[type] = None
+    ) -> int:
         for i, item in enumerate(self._items):
-            if isinstance(item, LayerItem) and item.id == layer_id:
+            if container_type and not isinstance(item, container_type):
+                continue
+            if isinstance(item, (LayerItem, GroupItem)) and item.id == container_id:
                 return i
         return -1
 
-    def _findLastChildPosition(self, layer_id: str) -> int:
-        """Find the position where a new child of the layer should be inserted.
-
-        Returns the index just before the next top-level item after the layer,
-        or the end of the list if no such item exists.
-        """
-        layer_index = self.getLayerIndex(layer_id)
-        if layer_index < 0:
+    def _findLastChildPosition(self, container_id: str) -> int:
+        """Return position immediately after the last descendant of container."""
+        container_index = self._get_container_index(container_id)
+        if container_index < 0:
             return len(self._items)
-
-        # Scan from after the layer to find the next top-level item
-        for i in range(layer_index + 1, len(self._items)):
-            item = self._items[i]
-            if isinstance(item, LayerItem):
-                # Next layer found - insert before it
-                return i
-            elif isinstance(item, (RectangleItem, EllipseItem)):
-                if item.parent_id is None:
-                    # Top-level shape found - insert before it
-                    return i
-
-        # No top-level item found after layer, insert at end
-        return len(self._items)
+        descendants = self._get_descendant_indices(container_id)
+        if not descendants:
+            return container_index + 1
+        return max(descendants) + 1
 
     def _getLayerChildrenIndices(self, layer_id: str) -> List[int]:
-        """Get indices of all children belonging to a layer."""
-        children = []
-        for i, item in enumerate(self._items):
-            if (
-                isinstance(item, (RectangleItem, EllipseItem))
-                and item.parent_id == layer_id
-            ):
-                children.append(i)
-        return children
+        """Backwards-compatible helper to get direct children indices of a layer."""
+        return [
+            i
+            for i, item in enumerate(self._items)
+            if getattr(item, "parent_id", None) == layer_id
+        ]
 
-    def _moveLayerWithChildren(
-        self, layer_from: int, layer_to: int, children_indices: List[int]
+    def _moveContainerWithChildren(
+        self, container_from: int, container_to: int, descendant_indices: List[int]
     ) -> None:
-        """Move a layer along with all its children as a group.
+        """Move a container and its descendants as one contiguous block."""
+        all_indices = sorted([container_from] + descendant_indices, reverse=True)
 
-        This maintains the parent-child visual grouping by extracting the layer
-        and all its children, then reinserting them at the target position.
-        """
-        # Collect all indices to move (layer + children), sorted descending for
-        # safe removal
-        all_indices = sorted([layer_from] + children_indices, reverse=True)
-
-        # Extract items in order (we'll reverse after extraction)
         extracted_items = []
         for idx in all_indices:
             extracted_items.append(self._items.pop(idx))
-
-        # Reverse to get original order (layer first, then children)
         extracted_items.reverse()
 
-        # Calculate insertion point
-        # The goal: place the group so it ends up at/near the target position
-        # When moving up (to lower index): insert at layer_to
-        # When moving down (to higher index): insert AFTER the target position
-        remaining_count = len(self._items)  # After extraction
-
-        if layer_to < layer_from:
-            # Moving up - insert at the target position
-            insert_at = layer_to
+        remaining_count = len(self._items)
+        if container_to < container_from:
+            insert_at = container_to
         else:
-            # Moving down - account for removed items and insert at end of target area
             items_removed_before_target = sum(
-                1 for idx in all_indices if idx < layer_to
+                1 for idx in all_indices if idx < container_to
             )
-            # +1 to insert AFTER the target position (not before it)
-            insert_at = min(layer_to - items_removed_before_target + 1, remaining_count)
+            insert_at = min(
+                container_to - items_removed_before_target + 1, remaining_count
+            )
 
-        # Insert all items at the target position
         for i, item in enumerate(extracted_items):
             self._items.insert(insert_at + i, item)
 
-        # Notify model of changes using proper row signals
         self.beginResetModel()
         self.endResetModel()
         self.itemsReordered.emit()
@@ -415,31 +495,38 @@ class CanvasModel(QAbstractListModel):
             return
 
         item = self._items[item_index]
-        # Only shapes can have parents
-        if not isinstance(item, (RectangleItem, EllipseItem)):
+        # Shapes and groups can have parents; layers cannot
+        if isinstance(item, LayerItem):
             return
 
         # Convert empty string to None for top-level items
         new_parent_id = parent_id if parent_id else None
 
-        # Calculate target position
         if new_parent_id:
-            layer_index = self.getLayerIndex(new_parent_id)
-            if layer_index < 0:
+            parent = self._get_container_by_id(new_parent_id)
+            if not parent:
+                return
+            if isinstance(item, GroupItem) and self._is_descendant_of(
+                new_parent_id, item.id
+            ):
                 return
 
-            # Default: insert directly below the layer (so it shows under the
-            # layer in the UI)
-            target_index = insert_index if insert_index >= 0 else layer_index
+            parent_index = self._get_container_index(new_parent_id)
+            if parent_index < 0:
+                return
 
-            # Clamp target to be at or before the layer to keep children under it
-            target_index = max(0, min(target_index, layer_index))
-
-            # Adjust if item is before target (it will be removed first)
+            if (
+                insert_index < 0
+                and isinstance(item, GroupItem)
+                and item_index == parent_index + 1
+            ):
+                target_index = item_index
+            else:
+                target_index = insert_index if insert_index >= 0 else parent_index
+                target_index = max(0, min(target_index, parent_index))
             if item_index < target_index:
                 target_index -= 1
         else:
-            # Unparenting - keep at current position unless insert provided
             target_index = insert_index if insert_index >= 0 else item_index
 
         # Use a transaction to group both operations for single undo
@@ -582,6 +669,52 @@ class CanvasModel(QAbstractListModel):
                 visible_items.append(self._itemToDict(item))
         return visible_items
 
+    @Slot(int, result="QVariant")  # type: ignore[arg-type]
+    def getBoundingBox(self, index: int) -> Optional[Dict[str, float]]:
+        """Return axis-aligned bounding box for an item (or its descendants)."""
+        if not (0 <= index < len(self._items)):
+            return None
+        item = self._items[index]
+
+        def rect_bounds(x: float, y: float, w: float, h: float) -> Dict[str, float]:
+            return {"x": x, "y": y, "width": w, "height": h}
+
+        if isinstance(item, RectangleItem):
+            return rect_bounds(item.x, item.y, item.width, item.height)
+        if isinstance(item, EllipseItem):
+            return rect_bounds(
+                item.center_x - item.radius_x,
+                item.center_y - item.radius_y,
+                item.radius_x * 2,
+                item.radius_y * 2,
+            )
+
+        # For containers (layer/group), compute union of all descendant shapes
+        if isinstance(item, (LayerItem, GroupItem)):
+            descendants = self._get_descendant_indices(item.id)
+            bounds = None
+            for child_idx in descendants:
+                child_bounds = self.getBoundingBox(child_idx)
+                if not child_bounds:
+                    continue
+                if bounds is None:
+                    bounds = dict(child_bounds)
+                else:
+                    min_x = min(bounds["x"], child_bounds["x"])
+                    min_y = min(bounds["y"], child_bounds["y"])
+                    max_x = max(
+                        bounds["x"] + bounds["width"],
+                        child_bounds["x"] + child_bounds["width"],
+                    )
+                    max_y = max(
+                        bounds["y"] + bounds["height"],
+                        child_bounds["y"] + child_bounds["height"],
+                    )
+                    bounds = rect_bounds(min_x, min_y, max_x - min_x, max_y - min_y)
+            return bounds
+
+        return None
+
     def getRenderItems(self) -> List[CanvasItem]:
         """Return items in model order (bottom to top) skipping layers.
 
@@ -591,12 +724,12 @@ class CanvasModel(QAbstractListModel):
         rendered, so they are skipped but the relative order of shapes is
         preserved exactly as in the model.
         """
-        from lucent.canvas_items import RectangleItem, EllipseItem, LayerItem
+        from lucent.canvas_items import RectangleItem, EllipseItem, LayerItem, GroupItem
 
         ordered: List[CanvasItem] = []
         for idx, item in enumerate(self._items):
-            # Skip layers (not renderable) but keep model ordering of shapes
-            if isinstance(item, LayerItem):
+            # Skip non-rendering containers but keep model ordering of shapes
+            if isinstance(item, (LayerItem, GroupItem)):
                 continue
             if isinstance(item, (RectangleItem, EllipseItem)):
                 if not self._is_effectively_visible(idx):

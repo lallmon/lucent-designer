@@ -15,10 +15,10 @@ ScrollView {
     property string originalFillColor: ""
 
     // Helper to check if selected item is a shape with stroke/fill properties
-    readonly property bool isShapeSelected: selectedItem !== null && (selectedItem.type === "rectangle" || selectedItem.type === "ellipse")
+    readonly property bool isShapeSelected: !!selectedItem && (selectedItem.type === "rectangle" || selectedItem.type === "ellipse")
 
     // Helper to check if selected item is effectively locked (own state or parent layer locked)
-    readonly property bool isLocked: DV.SelectionManager.selectedItemIndex >= 0 && canvasModel.isEffectivelyLocked(DV.SelectionManager.selectedItemIndex)
+    readonly property bool isLocked: (DV.SelectionManager.selectedItemIndex >= 0) && canvasModel && canvasModel.isEffectivelyLocked(DV.SelectionManager.selectedItemIndex)
 
     readonly property int labelSize: 11
     readonly property color labelColor: DV.Theme.colors.textSubtle
@@ -61,12 +61,12 @@ ScrollView {
             Layout.fillWidth: true
             Layout.topMargin: 4
             spacing: 8
-            visible: root.selectedItem !== null
+            visible: !!root.selectedItem
 
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                visible: root.selectedItem && root.selectedItem.type === "rectangle"
+                visible: !!root.selectedItem && root.selectedItem.type === "rectangle"
 
                 Label {
                     text: qsTr("Rectangle")
@@ -143,7 +143,7 @@ ScrollView {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                visible: root.selectedItem && root.selectedItem.type === "ellipse"
+                visible: !!root.selectedItem && root.selectedItem.type === "ellipse"
 
                 Label {
                     text: qsTr("Ellipse")
@@ -221,7 +221,7 @@ ScrollView {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                visible: root.selectedItem && root.selectedItem.type === "layer"
+                visible: !!root.selectedItem && root.selectedItem.type === "layer"
 
                 Label {
                     text: qsTr("Layer")

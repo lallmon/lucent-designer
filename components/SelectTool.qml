@@ -18,6 +18,7 @@ Item {
     property real lastY: 0
     property real selectPressX: 0
     property real selectPressY: 0
+    property int lastModifiers: Qt.NoModifier
 
     property var deltaBufferX: []
     property var deltaBufferY: []
@@ -26,10 +27,10 @@ Item {
 
     signal panDelta(real dx, real dy)
     signal cursorShapeChanged(int shape)
-    signal objectClicked(real viewportX, real viewportY)
+    signal objectClicked(real viewportX, real viewportY, int modifiers)
     signal objectDragged(real canvasDx, real canvasDy)
 
-    function handlePress(screenX, screenY, button) {
+    function handlePress(screenX, screenY, button, modifiers) {
         if (!tool.active)
             return false;
 
@@ -50,6 +51,8 @@ Item {
             lastX = screenX;
             lastY = screenY;
             clickedOnSelectedObject = false;
+            lastModifiers = modifiers;
+            lastModifiers = modifiers;
 
             if (hitTestCallback && viewportToCanvasCallback && DV.SelectionManager.selectedItemIndex >= 0) {
                 var canvasCoords = viewportToCanvasCallback(screenX, screenY);
@@ -65,7 +68,7 @@ Item {
         return false;
     }
 
-    function handleRelease(screenX, screenY, button) {
+    function handleRelease(screenX, screenY, button, modifiers) {
         if (!tool.active)
             return false;
 
@@ -89,7 +92,7 @@ Item {
             var dy = Math.abs(screenY - selectPressY);
 
             if (dx < clickThreshold && dy < clickThreshold) {
-                objectClicked(screenX, screenY);
+                objectClicked(screenX, screenY, modifiers);
             }
 
             return true;
