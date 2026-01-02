@@ -355,6 +355,88 @@ class CanvasModel(QAbstractListModel):
         self._execute_command(command)
         return command.result_index if command.result_index is not None else -1
 
+    @Slot(list, result="QVariant")  # type: ignore[arg-type]
+    def duplicateItems(self, indices: list[int]) -> List[int]:
+        """Duplicate multiple selected items; returns list of new top-level indices."""
+        if not indices:
+            return []
+
+        # Normalize and validate indices
+        unique_indices = sorted(
+            {int(i) for i in indices if 0 <= int(i) < len(self._items)}
+        )
+        if not unique_indices:
+            return []
+
+        # Skip locked or effectively locked items
+        unlocked_indices = [
+            i for i in unique_indices if not self._is_effectively_locked(i)
+        ]
+        if not unlocked_indices:
+            return []
+
+        # Drop descendants when their ancestor container is selected to avoid
+        # double duplication
+        selected_containers = {
+            getattr(self._items[i], "id", None)
+            for i in unlocked_indices
+            if isinstance(self._items[i], (LayerItem, GroupItem))
+        }
+        descendant_skip: set[int] = set()
+        for container_id in selected_containers:
+            if not container_id:
+                continue
+            descendant_skip.update(self._get_descendant_indices(container_id))
+
+        filtered_indices = [i for i in unlocked_indices if i not in descendant_skip]
+        if not filtered_indices:
+            return []
+
+        # Execute duplications in one transaction, from highest index down to
+        # keep positions stable
+        commands: List[DuplicateItemCommand] = []
+        index_to_command: Dict[int, DuplicateItemCommand] = {}
+        for idx in sorted(filtered_indices, reverse=True):
+            cmd = DuplicateItemCommand(self, idx)
+            commands.append(cmd)
+            index_to_command[idx] = cmd
+
+        transaction = TransactionCommand(commands, "Duplicate Items")
+        self._execute_command(transaction)
+
+        # Locate actual insertion points post-transaction to account for index
+        # shifts
+        used_positions: set[int] = set()
+
+        def find_sequence_start(payloads: List[Dict[str, Any]]) -> Optional[int]:
+            if not payloads:
+                return None
+            span = len(payloads)
+            limit = len(self._items) - span + 1
+            for start in range(0, max(limit, 0)):
+                if any(pos in used_positions for pos in range(start, start + span)):
+                    continue
+                match = True
+                for offset, expected in enumerate(payloads):
+                    if self._itemToDict(self._items[start + offset]) != expected:
+                        match = False
+                        break
+                if match:
+                    for pos in range(start, start + span):
+                        used_positions.add(pos)
+                    return start
+            return None
+
+        new_indices: List[int] = []
+        for idx in sorted(filtered_indices):
+            cmd = index_to_command.get(idx)
+            if not cmd:
+                continue
+            start = find_sequence_start(cmd.clone_payloads)
+            if start is not None:
+                new_indices.append(start)
+        return new_indices
+
     @Slot()
     def addLayer(self) -> None:
         """Create a new layer with an auto-generated name."""

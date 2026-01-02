@@ -39,7 +39,7 @@ MenuBar {
         Action {
             text: qsTr("&Duplicate Selection (Ctrl+D)")
             shortcut: StandardKey.Duplicate
-            enabled: root.canvas && DV.SelectionManager.selectedItemIndex >= 0 && !canvasModel.isEffectivelyLocked(DV.SelectionManager.selectedItemIndex)
+            enabled: root.canvas && ((DV.SelectionManager.selectedIndices && DV.SelectionManager.selectedIndices.length > 0) || DV.SelectionManager.selectedItemIndex >= 0)
             onTriggered: {
                 if (root.canvas) {
                     root.canvas.duplicateSelectedItem();

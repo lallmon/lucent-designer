@@ -278,6 +278,13 @@ class DuplicateItemCommand(Command):
     def result_index(self) -> Optional[int]:
         return self._result_index
 
+    @property
+    def clone_payloads(self) -> List[Dict[str, Any]]:
+        """Return the validated clone payloads captured for this duplicate."""
+        if not self._clones and self._insert_index is None:
+            self._build_clone_payloads()
+        return list(self._clones)
+
     def _clone_item_data(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Return validated clone of item data with offsets and fresh IDs."""
         item_type = data.get("type", "")

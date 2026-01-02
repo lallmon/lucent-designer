@@ -3175,6 +3175,75 @@ class TestCanvasModelDuplicate:
         assert result == -1
         assert canvas_model.count() == 0
 
+    def test_duplicate_items_duplicates_all_selected(self, canvas_model):
+        """Multiple selected items should all be duplicated with offsets."""
+        rect_a = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 10,
+            "height": 10,
+            "name": "A",
+        }
+        rect_b = {
+            "type": "rectangle",
+            "x": 10,
+            "y": 10,
+            "width": 20,
+            "height": 20,
+            "name": "B",
+        }
+        canvas_model.addItem(rect_a)
+        canvas_model.addItem(rect_b)
+
+        new_indices = canvas_model.duplicateItems([0, 1])
+
+        assert canvas_model.count() == 4
+        assert len(new_indices) == 2
+        dup_a = canvas_model.getItemData(new_indices[0])
+        dup_b = canvas_model.getItemData(new_indices[1])
+        assert dup_a["name"] == "A Copy"
+        assert dup_a["x"] == rect_a["x"] + DEFAULT_DUPLICATE_OFFSET
+        assert dup_b["name"] == "B Copy"
+        assert dup_b["y"] == rect_b["y"] + DEFAULT_DUPLICATE_OFFSET
+
+    def test_duplicate_items_skips_descendant_when_parent_selected(self, canvas_model):
+        """Descendants should not duplicate twice when parent container is selected."""
+        canvas_model.addItem({"type": "group", "name": "Group"})
+        group_id = canvas_model.getItems()[0].id
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 1,
+                "y": 2,
+                "width": 5,
+                "height": 6,
+                "parentId": group_id,
+                "name": "Child",
+            }
+        )
+
+        new_indices = canvas_model.duplicateItems([0, 1])
+
+        # Expect one duplicated group and its child (total items: 4)
+        assert canvas_model.count() == 4
+        assert len(new_indices) == 1
+        dup_group_index = new_indices[0]
+        dup_group = canvas_model.getItems()[dup_group_index]
+        assert dup_group.name == "Group Copy"
+
+    def test_duplicate_items_skips_locked(self, canvas_model):
+        """Locked selections are ignored."""
+        canvas_model.addItem(
+            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
+        )
+        canvas_model.toggleLocked(0)
+
+        new_indices = canvas_model.duplicateItems([0])
+
+        assert new_indices == []
+        assert canvas_model.count() == 1
+
 
 class TestCoverageEdgeCases:
     """Tests for edge cases and guard clauses to improve coverage."""
