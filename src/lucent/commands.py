@@ -270,6 +270,13 @@ class DuplicateItemCommand(Command):
         self._result_index: Optional[int] = None
         self._id_map: Dict[str, str] = {}
         self._parent_last: bool = False
+        self._inserted_indices: List[int] = []
+        self._parent_relative_index: int = 0
+        self._source_item_ref: Optional[CanvasItem] = None
+        self._source_container_id: Optional[str] = None
+        # Capture clone payloads immediately to avoid shifts when multiple
+        # commands run in one transaction.
+        self._build_clone_payloads()
 
     @property
     def description(self) -> str:
@@ -285,6 +292,21 @@ class DuplicateItemCommand(Command):
         if not self._clones and self._insert_index is None:
             self._build_clone_payloads()
         return list(self._clones)
+
+    @property
+    def inserted_indices(self) -> List[int]:
+        return list(self._inserted_indices)
+
+    @property
+    def inserted_parent_index(self) -> Optional[int]:
+        if not self._inserted_indices:
+            return None
+        if self._parent_last:
+            parent_pos = min(
+                len(self._inserted_indices) - 1, self._parent_relative_index
+            )
+            return self._inserted_indices[parent_pos]
+        return self._inserted_indices[0]
 
     def _clone_item_data(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Return validated clone of item data with offsets and fresh IDs."""
@@ -325,17 +347,23 @@ class DuplicateItemCommand(Command):
     def _build_clone_payloads(self) -> None:
         """Capture the data to duplicate once so redo stays deterministic."""
         items = self._model._items
-        if not (0 <= self._source_index < len(items)):
+        source_item: Optional[CanvasItem] = None
+        if 0 <= self._source_index < len(items):
+            source_item = items[self._source_index]
+        elif self._source_item_ref and self._source_item_ref in items:
+            source_item = self._source_item_ref
+        if source_item is None:
             return
-
-        source_item = items[self._source_index]
+        self._source_item_ref = source_item
         indices = [self._source_index]
         if isinstance(source_item, (LayerItem, GroupItem)):
             indices.extend(sorted(self._model._get_descendant_indices(source_item.id)))
+            self._source_container_id = source_item.id
 
         last_index = max(indices)
         self._insert_index = min(last_index + 1, len(items))
         parent_clone: Optional[Dict[str, Any]] = None
+        new_parent_id: Optional[str] = None
         for idx in indices:
             data = self._model._itemToDict(items[idx])
             clone = self._clone_item_data(data)
@@ -343,12 +371,22 @@ class DuplicateItemCommand(Command):
                 is_container = clone.get("type") in ("group", "layer")
                 if idx == self._source_index and is_container:
                     parent_clone = clone
+                    new_parent_id = clone.get("id")
                 else:
                     self._clones.append(clone)
+
+        # Remap any remaining child parentId to the new container id (safety net)
+        if new_parent_id and self._source_container_id:
+            for clone in self._clones:
+                if clone.get("parentId") == self._source_container_id:
+                    clone["parentId"] = new_parent_id
 
         if parent_clone:
             self._clones.append(parent_clone)
             self._parent_last = True
+            self._parent_relative_index = len(self._clones) - 1
+        else:
+            self._parent_relative_index = 0
 
         if self._clones:
             # For containers, select the parent (last in the block). Otherwise,
@@ -365,7 +403,10 @@ class DuplicateItemCommand(Command):
         if not self._clones or self._insert_index is None:
             return
 
-        insert_at = min(self._insert_index, len(self._model._items))
+        # Always append to the end so duplicates appear on top and avoid nesting
+        insert_at = len(self._model._items)
+        self._insert_index = insert_at
+
         count = len(self._clones)
         self._model.beginInsertRows(QModelIndex(), insert_at, insert_at + count - 1)
         for i, data in enumerate(self._clones):
@@ -373,7 +414,11 @@ class DuplicateItemCommand(Command):
         self._model.endInsertRows()
         for i in range(count):
             self._model.itemAdded.emit(insert_at + i)
-        self._result_index = insert_at
+        self._inserted_indices = [insert_at + i for i in range(count)]
+        if self._parent_last:
+            self._result_index = insert_at + self._parent_relative_index
+        else:
+            self._result_index = insert_at
 
     def undo(self) -> None:
         if self._insert_index is None or not self._clones:
@@ -388,6 +433,7 @@ class DuplicateItemCommand(Command):
             del self._model._items[self._insert_index]
         self._model.endRemoveRows()
         self._model.itemRemoved.emit(self._insert_index)
+        self._inserted_indices = []
 
 
 class GroupItemsCommand(Command):

@@ -396,7 +396,7 @@ class CanvasModel(QAbstractListModel):
         # keep positions stable
         commands: List[DuplicateItemCommand] = []
         index_to_command: Dict[int, DuplicateItemCommand] = {}
-        for idx in sorted(filtered_indices, reverse=True):
+        for idx in sorted(filtered_indices):
             cmd = DuplicateItemCommand(self, idx)
             commands.append(cmd)
             index_to_command[idx] = cmd
@@ -404,42 +404,16 @@ class CanvasModel(QAbstractListModel):
         transaction = TransactionCommand(commands, "Duplicate Items")
         self._execute_command(transaction)
 
-        # Locate actual insertion points post-transaction to account for index
-        # shifts
-        used_positions: set[int] = set()
-
-        def find_sequence_start(payloads: List[Dict[str, Any]]) -> Optional[int]:
-            if not payloads:
-                return None
-            span = len(payloads)
-            limit = len(self._items) - span + 1
-            for start in range(0, max(limit, 0)):
-                if any(pos in used_positions for pos in range(start, start + span)):
-                    continue
-                match = True
-                for offset, expected in enumerate(payloads):
-                    if self._itemToDict(self._items[start + offset]) != expected:
-                        match = False
-                        break
-                if match:
-                    for pos in range(start, start + span):
-                        used_positions.add(pos)
-                    return start
-            return None
-
+        # Consume recorded insertion indices per command; order results by
+        # original selection order.
         new_indices: List[int] = []
         for idx in sorted(filtered_indices):
             cmd = index_to_command.get(idx)
             if not cmd:
                 continue
-            start = find_sequence_start(cmd.clone_payloads)
-            if start is not None:
-                if cmd._parent_last:
-                    new_indices.append(start + len(cmd.clone_payloads) - 1)
-                else:
-                    new_indices.append(start)
-            elif cmd.result_index is not None:
-                new_indices.append(cmd.result_index)
+            parent_idx = cmd.inserted_parent_index
+            if parent_idx is not None:
+                new_indices.append(parent_idx)
         return new_indices
 
     @Slot()

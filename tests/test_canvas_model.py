@@ -3231,6 +3231,9 @@ class TestCanvasModelDuplicate:
         dup_group_index = new_indices[0]
         dup_group = canvas_model.getItems()[dup_group_index]
         assert dup_group.name == "Group Copy"
+        # Child should be directly before the group
+        dup_child = canvas_model.getItems()[dup_group_index - 1]
+        assert dup_child.parent_id == dup_group.id
 
     def test_duplicate_items_skips_locked(self, canvas_model):
         """Locked selections are ignored."""

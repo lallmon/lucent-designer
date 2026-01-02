@@ -522,8 +522,8 @@ class TestDuplicateItemCommand:
 
         # Expect original three plus duplicated group+child
         assert canvas_model.count() == 5
-        group_copy = canvas_model.getItems()[4]
-        child_copy = canvas_model.getItems()[3]
+        group_copy = canvas_model.getItems()[cmd.inserted_parent_index]
+        child_copy = canvas_model.getItems()[cmd.inserted_parent_index - 1]
 
         assert isinstance(group_copy, GroupItem)
         assert isinstance(child_copy, RectangleItem)
