@@ -13,12 +13,20 @@ ApplicationWindow {
 
     menuBar: MenuBar {
         viewport: viewport
+        canvas: canvas
     }
 
     footer: StatusBar {
         zoomLevel: viewport.zoomLevel
         cursorX: canvas.cursorX
         cursorY: canvas.cursorY
+    }
+
+    Shortcut {
+        sequences: [StandardKey.Duplicate, "Ctrl+D"]
+        onActivated: {
+            canvas.duplicateSelectedItem();
+        }
     }
 
     // Main layout with tool settings and content

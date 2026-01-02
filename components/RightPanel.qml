@@ -21,8 +21,6 @@ Pane {
             ObjectPropertiesInspector {
                 id: propertiesInspector
                 anchors.fill: parent
-                // Direct binding avoids binding loop warnings seen with Binding element
-                selectedItem: DV.SelectionManager.selectedItem
             }
         }
 
@@ -42,6 +40,23 @@ Pane {
             LayerPanel {
                 anchors.fill: parent
             }
+        }
+    }
+
+    // Keep inspector selection in sync without introducing a binding loop
+    Component.onCompleted: {
+        propertiesInspector.selectedItem = DV.SelectionManager.selectedItem;
+    }
+    Connections {
+        target: DV.SelectionManager
+        function onSelectedItemChanged() {
+            propertiesInspector.selectedItem = DV.SelectionManager.selectedItem;
+        }
+        function onSelectedItemIndexChanged() {
+            propertiesInspector.selectedItem = DV.SelectionManager.selectedItem;
+        }
+        function onSelectedIndicesChanged() {
+            propertiesInspector.selectedItem = DV.SelectionManager.selectedItem;
         }
     }
 }

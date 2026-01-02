@@ -373,6 +373,22 @@ Item {
         DV.SelectionManager.selectedItem = null;
     }
 
+    function duplicateSelectedItem() {
+        var indices = DV.SelectionManager.selectedIndices || [];
+        if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
+            indices = [DV.SelectionManager.selectedItemIndex];
+        }
+        if (indices.length === 0)
+            return;
+        var newIndices = canvasModel.duplicateItems(indices);
+        if (!newIndices || newIndices.length === 0)
+            return;
+        DV.SelectionManager.selectedIndices = newIndices;
+        DV.SelectionManager.selectedItemIndex = newIndices[newIndices.length - 1];
+        DV.SelectionManager.selectedItem = canvasModel.getItemData(DV.SelectionManager.selectedItemIndex);
+        refreshSelectionOverlayBounds();
+    }
+
     // Cancel the current drawing tool operation
     function cancelCurrentTool() {
         if (currentToolLoader.item) {

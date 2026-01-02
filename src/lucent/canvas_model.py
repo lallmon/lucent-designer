@@ -28,6 +28,7 @@ from lucent.commands import (
     MoveItemCommand,
     TransactionCommand,
     GroupItemsCommand,
+    DuplicateItemCommand,
 )
 from lucent.history_manager import HistoryManager
 from lucent.item_schema import (
@@ -341,6 +342,79 @@ class CanvasModel(QAbstractListModel):
 
         command = AddItemCommand(self, parsed.data)
         self._execute_command(command)
+
+    @Slot(int, result=int)
+    def duplicateItem(self, index: int) -> int:
+        """Duplicate an item (and its descendants) returning the new index."""
+        if not (0 <= index < len(self._items)):
+            return -1
+        if self._is_effectively_locked(index):
+            return -1
+
+        command = DuplicateItemCommand(self, index)
+        self._execute_command(command)
+        return command.result_index if command.result_index is not None else -1
+
+    @Slot(list, result="QVariant")  # type: ignore[arg-type]
+    def duplicateItems(self, indices: list[int]) -> List[int]:
+        """Duplicate multiple selected items; returns list of new top-level indices."""
+        if not indices:
+            return []
+
+        # Normalize and validate indices
+        unique_indices = sorted(
+            {int(i) for i in indices if 0 <= int(i) < len(self._items)}
+        )
+        if not unique_indices:
+            return []
+
+        # Skip locked or effectively locked items
+        unlocked_indices = [
+            i for i in unique_indices if not self._is_effectively_locked(i)
+        ]
+        if not unlocked_indices:
+            return []
+
+        # Drop descendants when their ancestor container is selected to avoid
+        # double duplication
+        selected_containers = {
+            getattr(self._items[i], "id", None)
+            for i in unlocked_indices
+            if isinstance(self._items[i], (LayerItem, GroupItem))
+        }
+        descendant_skip: set[int] = set()
+        for container_id in selected_containers:
+            if not container_id:
+                continue
+            descendant_skip.update(self._get_descendant_indices(container_id))
+
+        filtered_indices = [i for i in unlocked_indices if i not in descendant_skip]
+        if not filtered_indices:
+            return []
+
+        # Execute duplications in one transaction, from highest index down to
+        # keep positions stable
+        commands: List[DuplicateItemCommand] = []
+        index_to_command: Dict[int, DuplicateItemCommand] = {}
+        for idx in sorted(filtered_indices):
+            cmd = DuplicateItemCommand(self, idx)
+            commands.append(cmd)
+            index_to_command[idx] = cmd
+
+        transaction = TransactionCommand(commands, "Duplicate Items")
+        self._execute_command(transaction)
+
+        # Consume recorded insertion indices per command; order results by
+        # original selection order.
+        new_indices: List[int] = []
+        for idx in sorted(filtered_indices):
+            cmd = index_to_command.get(idx)
+            if not cmd:
+                continue
+            parent_idx = cmd.inserted_parent_index
+            if parent_idx is not None:
+                new_indices.append(parent_idx)
+        return new_indices
 
     @Slot()
     def addLayer(self) -> None:

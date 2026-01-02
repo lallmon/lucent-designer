@@ -322,6 +322,17 @@ Item {
                                                         layerContainer.dragActive = false;
                                                         autoScrollTimer.stop();
                                                         if (root.draggedIndex >= 0) {
+                                                            // Guard against empty model or stale indices after a reset
+                                                            if (layerRepeater.count <= 0) {
+                                                                delegateRoot.dragOffsetY = 0;
+                                                                root.draggedIndex = -1;
+                                                                root.draggedItemType = "";
+                                                                root.dropTargetContainerId = "";
+                                                                root.draggedItemParentId = null;
+                                                                root.dropTargetParentId = null;
+                                                                root.dropInsertIndex = -1;
+                                                                return;
+                                                            }
                                                             // Calculate target model index for potential reordering
                                                             let totalItemHeight = layerContainer.itemHeight + layerContainer.itemSpacing;
                                                             let indexDelta = Math.round(delegateRoot.dragOffsetY / totalItemHeight);
@@ -329,6 +340,16 @@ Item {
                                                             let rowCount = layerRepeater.count;
                                                             targetDisplayIndex = Math.max(0, Math.min(rowCount - 1, targetDisplayIndex));
                                                             let targetModelIndex = root.modelIndexForDisplay(targetDisplayIndex);
+                                                            if (targetModelIndex < 0 || targetModelIndex >= rowCount) {
+                                                                delegateRoot.dragOffsetY = 0;
+                                                                root.draggedIndex = -1;
+                                                                root.draggedItemType = "";
+                                                                root.dropTargetContainerId = "";
+                                                                root.draggedItemParentId = null;
+                                                                root.dropTargetParentId = null;
+                                                                root.dropInsertIndex = -1;
+                                                                return;
+                                                            }
 
                                                             // Determine the action based on drag context
                                                             if (root.dropTargetContainerId !== "" && root.draggedItemType !== "layer") {

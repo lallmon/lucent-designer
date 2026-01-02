@@ -3,6 +3,7 @@
 from lucent.canvas_items import RectangleItem, EllipseItem, LayerItem
 from lucent.commands import (
     AddItemCommand,
+    DEFAULT_DUPLICATE_OFFSET,
 )
 from types import SimpleNamespace
 
@@ -3124,6 +3125,223 @@ class TestEffectiveLockedFunctionality:
 
         canvas_model.toggleLocked(0)
         assert canvas_model.data(idx, canvas_model.EffectiveLockedRole) is True
+
+
+class TestCanvasModelDuplicate:
+    """Tests for duplicating items via CanvasModel."""
+
+    def test_duplicate_item_creates_offset_copy(self, canvas_model):
+        """Duplicating an item returns new index and copies geometry."""
+        base_data = {
+            "type": "rectangle",
+            "x": 2,
+            "y": 4,
+            "width": 20,
+            "height": 10,
+            "name": "Origin",
+        }
+        canvas_model.addItem(base_data)
+
+        new_index = canvas_model.duplicateItem(0)
+
+        assert new_index == 1
+        assert canvas_model.count() == 2
+        duplicate = canvas_model.getItemData(new_index)
+        assert duplicate is not None
+        assert duplicate["type"] == "rectangle"
+        assert duplicate["x"] == base_data["x"] + DEFAULT_DUPLICATE_OFFSET
+        assert duplicate["y"] == base_data["y"] + DEFAULT_DUPLICATE_OFFSET
+        assert duplicate["name"] == "Origin Copy"
+
+    def test_duplicate_item_respects_effective_lock(self, canvas_model):
+        """Locked ancestry prevents duplication."""
+        canvas_model.addLayer()
+        layer_id = canvas_model.getItems()[0].id
+        canvas_model.toggleLocked(0)  # Lock the layer
+        canvas_model.addItem(
+            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
+        )
+        canvas_model.setParent(1, layer_id)
+
+        new_index = canvas_model.duplicateItem(1)
+
+        assert new_index == -1
+        assert canvas_model.count() == 2
+
+    def test_duplicate_item_invalid_index(self, canvas_model):
+        """Invalid index should return -1 without side effects."""
+        result = canvas_model.duplicateItem(99)
+
+        assert result == -1
+        assert canvas_model.count() == 0
+
+    def test_duplicate_items_duplicates_all_selected(self, canvas_model):
+        """Multiple selected items should all be duplicated with offsets."""
+        rect_a = {
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 10,
+            "height": 10,
+            "name": "A",
+        }
+        rect_b = {
+            "type": "rectangle",
+            "x": 10,
+            "y": 10,
+            "width": 20,
+            "height": 20,
+            "name": "B",
+        }
+        canvas_model.addItem(rect_a)
+        canvas_model.addItem(rect_b)
+
+        new_indices = canvas_model.duplicateItems([0, 1])
+
+        assert canvas_model.count() == 4
+        assert len(new_indices) == 2
+        dup_a = canvas_model.getItemData(new_indices[0])
+        dup_b = canvas_model.getItemData(new_indices[1])
+        assert dup_a["name"] == "A Copy"
+        assert dup_a["x"] == rect_a["x"] + DEFAULT_DUPLICATE_OFFSET
+        assert dup_b["name"] == "B Copy"
+        assert dup_b["y"] == rect_b["y"] + DEFAULT_DUPLICATE_OFFSET
+
+    def test_duplicate_items_appends_to_end(self, canvas_model):
+        """Duplicates are appended so they render on top."""
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 10,
+                "height": 10,
+                "name": "A",
+            }
+        )
+        canvas_model.addItem(
+            {"type": "rectangle", "x": 1, "y": 1, "width": 5, "height": 5, "name": "B"}
+        )
+
+        new_indices = canvas_model.duplicateItems([0])
+
+        assert canvas_model.count() == 3
+        assert new_indices == [2]  # appended
+        names = [
+            canvas_model.getItemData(i)["name"] for i in range(canvas_model.count())
+        ]
+        assert names == ["A", "B", "A Copy"]
+
+    def test_duplicate_group_appends_as_sibling_with_children(self, canvas_model):
+        """Duplicating a group appends it as a sibling with its children under it."""
+        canvas_model.addLayer()
+        layer_id = canvas_model.getItems()[0].id
+        canvas_model.addItem({"type": "group", "name": "G1", "parentId": layer_id})
+        g1_id = canvas_model.getItems()[1].id
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 1,
+                "height": 1,
+                "name": "C1",
+                "parentId": g1_id,
+            }
+        )
+        canvas_model.addItem(
+            {"type": "rectangle", "x": 1, "y": 1, "width": 1, "height": 1, "name": "R1"}
+        )
+
+        new_indices = canvas_model.duplicateItems([1, 3])
+
+        assert len(new_indices) == 2
+        # Expect appended order: existing 4 items + group copy + child copy + rect copy
+        assert canvas_model.count() == 7
+        group_copy_idx = new_indices[0]
+        rect_copy_idx = new_indices[1]
+
+        group_copy = canvas_model.getItems()[group_copy_idx]
+        child_copy = canvas_model.getItems()[group_copy_idx - 1]
+        rect_copy = canvas_model.getItems()[rect_copy_idx]
+
+        assert group_copy.name == "G1 Copy"
+        assert group_copy.parent_id == layer_id
+        assert child_copy.parent_id == group_copy.id
+        assert rect_copy.name == "R1 Copy"
+        assert rect_copy_idx == canvas_model.count() - 1
+
+    def test_duplicate_items_skips_descendant_when_parent_selected(self, canvas_model):
+        """Descendants should not duplicate twice when parent container is selected."""
+        canvas_model.addItem({"type": "group", "name": "Group"})
+        group_id = canvas_model.getItems()[0].id
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 1,
+                "y": 2,
+                "width": 5,
+                "height": 6,
+                "parentId": group_id,
+                "name": "Child",
+            }
+        )
+
+        new_indices = canvas_model.duplicateItems([0, 1])
+
+        # Expect one duplicated group and its child (total items: 4)
+        assert canvas_model.count() == 4
+        assert len(new_indices) == 1
+        dup_group_index = new_indices[0]
+        dup_group = canvas_model.getItems()[dup_group_index]
+        assert dup_group.name == "Group Copy"
+        # Child should be directly before the group
+        dup_child = canvas_model.getItems()[dup_group_index - 1]
+        assert dup_child.parent_id == dup_group.id
+
+    def test_duplicate_items_skips_locked(self, canvas_model):
+        """Locked selections are ignored."""
+        canvas_model.addItem(
+            {"type": "rectangle", "x": 0, "y": 0, "width": 10, "height": 10}
+        )
+        canvas_model.toggleLocked(0)
+
+        new_indices = canvas_model.duplicateItems([0])
+
+        assert new_indices == []
+        assert canvas_model.count() == 1
+
+    def test_duplicate_group_places_parent_after_children(self, canvas_model):
+        """Duplicating container should place parent after its cloned children."""
+        canvas_model.addLayer()
+        layer_id = canvas_model.getItems()[0].id
+        canvas_model.addItem({"type": "group", "name": "G", "parentId": layer_id})
+        group_id = canvas_model.getItems()[1].id
+        canvas_model.addItem(
+            {
+                "type": "rectangle",
+                "x": 1,
+                "y": 2,
+                "width": 3,
+                "height": 4,
+                "parentId": group_id,
+                "name": "C",
+            }
+        )
+
+        new_indices = canvas_model.duplicateItems([1])
+
+        assert len(new_indices) == 1
+        dup_group_index = new_indices[0]
+        dup_child_index = dup_group_index - 1
+
+        dup_group = canvas_model.getItems()[dup_group_index]
+        dup_child = canvas_model.getItems()[dup_child_index]
+
+        assert dup_group.parent_id == layer_id
+        assert dup_child.parent_id == dup_group.id
+        # Parent should come after its child in model order so it displays above
+        assert dup_child_index < dup_group_index
 
 
 class TestCoverageEdgeCases:

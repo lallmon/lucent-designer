@@ -8,6 +8,8 @@ MenuBar {
 
     // Property to reference the viewport for zoom operations
     property var viewport: null
+    // Property to reference the canvas for edit operations
+    property var canvas: null
 
     Menu {
         title: qsTr("&File")
@@ -33,6 +35,16 @@ MenuBar {
             enabled: canvasModel ? canvasModel.canRedo : false
             onTriggered: if (canvasModel)
                 canvasModel.redo()
+        }
+        Action {
+            text: qsTr("&Duplicate Selection (Ctrl+D)")
+            shortcut: StandardKey.Duplicate
+            enabled: root.canvas && ((DV.SelectionManager.selectedIndices && DV.SelectionManager.selectedIndices.length > 0) || DV.SelectionManager.selectedItemIndex >= 0)
+            onTriggered: {
+                if (root.canvas) {
+                    root.canvas.duplicateSelectedItem();
+                }
+            }
         }
         Action {
             text: qsTr("&Group Selection (Ctrl+G)")
