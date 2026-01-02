@@ -27,6 +27,7 @@ from lucent.commands import (
     ClearCommand,
     MoveItemCommand,
     TransactionCommand,
+    GroupItemsCommand,
 )
 from lucent.history_manager import HistoryManager
 from lucent.item_schema import (
@@ -272,6 +273,13 @@ class CanvasModel(QAbstractListModel):
 
         # Remove the group itself
         self.removeItem(group_index)
+
+    @Slot(list, result=int)
+    def groupItems(self, indices: list[int]) -> int:
+        """Group items in one undoable action; returns group index or -1."""
+        command = GroupItemsCommand(self, indices)
+        self._execute_command(command)
+        return command.result_index if command.result_index is not None else -1
 
     def _is_effectively_visible(self, index: int) -> bool:
         if not (0 <= index < len(self._items)):

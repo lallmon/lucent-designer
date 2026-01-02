@@ -114,6 +114,43 @@ Item {
                         }
                     }
                 }
+
+                Rectangle {
+                    id: addGroupFromSelectionButton
+                    Layout.preferredWidth: 24
+                    Layout.preferredHeight: 24
+                    radius: DV.Theme.sizes.radiusSm
+                    color: addGroupFromSelectionHover.hovered ? DV.Theme.colors.panelHover : "transparent"
+
+                    DV.PhIcon {
+                        anchors.centerIn: parent
+                        name: "folders"
+                        size: 18
+                        color: DV.Theme.colors.textSubtle
+                    }
+
+                    HoverHandler {
+                        id: addGroupFromSelectionHover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    TapHandler {
+                        onTapped: {
+                            var indices = DV.SelectionManager.selectedIndices || [];
+                            if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
+                                indices = [DV.SelectionManager.selectedItemIndex];
+                            }
+                            if (indices.length === 0)
+                                return;
+                            var finalGroupIndex = canvasModel.groupItems(indices);
+                            if (finalGroupIndex >= 0) {
+                                DV.SelectionManager.selectedIndices = [finalGroupIndex];
+                                DV.SelectionManager.selectedItemIndex = finalGroupIndex;
+                                DV.SelectionManager.selectedItem = canvasModel.getItemData(finalGroupIndex);
+                            }
+                        }
+                    }
+                }
             }
         }
 

@@ -49,38 +49,8 @@ MenuBar {
                 }
                 if (indices.length === 0)
                     return;
-                indices.sort(function (a, b) {
-                    return a - b;
-                });
-                const first = indices[0];
-                const firstData = canvasModel.getItemData(first);
-                if (!firstData)
-                    return;
-                const parentId = firstData.parentId ? firstData.parentId : "";
-                canvasModel.addItem({
-                    "type": "group",
-                    "parentId": parentId
-                });
-                const groupIndex = canvasModel.count() - 1;
-                const insertAt = first;
-                canvasModel.moveItem(groupIndex, insertAt);
-                const groupData = canvasModel.getItemData(insertAt);
-                const groupId = groupData ? groupData.id : null;
-                if (groupId !== null) {
-                    for (let k = 0; k < indices.length; k++) {
-                        const orig = indices[k];
-                        const currentIndex = orig >= insertAt ? orig + 1 : orig;
-                        canvasModel.reparentItem(currentIndex, groupId);
-                    }
-                    // Find the group index in case reparenting changed positions
-                    let finalGroupIndex = insertAt;
-                    for (let i = 0; i < canvasModel.count(); i++) {
-                        const data = canvasModel.getItemData(i);
-                        if (data && data.type === "group" && data.id === groupId) {
-                            finalGroupIndex = i;
-                            break;
-                        }
-                    }
+                const finalGroupIndex = canvasModel.groupItems(indices);
+                if (finalGroupIndex >= 0) {
                     DV.SelectionManager.selectedIndices = [finalGroupIndex];
                     DV.SelectionManager.selectedItemIndex = finalGroupIndex;
                     DV.SelectionManager.selectedItem = canvasModel.getItemData(finalGroupIndex);
