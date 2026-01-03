@@ -41,6 +41,7 @@ Item {
     ShaderEffect {
         id: gridShader
         anchors.fill: parent
+        visible: status === ShaderEffect.Ready
 
         property real baseGridSize: 32.0
         property real majorMultiplier: 5.0
@@ -68,6 +69,125 @@ Item {
 
         vertexShader: Qt.resolvedUrl("shaders/grid.vert.qsb")
         fragmentShader: Qt.resolvedUrl("shaders/grid.frag.qsb")
+
+        onStatusChanged: {
+            if (status === ShaderEffect.Error) {
+                console.error("[gridShader] status=Error; grid fallback will activate");
+            } else if (status !== ShaderEffect.Ready) {
+                console.warn("[gridShader] status:", status, "grid fallback will activate if not Ready");
+            }
+        }
+    }
+
+    // Fallback grid when shader fails or is unavailable (e.g., missing GL backend)
+    Canvas {
+        id: gridFallback
+        anchors.fill: parent
+        visible: gridShader.status !== ShaderEffect.Ready
+        antialiasing: false
+        z: gridShader.z
+
+        // Mirror shader params to keep spacing/colors consistent
+        property real baseGridSize: gridShader.baseGridSize
+        property real majorMultiplier: gridShader.majorMultiplier
+
+        function gridParams() {
+            var gridSize = baseGridSize;
+            var showMinor = true;
+            if (root.zoomLevel < 0.5) {
+                gridSize = baseGridSize * majorMultiplier;
+                showMinor = false;
+            } else if (root.zoomLevel > 2.0) {
+                gridSize = baseGridSize * 0.5;
+            }
+            return {
+                gridSize: gridSize,
+                majorStep: baseGridSize * majorMultiplier,
+                showMinor: showMinor
+            };
+        }
+
+        function drawLines(stepPx, color, lineWidth) {
+            if (!isFinite(stepPx) || stepPx < 1) {
+                return;
+            }
+            var ctx = getContext("2d");
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+
+            var originX = (width * 0.5) + root.offsetX;
+            var originY = (height * 0.5) + root.offsetY;
+
+            var startX = originX % stepPx;
+            if (startX < 0)
+                startX += stepPx;
+            for (var x = startX; x <= width; x += stepPx) {
+                ctx.beginPath();
+                ctx.moveTo(x + 0.5, 0);
+                ctx.lineTo(x + 0.5, height);
+                ctx.stroke();
+            }
+
+            var startY = originY % stepPx;
+            if (startY < 0)
+                startY += stepPx;
+            for (var y = startY; y <= height; y += stepPx) {
+                ctx.beginPath();
+                ctx.moveTo(0, y + 0.5);
+                ctx.lineTo(width, y + 0.5);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        onPaint: {
+            var ctx = getContext("2d");
+            ctx.resetTransform();
+            ctx.clearRect(0, 0, width, height);
+
+            var params = gridParams();
+            var zoom = root.zoomLevel;
+            if (!isFinite(zoom) || zoom <= 0)
+                return;
+
+            var minorStepPx = params.gridSize * zoom;
+            var majorStepPx = params.majorStep * zoom;
+
+            // Minor grid
+            if (params.showMinor) {
+                drawLines(minorStepPx, DV.Theme.colors.gridMinor, gridShader.minorThicknessPx);
+            }
+            // Major grid overlays minor
+            drawLines(majorStepPx, DV.Theme.colors.gridMajor, gridShader.majorThicknessPx);
+        }
+
+        onVisibleChanged: {
+            if (visible) {
+                requestPaint();
+            }
+        }
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+
+        Connections {
+            target: root
+            function onZoomLevelChanged() {
+                if (gridFallback.visible) {
+                    gridFallback.requestPaint();
+                }
+            }
+            function onOffsetXChanged() {
+                if (gridFallback.visible) {
+                    gridFallback.requestPaint();
+                }
+            }
+            function onOffsetYChanged() {
+                if (gridFallback.visible) {
+                    gridFallback.requestPaint();
+                }
+            }
+        }
     }
 
     // Origin marker at canvas (0,0)
