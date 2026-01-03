@@ -17,10 +17,10 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: Linux
-          # - os: macos-latest
-          #   platform: macOS
-          # - os: windows-latest
-          #   platform: Windows
+          - os: macos-latest
+            platform: macOS
+          - os: windows-latest
+            platform: Windows
 
     steps:
       - name: Checkout code
