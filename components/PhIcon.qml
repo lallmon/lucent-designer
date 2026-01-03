@@ -4,13 +4,14 @@ import "." as DV
 
 Item {
     id: root
+    readonly property SystemPalette palette: DV.PaletteBridge.active
 
     // Icon name (without extension), e.g. "cursor" or "square"
     property string name: ""
     // Icon weight directory under assets/phosphor/, defaults to "regular"
     property string weight: "regular"
     // Icon pixel size (width and height)
-    property real size: DV.Theme.sizes.iconSize
+    property real size: DV.Styles.height.lg
     // Tint color; set to "transparent" to keep original SVG color
     property color color: "white"
 
@@ -51,13 +52,13 @@ Item {
         anchors.fill: parent
         visible: image.status === Image.Error
         color: "#00000000"
-        border.color: DV.Theme.colors.error
-        radius: DV.Theme.sizes.radiusSm
+        border.color: palette.highlight
+        radius: DV.Styles.rad.sm
 
         Text {
             anchors.centerIn: parent
             text: "?"
-            color: DV.Theme.colors.error
+            color: palette.highlight
             font.pixelSize: 10
         }
     }

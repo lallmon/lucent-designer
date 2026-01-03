@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Controls.Material
 import "components"
+import "components" as DV
 
 ApplicationWindow {
     id: root
@@ -10,6 +11,10 @@ ApplicationWindow {
     height: 1080
     visible: true
     title: qsTr("Lucent")
+    font: Qt.application.font
+    readonly property SystemPalette palette: DV.PaletteBridge.active
+
+    readonly property var systemFont: Qt.application.font
 
     menuBar: MenuBar {
         viewport: viewport
@@ -68,7 +73,7 @@ ApplicationWindow {
                 handle: Rectangle {
                     implicitWidth: 6
                     implicitHeight: 6
-                    color: SplitHandle.hovered ? Theme.colors.borderDefault : Theme.colors.borderSubtle
+                    color: SplitHandle.hovered ? palette.highlight : palette.mid
                 }
 
                 // Main Viewport with Canvas

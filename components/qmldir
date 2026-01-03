@@ -1,3 +1,4 @@
-singleton Theme Theme.qml
+singleton Styles Styles.qml
 singleton SelectionManager SelectionManager.qml
+singleton PaletteBridge PaletteBridge.qml
 Viewport 1.0 Viewport.qml

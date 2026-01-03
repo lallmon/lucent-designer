@@ -11,26 +11,27 @@ ToolBar {
 
     // Properties
     property string activeTool: ""  // Current tool ("select", "rectangle", "ellipse", etc.)
+    readonly property SystemPalette palette: DV.PaletteBridge.active
 
     // Tool-specific settings - Rectangle
     property real rectangleStrokeWidth: 1
-    property color rectangleStrokeColor: "#ffffff"
+    property color rectangleStrokeColor: palette.text
     property real rectangleStrokeOpacity: 1.0
-    property color rectangleFillColor: "#ffffff"
+    property color rectangleFillColor: palette.base
     property real rectangleFillOpacity: 0.0
 
     // Tool-specific settings - Ellipse
     property real ellipseStrokeWidth: 1
-    property color ellipseStrokeColor: "#ffffff"
+    property color ellipseStrokeColor: palette.text
     property real ellipseStrokeOpacity: 1.0
-    property color ellipseFillColor: "#ffffff"
+    property color ellipseFillColor: palette.base
     property real ellipseFillOpacity: 0.0
 
     // Tool-specific settings - Pen
     property real penStrokeWidth: 1
-    property color penStrokeColor: "#ffffff"
+    property color penStrokeColor: palette.text
     property real penStrokeOpacity: 1.0
-    property color penFillColor: "#ffffff"
+    property color penFillColor: palette.base
     property real penFillOpacity: 0.0
 
     // Construct toolSettings object from individual properties
@@ -80,8 +81,8 @@ ToolBar {
 
             TextField {
                 id: strokeWidthInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsStrokeWidthFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 50
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: root.rectangleStrokeWidth.toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -113,13 +114,13 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: strokeWidthInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: strokeWidthInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
 
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -135,7 +136,7 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: 6
                 Layout.rightMargin: 6
-                color: DV.Theme.colors.borderSubtle
+                color: palette.mid
             }
 
             Label {
@@ -156,9 +157,9 @@ ToolBar {
 
                 background: Rectangle {
                     color: root.rectangleStrokeColor
-                    border.color: DV.Theme.colors.borderSubtle
+                    border.color: palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
             }
 
@@ -171,8 +172,8 @@ ToolBar {
             Slider {
                 id: strokeOpacitySlider
                 Layout.preferredWidth: 80
-                Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                implicitHeight: DV.Theme.sizes.sliderHeight
+                Layout.preferredHeight: DV.Styles.height.sm
+                implicitHeight: DV.Styles.height.sm
                 Layout.alignment: Qt.AlignVCenter
                 from: 0
                 to: 100
@@ -204,38 +205,38 @@ ToolBar {
                     x: strokeOpacitySlider.leftPadding
                     y: strokeOpacitySlider.topPadding + strokeOpacitySlider.availableHeight / 2 - height / 2
                     width: strokeOpacitySlider.availableWidth
-                    height: DV.Theme.sizes.sliderTrackHeight
+                    height: DV.Styles.height.xxxsm
                     implicitWidth: 80
-                    implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                    radius: DV.Theme.sizes.radiusSm
-                    color: DV.Theme.colors.gridMinor
+                    implicitHeight: DV.Styles.height.xxxsm
+                    radius: DV.Styles.rad.sm
+                    color: palette.base
 
                     Rectangle {
                         width: strokeOpacitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: DV.Theme.colors.accent
-                        radius: DV.Theme.sizes.radiusSm
+                        color: palette.highlight
+                        radius: DV.Styles.rad.sm
                     }
                 }
 
                 handle: Rectangle {
                     x: strokeOpacitySlider.leftPadding + strokeOpacitySlider.visualPosition * (strokeOpacitySlider.availableWidth - width)
                     y: strokeOpacitySlider.topPadding + strokeOpacitySlider.availableHeight / 2 - height / 2
-                    width: DV.Theme.sizes.sliderHandleSize
-                    height: DV.Theme.sizes.sliderHandleSize
-                    implicitWidth: DV.Theme.sizes.sliderHandleSize
-                    implicitHeight: DV.Theme.sizes.sliderHandleSize
-                    radius: DV.Theme.sizes.radiusLg
-                    color: strokeOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                    border.color: DV.Theme.colors.borderSubtle
+                    width: DV.Styles.height.xs
+                    height: DV.Styles.height.xs
+                    implicitWidth: DV.Styles.height.xs
+                    implicitHeight: DV.Styles.height.xs
+                    radius: DV.Styles.rad.lg
+                    color: strokeOpacitySlider.pressed ? palette.highlight : palette.button
+                    border.color: palette.mid
                     border.width: 1
                 }
             }
 
             TextField {
                 id: strokeOpacityInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsOpacityFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 35
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: Math.round(root.rectangleStrokeOpacity * 100).toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -275,13 +276,13 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: strokeOpacityInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: strokeOpacityInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
 
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -297,7 +298,7 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: 6
                 Layout.rightMargin: 6
-                color: DV.Theme.colors.borderSubtle
+                color: palette.mid
             }
 
             Label {
@@ -317,9 +318,9 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    border.color: DV.Theme.colors.borderSubtle
+                    border.color: palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                     color: "transparent"
                     clip: true
 
@@ -327,6 +328,10 @@ ToolBar {
                     Canvas {
                         anchors.fill: parent
                         z: 0
+                        property color checkerLight: palette.midlight
+                        property color checkerDark: palette.mid
+                        onCheckerLightChanged: requestPaint()
+                        onCheckerDarkChanged: requestPaint()
                         onPaint: {
                             var ctx = getContext("2d");
                             ctx.clearRect(0, 0, width, height);
@@ -336,9 +341,9 @@ ToolBar {
                             for (var y = 0; y < height; y += size) {
                                 for (var x = 0; x < width; x += size) {
                                     if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
-                                        ctx.fillStyle = "#999999";
+                                        ctx.fillStyle = checkerLight;
                                     } else {
-                                        ctx.fillStyle = "#666666";
+                                        ctx.fillStyle = checkerDark;
                                     }
                                     ctx.fillRect(x, y, size, size);
                                 }
@@ -368,8 +373,8 @@ ToolBar {
                 Layout.preferredWidth: 80
                 // When we customize handle/background, the Slider can lose its implicit height,
                 // which causes RowLayout to give it ~0 height (no hit area). Explicitly size it.
-                Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                implicitHeight: DV.Theme.sizes.sliderHeight
+                Layout.preferredHeight: DV.Styles.height.sm
+                implicitHeight: DV.Styles.height.sm
                 Layout.alignment: Qt.AlignVCenter
                 from: 0
                 to: 100
@@ -403,39 +408,39 @@ ToolBar {
                     x: opacitySlider.leftPadding
                     y: opacitySlider.topPadding + opacitySlider.availableHeight / 2 - height / 2
                     width: opacitySlider.availableWidth
-                    height: DV.Theme.sizes.sliderTrackHeight
+                    height: DV.Styles.height.xxxsm
                     // Provide implicit sizes so the control has a non-zero implicitHeight/Width in layouts
                     implicitWidth: 80
-                    implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                    radius: DV.Theme.sizes.radiusSm
-                    color: DV.Theme.colors.gridMinor
+                    implicitHeight: DV.Styles.height.xxxsm
+                    radius: DV.Styles.rad.sm
+                    color: palette.base
 
                     Rectangle {
                         width: opacitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: DV.Theme.colors.accent
-                        radius: DV.Theme.sizes.radiusSm
+                        color: palette.highlight
+                        radius: DV.Styles.rad.sm
                     }
                 }
 
                 handle: Rectangle {
                     x: opacitySlider.leftPadding + opacitySlider.visualPosition * (opacitySlider.availableWidth - width)
                     y: opacitySlider.topPadding + opacitySlider.availableHeight / 2 - height / 2
-                    width: DV.Theme.sizes.sliderHandleSize
-                    height: DV.Theme.sizes.sliderHandleSize
-                    implicitWidth: DV.Theme.sizes.sliderHandleSize
-                    implicitHeight: DV.Theme.sizes.sliderHandleSize
-                    radius: DV.Theme.sizes.radiusLg
-                    color: opacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                    border.color: DV.Theme.colors.borderSubtle
+                    width: DV.Styles.height.xs
+                    height: DV.Styles.height.xs
+                    implicitWidth: DV.Styles.height.xs
+                    implicitHeight: DV.Styles.height.xs
+                    radius: DV.Styles.rad.lg
+                    color: opacitySlider.pressed ? palette.highlight : palette.button
+                    border.color: palette.mid
                     border.width: 1
                 }
             }
 
             TextField {
                 id: opacityInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsOpacityFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 35
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: Math.round(root.rectangleFillOpacity * 100).toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -476,13 +481,13 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: opacityInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: opacityInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
 
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -508,8 +513,8 @@ ToolBar {
 
             TextField {
                 id: penStrokeWidthInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsStrokeWidthFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 50
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: root.penStrokeWidth.toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -537,12 +542,12 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: penStrokeWidthInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: penStrokeWidthInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -557,7 +562,7 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: 6
                 Layout.rightMargin: 6
-                color: DV.Theme.colors.borderSubtle
+                color: palette.mid
             }
 
             Label {
@@ -576,9 +581,9 @@ ToolBar {
 
                 background: Rectangle {
                     color: root.penStrokeColor
-                    border.color: DV.Theme.colors.borderSubtle
+                    border.color: palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
             }
 
@@ -591,8 +596,8 @@ ToolBar {
             Slider {
                 id: penStrokeOpacitySlider
                 Layout.preferredWidth: 80
-                Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                implicitHeight: DV.Theme.sizes.sliderHeight
+                Layout.preferredHeight: DV.Styles.height.sm
+                implicitHeight: DV.Styles.height.sm
                 Layout.alignment: Qt.AlignVCenter
                 from: 0
                 to: 100
@@ -620,38 +625,38 @@ ToolBar {
                     x: penStrokeOpacitySlider.leftPadding
                     y: penStrokeOpacitySlider.topPadding + penStrokeOpacitySlider.availableHeight / 2 - height / 2
                     width: penStrokeOpacitySlider.availableWidth
-                    height: DV.Theme.sizes.sliderTrackHeight
+                    height: DV.Styles.height.xxxsm
                     implicitWidth: 80
-                    implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                    radius: DV.Theme.sizes.radiusSm
-                    color: DV.Theme.colors.gridMinor
+                    implicitHeight: DV.Styles.height.xxxsm
+                    radius: DV.Styles.rad.sm
+                    color: palette.base
 
                     Rectangle {
                         width: penStrokeOpacitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: DV.Theme.colors.accent
-                        radius: DV.Theme.sizes.radiusSm
+                        color: palette.highlight
+                        radius: DV.Styles.rad.sm
                     }
                 }
 
                 handle: Rectangle {
                     x: penStrokeOpacitySlider.leftPadding + penStrokeOpacitySlider.visualPosition * (penStrokeOpacitySlider.availableWidth - width)
                     y: penStrokeOpacitySlider.topPadding + penStrokeOpacitySlider.availableHeight / 2 - height / 2
-                    width: DV.Theme.sizes.sliderHandleSize
-                    height: DV.Theme.sizes.sliderHandleSize
-                    implicitWidth: DV.Theme.sizes.sliderHandleSize
-                    implicitHeight: DV.Theme.sizes.sliderHandleSize
-                    radius: DV.Theme.sizes.radiusLg
-                    color: penStrokeOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                    border.color: DV.Theme.colors.borderSubtle
+                    width: DV.Styles.height.xs
+                    height: DV.Styles.height.xs
+                    implicitWidth: DV.Styles.height.xs
+                    implicitHeight: DV.Styles.height.xs
+                    radius: DV.Styles.rad.lg
+                    color: penStrokeOpacitySlider.pressed ? palette.highlight : palette.button
+                    border.color: palette.mid
                     border.width: 1
                 }
             }
 
             TextField {
                 id: penStrokeOpacityInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsOpacityFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 35
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: Math.round(root.penStrokeOpacity * 100).toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -687,12 +692,12 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: penStrokeOpacityInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: penStrokeOpacityInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -708,7 +713,7 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: 6
                 Layout.rightMargin: 6
-                color: DV.Theme.colors.borderSubtle
+                color: palette.mid
             }
 
             Label {
@@ -726,9 +731,9 @@ ToolBar {
                 onClicked: penFillColorDialog.open()
 
                 background: Rectangle {
-                    border.color: DV.Theme.colors.borderSubtle
+                    border.color: palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                     color: "transparent"
                     clip: true
 
@@ -736,6 +741,10 @@ ToolBar {
                     Canvas {
                         anchors.fill: parent
                         z: 0
+                        property color checkerLight: palette.midlight
+                        property color checkerDark: palette.mid
+                        onCheckerLightChanged: requestPaint()
+                        onCheckerDarkChanged: requestPaint()
                         onPaint: {
                             var ctx = getContext("2d");
                             ctx.clearRect(0, 0, width, height);
@@ -743,9 +752,9 @@ ToolBar {
                             for (var y = 0; y < height; y += size) {
                                 for (var x = 0; x < width; x += size) {
                                     if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
-                                        ctx.fillStyle = "#999999";
+                                        ctx.fillStyle = checkerLight;
                                     } else {
-                                        ctx.fillStyle = "#666666";
+                                        ctx.fillStyle = checkerDark;
                                     }
                                     ctx.fillRect(x, y, size, size);
                                 }
@@ -772,8 +781,8 @@ ToolBar {
             Slider {
                 id: penFillOpacitySlider
                 Layout.preferredWidth: 80
-                Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                implicitHeight: DV.Theme.sizes.sliderHeight
+                Layout.preferredHeight: DV.Styles.height.sm
+                implicitHeight: DV.Styles.height.sm
                 Layout.alignment: Qt.AlignVCenter
                 from: 0
                 to: 100
@@ -801,38 +810,38 @@ ToolBar {
                     x: penFillOpacitySlider.leftPadding
                     y: penFillOpacitySlider.topPadding + penFillOpacitySlider.availableHeight / 2 - height / 2
                     width: penFillOpacitySlider.availableWidth
-                    height: DV.Theme.sizes.sliderTrackHeight
+                    height: DV.Styles.height.xxxsm
                     implicitWidth: 80
-                    implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                    radius: DV.Theme.sizes.radiusSm
-                    color: DV.Theme.colors.gridMinor
+                    implicitHeight: DV.Styles.height.xxxsm
+                    radius: DV.Styles.rad.sm
+                    color: palette.base
 
                     Rectangle {
                         width: penFillOpacitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: DV.Theme.colors.accent
-                        radius: DV.Theme.sizes.radiusSm
+                        color: palette.highlight
+                        radius: DV.Styles.rad.sm
                     }
                 }
 
                 handle: Rectangle {
                     x: penFillOpacitySlider.leftPadding + penFillOpacitySlider.visualPosition * (penFillOpacitySlider.availableWidth - width)
                     y: penFillOpacitySlider.topPadding + penFillOpacitySlider.availableHeight / 2 - height / 2
-                    width: DV.Theme.sizes.sliderHandleSize
-                    height: DV.Theme.sizes.sliderHandleSize
-                    implicitWidth: DV.Theme.sizes.sliderHandleSize
-                    implicitHeight: DV.Theme.sizes.sliderHandleSize
-                    radius: DV.Theme.sizes.radiusLg
-                    color: penFillOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                    border.color: DV.Theme.colors.borderSubtle
+                    width: DV.Styles.height.xs
+                    height: DV.Styles.height.xs
+                    implicitWidth: DV.Styles.height.xs
+                    implicitHeight: DV.Styles.height.xs
+                    radius: DV.Styles.rad.lg
+                    color: penFillOpacitySlider.pressed ? palette.highlight : palette.button
+                    border.color: palette.mid
                     border.width: 1
                 }
             }
 
             TextField {
                 id: penFillOpacityInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsOpacityFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 35
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: Math.round(root.penFillOpacity * 100).toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -867,12 +876,12 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: penFillOpacityInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: penFillOpacityInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -920,8 +929,8 @@ ToolBar {
 
             TextField {
                 id: ellipseStrokeWidthInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsStrokeWidthFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 50
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: root.ellipseStrokeWidth.toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -953,13 +962,13 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: ellipseStrokeWidthInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: ellipseStrokeWidthInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
 
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -975,7 +984,7 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: 6
                 Layout.rightMargin: 6
-                color: DV.Theme.colors.borderSubtle
+                color: palette.mid
             }
 
             Label {
@@ -996,9 +1005,9 @@ ToolBar {
 
                 background: Rectangle {
                     color: root.ellipseStrokeColor
-                    border.color: DV.Theme.colors.borderSubtle
+                    border.color: palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
             }
 
@@ -1011,8 +1020,8 @@ ToolBar {
             Slider {
                 id: ellipseStrokeOpacitySlider
                 Layout.preferredWidth: 80
-                Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                implicitHeight: DV.Theme.sizes.sliderHeight
+                Layout.preferredHeight: DV.Styles.height.sm
+                implicitHeight: DV.Styles.height.sm
                 Layout.alignment: Qt.AlignVCenter
                 from: 0
                 to: 100
@@ -1044,38 +1053,38 @@ ToolBar {
                     x: ellipseStrokeOpacitySlider.leftPadding
                     y: ellipseStrokeOpacitySlider.topPadding + ellipseStrokeOpacitySlider.availableHeight / 2 - height / 2
                     width: ellipseStrokeOpacitySlider.availableWidth
-                    height: DV.Theme.sizes.sliderTrackHeight
+                    height: DV.Styles.height.xxxsm
                     implicitWidth: 80
-                    implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                    radius: DV.Theme.sizes.radiusSm
-                    color: DV.Theme.colors.gridMinor
+                    implicitHeight: DV.Styles.height.xxxsm
+                    radius: DV.Styles.rad.sm
+                    color: palette.base
 
                     Rectangle {
                         width: ellipseStrokeOpacitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: DV.Theme.colors.accent
-                        radius: DV.Theme.sizes.radiusSm
+                        color: palette.highlight
+                        radius: DV.Styles.rad.sm
                     }
                 }
 
                 handle: Rectangle {
                     x: ellipseStrokeOpacitySlider.leftPadding + ellipseStrokeOpacitySlider.visualPosition * (ellipseStrokeOpacitySlider.availableWidth - width)
                     y: ellipseStrokeOpacitySlider.topPadding + ellipseStrokeOpacitySlider.availableHeight / 2 - height / 2
-                    width: DV.Theme.sizes.sliderHandleSize
-                    height: DV.Theme.sizes.sliderHandleSize
-                    implicitWidth: DV.Theme.sizes.sliderHandleSize
-                    implicitHeight: DV.Theme.sizes.sliderHandleSize
-                    radius: DV.Theme.sizes.radiusLg
-                    color: ellipseStrokeOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                    border.color: DV.Theme.colors.borderSubtle
+                    width: DV.Styles.height.xs
+                    height: DV.Styles.height.xs
+                    implicitWidth: DV.Styles.height.xs
+                    implicitHeight: DV.Styles.height.xs
+                    radius: DV.Styles.rad.lg
+                    color: ellipseStrokeOpacitySlider.pressed ? palette.highlight : palette.button
+                    border.color: palette.mid
                     border.width: 1
                 }
             }
 
             TextField {
                 id: ellipseStrokeOpacityInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsOpacityFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 35
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: Math.round(root.ellipseStrokeOpacity * 100).toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -1115,13 +1124,13 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: ellipseStrokeOpacityInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: ellipseStrokeOpacityInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
 
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {
@@ -1137,7 +1146,7 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: 6
                 Layout.rightMargin: 6
-                color: DV.Theme.colors.borderSubtle
+                color: palette.mid
             }
 
             Label {
@@ -1157,9 +1166,9 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    border.color: DV.Theme.colors.borderSubtle
+                    border.color: palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                     color: "transparent"
                     clip: true
 
@@ -1167,6 +1176,10 @@ ToolBar {
                     Canvas {
                         anchors.fill: parent
                         z: 0
+                        property color checkerLight: palette.midlight
+                        property color checkerDark: palette.mid
+                        onCheckerLightChanged: requestPaint()
+                        onCheckerDarkChanged: requestPaint()
                         onPaint: {
                             var ctx = getContext("2d");
                             ctx.clearRect(0, 0, width, height);
@@ -1176,9 +1189,9 @@ ToolBar {
                             for (var y = 0; y < height; y += size) {
                                 for (var x = 0; x < width; x += size) {
                                     if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
-                                        ctx.fillStyle = "#999999";
+                                        ctx.fillStyle = checkerLight;
                                     } else {
-                                        ctx.fillStyle = "#666666";
+                                        ctx.fillStyle = checkerDark;
                                     }
                                     ctx.fillRect(x, y, size, size);
                                 }
@@ -1206,8 +1219,8 @@ ToolBar {
             Slider {
                 id: ellipseOpacitySlider
                 Layout.preferredWidth: 80
-                Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                implicitHeight: DV.Theme.sizes.sliderHeight
+                Layout.preferredHeight: DV.Styles.height.sm
+                implicitHeight: DV.Styles.height.sm
                 Layout.alignment: Qt.AlignVCenter
                 from: 0
                 to: 100
@@ -1241,38 +1254,38 @@ ToolBar {
                     x: ellipseOpacitySlider.leftPadding
                     y: ellipseOpacitySlider.topPadding + ellipseOpacitySlider.availableHeight / 2 - height / 2
                     width: ellipseOpacitySlider.availableWidth
-                    height: DV.Theme.sizes.sliderTrackHeight
+                    height: DV.Styles.height.xxxsm
                     implicitWidth: 80
-                    implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                    radius: DV.Theme.sizes.radiusSm
-                    color: DV.Theme.colors.gridMinor
+                    implicitHeight: DV.Styles.height.xxxsm
+                    radius: DV.Styles.rad.sm
+                    color: palette.base
 
                     Rectangle {
                         width: ellipseOpacitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: DV.Theme.colors.accent
-                        radius: DV.Theme.sizes.radiusSm
+                        color: palette.highlight
+                        radius: DV.Styles.rad.sm
                     }
                 }
 
                 handle: Rectangle {
                     x: ellipseOpacitySlider.leftPadding + ellipseOpacitySlider.visualPosition * (ellipseOpacitySlider.availableWidth - width)
                     y: ellipseOpacitySlider.topPadding + ellipseOpacitySlider.availableHeight / 2 - height / 2
-                    width: DV.Theme.sizes.sliderHandleSize
-                    height: DV.Theme.sizes.sliderHandleSize
-                    implicitWidth: DV.Theme.sizes.sliderHandleSize
-                    implicitHeight: DV.Theme.sizes.sliderHandleSize
-                    radius: DV.Theme.sizes.radiusLg
-                    color: ellipseOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                    border.color: DV.Theme.colors.borderSubtle
+                    width: DV.Styles.height.xs
+                    height: DV.Styles.height.xs
+                    implicitWidth: DV.Styles.height.xs
+                    implicitHeight: DV.Styles.height.xs
+                    radius: DV.Styles.rad.lg
+                    color: ellipseOpacitySlider.pressed ? palette.highlight : palette.button
+                    border.color: palette.mid
                     border.width: 1
                 }
             }
 
             TextField {
                 id: ellipseOpacityInput
-                Layout.preferredWidth: DV.Theme.sizes.settingsOpacityFieldWidth
-                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.preferredWidth: 35
+                Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 text: Math.round(root.ellipseFillOpacity * 100).toString()
                 horizontalAlignment: TextInput.AlignHCenter
@@ -1313,13 +1326,13 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: DV.Theme.colors.gridMinor
-                    border.color: ellipseOpacityInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    color: palette.base
+                    border.color: ellipseOpacityInput.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
-                    radius: DV.Theme.sizes.radiusSm
+                    radius: DV.Styles.rad.sm
                 }
 
-                color: "#ffffff"
+                color: palette.text
             }
 
             Label {

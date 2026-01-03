@@ -9,6 +9,7 @@ ScrollView {
     id: root
     clip: true
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+    readonly property SystemPalette palette: DV.PaletteBridge.active
 
     property var selectedItem: null
     property string originalStrokeColor: ""
@@ -22,7 +23,7 @@ ScrollView {
     readonly property bool isLocked: (DV.SelectionManager.selectedItemIndex >= 0) && canvasModel && canvasModel.isEffectivelyLocked(DV.SelectionManager.selectedItemIndex)
 
     readonly property int labelSize: 11
-    readonly property color labelColor: DV.Theme.colors.textSubtle
+    readonly property color labelColor: palette.text
 
     function updateProperty(property, value) {
         if (selectedItem && DV.SelectionManager.selectedItemIndex >= 0) {
@@ -35,7 +36,7 @@ ScrollView {
     component PropertySeparator: Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 1
-        color: DV.Theme.colors.borderSubtle
+        color: palette.mid
         Layout.topMargin: 4
         Layout.bottomMargin: 4
     }
@@ -55,7 +56,7 @@ ScrollView {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: DV.Theme.colors.borderSubtle
+            color: palette.mid
         }
 
         ColumnLayout {
@@ -333,7 +334,7 @@ ScrollView {
                             height: 16
                             radius: 2
                             color: root.isPathSelected ? root.selectedItem.strokeColor : "transparent"
-                            border.color: DV.Theme.colors.borderSubtle
+                            border.color: palette.mid
                             border.width: 1
                             Layout.alignment: Qt.AlignVCenter
                             MouseArea {
@@ -367,7 +368,7 @@ ScrollView {
                         Slider {
                             id: pathStrokeOpacitySlider
                             Layout.fillWidth: true
-                            Layout.preferredHeight: DV.Theme.sizes.sliderHeight
+                            Layout.preferredHeight: DV.Styles.height.sm
                             from: 0
                             to: 100
                             stepSize: 1
@@ -387,30 +388,30 @@ ScrollView {
                                 x: pathStrokeOpacitySlider.leftPadding
                                 y: pathStrokeOpacitySlider.topPadding + pathStrokeOpacitySlider.availableHeight / 2 - height / 2
                                 width: pathStrokeOpacitySlider.availableWidth
-                                height: DV.Theme.sizes.sliderTrackHeight
+                                height: DV.Styles.height.xxxsm
                                 implicitWidth: 80
-                                implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                                radius: DV.Theme.sizes.radiusSm
-                                color: DV.Theme.colors.gridMinor
+                                implicitHeight: DV.Styles.height.xxxsm
+                                radius: DV.Styles.rad.sm
+                                color: palette.midlight
 
                                 Rectangle {
                                     width: pathStrokeOpacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: DV.Theme.colors.accent
-                                    radius: DV.Theme.sizes.radiusSm
+                                    color: palette.highlight
+                                    radius: DV.Styles.rad.sm
                                 }
                             }
 
                             handle: Rectangle {
                                 x: pathStrokeOpacitySlider.leftPadding + pathStrokeOpacitySlider.visualPosition * (pathStrokeOpacitySlider.availableWidth - width)
                                 y: pathStrokeOpacitySlider.topPadding + pathStrokeOpacitySlider.availableHeight / 2 - height / 2
-                                width: DV.Theme.sizes.sliderHandleSize
-                                height: DV.Theme.sizes.sliderHandleSize
-                                implicitWidth: DV.Theme.sizes.sliderHandleSize
-                                implicitHeight: DV.Theme.sizes.sliderHandleSize
-                                radius: DV.Theme.sizes.radiusLg
-                                color: pathStrokeOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                                border.color: DV.Theme.colors.borderSubtle
+                                width: DV.Styles.height.xs
+                                height: DV.Styles.height.xs
+                                implicitWidth: DV.Styles.height.xs
+                                implicitHeight: DV.Styles.height.xs
+                                radius: DV.Styles.rad.lg
+                                color: pathStrokeOpacitySlider.pressed ? palette.highlight : palette.text
+                                border.color: palette.mid
                                 border.width: 1
                             }
                         }
@@ -437,7 +438,7 @@ ScrollView {
                             height: 16
                             radius: 2
                             color: root.isPathSelected ? root.selectedItem.fillColor : "transparent"
-                            border.color: DV.Theme.colors.borderSubtle
+                            border.color: palette.mid
                             border.width: 1
                             Layout.alignment: Qt.AlignVCenter
                             MouseArea {
@@ -471,7 +472,7 @@ ScrollView {
                         Slider {
                             id: pathFillOpacitySlider
                             Layout.fillWidth: true
-                            Layout.preferredHeight: DV.Theme.sizes.sliderHeight
+                            Layout.preferredHeight: DV.Styles.height.sm
                             from: 0
                             to: 100
                             stepSize: 1
@@ -491,30 +492,30 @@ ScrollView {
                                 x: pathFillOpacitySlider.leftPadding
                                 y: pathFillOpacitySlider.topPadding + pathFillOpacitySlider.availableHeight / 2 - height / 2
                                 width: pathFillOpacitySlider.availableWidth
-                                height: DV.Theme.sizes.sliderTrackHeight
+                                height: DV.Styles.height.xxxsm
                                 implicitWidth: 80
-                                implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                                radius: DV.Theme.sizes.radiusSm
-                                color: DV.Theme.colors.gridMinor
+                                implicitHeight: DV.Styles.height.xxxsm
+                                radius: DV.Styles.rad.sm
+                                color: palette.midlight
 
                                 Rectangle {
                                     width: pathFillOpacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: DV.Theme.colors.accent
-                                    radius: DV.Theme.sizes.radiusSm
+                                    color: palette.highlight
+                                    radius: DV.Styles.rad.sm
                                 }
                             }
 
                             handle: Rectangle {
                                 x: pathFillOpacitySlider.leftPadding + pathFillOpacitySlider.visualPosition * (pathFillOpacitySlider.availableWidth - width)
                                 y: pathFillOpacitySlider.topPadding + pathFillOpacitySlider.availableHeight / 2 - height / 2
-                                width: DV.Theme.sizes.sliderHandleSize
-                                height: DV.Theme.sizes.sliderHandleSize
-                                implicitWidth: DV.Theme.sizes.sliderHandleSize
-                                implicitHeight: DV.Theme.sizes.sliderHandleSize
-                                radius: DV.Theme.sizes.radiusLg
-                                color: pathFillOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                                border.color: DV.Theme.colors.borderSubtle
+                                width: DV.Styles.height.xs
+                                height: DV.Styles.height.xs
+                                implicitWidth: DV.Styles.height.xs
+                                implicitHeight: DV.Styles.height.xs
+                                radius: DV.Styles.rad.lg
+                                color: pathFillOpacitySlider.pressed ? palette.highlight : palette.text
+                                border.color: palette.mid
                                 border.width: 1
                             }
                         }
@@ -591,9 +592,9 @@ ScrollView {
                             }
                             background: Rectangle {
                                 color: root.isShapeSelected ? root.selectedItem.strokeColor : "transparent"
-                                border.color: DV.Theme.colors.borderSubtle
+                                border.color: palette.mid
                                 border.width: 1
-                                radius: DV.Theme.sizes.radiusSm
+                                radius: DV.Styles.rad.sm
                             }
                         }
                         TextField {
@@ -616,8 +617,8 @@ ScrollView {
                         Slider {
                             id: strokeOpacitySlider
                             Layout.fillWidth: true
-                            Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                            implicitHeight: DV.Theme.sizes.sliderHeight
+                            Layout.preferredHeight: DV.Styles.height.sm
+                            implicitHeight: DV.Styles.height.sm
                             from: 0
                             to: 100
                             stepSize: 1
@@ -639,28 +640,28 @@ ScrollView {
                                 x: strokeOpacitySlider.leftPadding
                                 y: strokeOpacitySlider.topPadding + strokeOpacitySlider.availableHeight / 2 - height / 2
                                 width: strokeOpacitySlider.availableWidth
-                                height: DV.Theme.sizes.sliderTrackHeight
+                                height: DV.Styles.height.xxxsm
                                 implicitWidth: 80
-                                implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                                radius: DV.Theme.sizes.radiusSm
-                                color: DV.Theme.colors.gridMinor
+                                implicitHeight: DV.Styles.height.xxxsm
+                                radius: DV.Styles.rad.sm
+                                color: palette.midlight
                                 Rectangle {
                                     width: strokeOpacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: DV.Theme.colors.accent
-                                    radius: DV.Theme.sizes.radiusSm
+                                    color: palette.highlight
+                                    radius: DV.Styles.rad.sm
                                 }
                             }
                             handle: Rectangle {
                                 x: strokeOpacitySlider.leftPadding + strokeOpacitySlider.visualPosition * (strokeOpacitySlider.availableWidth - width)
                                 y: strokeOpacitySlider.topPadding + strokeOpacitySlider.availableHeight / 2 - height / 2
-                                width: DV.Theme.sizes.sliderHandleSize
-                                height: DV.Theme.sizes.sliderHandleSize
-                                implicitWidth: DV.Theme.sizes.sliderHandleSize
-                                implicitHeight: DV.Theme.sizes.sliderHandleSize
-                                radius: DV.Theme.sizes.radiusLg
-                                color: strokeOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                                border.color: DV.Theme.colors.borderSubtle
+                                width: DV.Styles.height.xs
+                                height: DV.Styles.height.xs
+                                implicitWidth: DV.Styles.height.xs
+                                implicitHeight: DV.Styles.height.xs
+                                radius: DV.Styles.rad.lg
+                                color: strokeOpacitySlider.pressed ? palette.highlight : palette.text
+                                border.color: palette.mid
                                 border.width: 1
                             }
                         }
@@ -699,9 +700,9 @@ ScrollView {
                             }
                             background: Rectangle {
                                 color: root.isShapeSelected ? root.selectedItem.fillColor : "transparent"
-                                border.color: DV.Theme.colors.borderSubtle
+                                border.color: palette.mid
                                 border.width: 1
-                                radius: DV.Theme.sizes.radiusSm
+                                radius: DV.Styles.rad.sm
                             }
                         }
                         TextField {
@@ -724,8 +725,8 @@ ScrollView {
                         Slider {
                             id: opacitySlider
                             Layout.fillWidth: true
-                            Layout.preferredHeight: DV.Theme.sizes.sliderHeight
-                            implicitHeight: DV.Theme.sizes.sliderHeight
+                            Layout.preferredHeight: DV.Styles.height.sm
+                            implicitHeight: DV.Styles.height.sm
                             from: 0
                             to: 100
                             stepSize: 1
@@ -747,28 +748,28 @@ ScrollView {
                                 x: opacitySlider.leftPadding
                                 y: opacitySlider.topPadding + opacitySlider.availableHeight / 2 - height / 2
                                 width: opacitySlider.availableWidth
-                                height: DV.Theme.sizes.sliderTrackHeight
+                                height: DV.Styles.height.xxxsm
                                 implicitWidth: 80
-                                implicitHeight: DV.Theme.sizes.sliderTrackHeight
-                                radius: DV.Theme.sizes.radiusSm
-                                color: DV.Theme.colors.gridMinor
+                                implicitHeight: DV.Styles.height.xxxsm
+                                radius: DV.Styles.rad.sm
+                                color: palette.midlight
                                 Rectangle {
                                     width: opacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: DV.Theme.colors.accent
-                                    radius: DV.Theme.sizes.radiusSm
+                                    color: palette.highlight
+                                    radius: DV.Styles.rad.sm
                                 }
                             }
                             handle: Rectangle {
                                 x: opacitySlider.leftPadding + opacitySlider.visualPosition * (opacitySlider.availableWidth - width)
                                 y: opacitySlider.topPadding + opacitySlider.availableHeight / 2 - height / 2
-                                width: DV.Theme.sizes.sliderHandleSize
-                                height: DV.Theme.sizes.sliderHandleSize
-                                implicitWidth: DV.Theme.sizes.sliderHandleSize
-                                implicitHeight: DV.Theme.sizes.sliderHandleSize
-                                radius: DV.Theme.sizes.radiusLg
-                                color: opacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
-                                border.color: DV.Theme.colors.borderSubtle
+                                width: DV.Styles.height.xs
+                                height: DV.Styles.height.xs
+                                implicitWidth: DV.Styles.height.xs
+                                implicitHeight: DV.Styles.height.xs
+                                radius: DV.Styles.rad.lg
+                                color: opacitySlider.pressed ? palette.highlight : palette.text
+                                border.color: palette.mid
                                 border.width: 1
                             }
                         }
@@ -784,7 +785,7 @@ ScrollView {
                 ColorDialog {
                     id: strokeColorDialog
                     title: qsTr("Choose Stroke Color")
-                    selectedColor: root.isShapeSelected ? root.selectedItem.strokeColor : "#ffffff"
+                    selectedColor: root.isShapeSelected ? root.selectedItem.strokeColor : palette.text
                     onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
@@ -798,7 +799,7 @@ ScrollView {
                     title: qsTr("Choose Stroke Color")
                     onVisibleChanged: {
                         if (visible) {
-                            selectedColor = root.isPathSelected ? root.selectedItem.strokeColor : "#ffffff";
+                            selectedColor = root.isPathSelected ? root.selectedItem.strokeColor : palette.text;
                         }
                     }
                     onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
@@ -814,7 +815,7 @@ ScrollView {
                     title: qsTr("Choose Fill Color")
                     onVisibleChanged: {
                         if (visible) {
-                            selectedColor = root.isPathSelected ? root.selectedItem.fillColor : "#ffffff";
+                            selectedColor = root.isPathSelected ? root.selectedItem.fillColor : palette.text;
                         }
                     }
                     onSelectedColorChanged: root.updateProperty("fillColor", selectedColor.toString())
@@ -828,7 +829,7 @@ ScrollView {
                 ColorDialog {
                     id: fillColorDialog
                     title: qsTr("Choose Fill Color")
-                    selectedColor: root.isShapeSelected ? root.selectedItem.fillColor : "#ffffff"
+                    selectedColor: root.isShapeSelected ? root.selectedItem.fillColor : palette.text
                     onSelectedColorChanged: root.updateProperty("fillColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
@@ -849,7 +850,7 @@ ScrollView {
                 anchors.centerIn: parent
                 text: qsTr("No object selected")
                 font.pixelSize: 12
-                color: DV.Theme.colors.textSubtle
+                color: palette.text
             }
         }
 

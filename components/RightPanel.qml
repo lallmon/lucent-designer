@@ -6,6 +6,7 @@ import "." as DV
 Pane {
     id: root
     padding: 0
+    readonly property SystemPalette palette: DV.PaletteBridge.active
 
     ColumnLayout {
         anchors.fill: parent
@@ -16,7 +17,7 @@ Pane {
             Layout.fillWidth: true
             Layout.preferredHeight: parent.height * 0.35
             Layout.minimumHeight: 150
-            padding: DV.Theme.sizes.rightPanelPadding
+            padding: 12
 
             ObjectPropertiesInspector {
                 id: propertiesInspector
@@ -27,7 +28,7 @@ Pane {
         Rectangle {
             Layout.fillWidth: true
             height: 1
-            color: DV.Theme.colors.borderSubtle
+            color: palette.mid
         }
 
         // Layers section
@@ -35,7 +36,7 @@ Pane {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: 150
-            padding: DV.Theme.sizes.rightPanelPadding
+            padding: 12
 
             LayerPanel {
                 anchors.fill: parent

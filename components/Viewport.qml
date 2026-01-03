@@ -6,6 +6,7 @@ import "." as DV
 Item {
     id: root
     clip: true  // Constrain rendering to viewport boundaries
+    readonly property SystemPalette palette: DV.PaletteBridge.active
 
     // Zoom/pan state (camera controls)
     property real zoomLevel: 0.7  // Start at 70%
@@ -34,7 +35,7 @@ Item {
     // Background color
     Rectangle {
         anchors.fill: parent
-        color: DV.Theme.colors.canvasBackground
+        color: palette.window
     }
 
     // GPU grid overlay: crisp, infinite-feel, tied to current viewport
@@ -63,8 +64,8 @@ Item {
         property real zoomLevel: root.zoomLevel
         property real offsetX: root.offsetX
         property real offsetY: root.offsetY
-        property color minorColor: DV.Theme.colors.gridMinor
-        property color majorColor: DV.Theme.colors.gridMajor
+        property color minorColor: palette.midlight
+        property color majorColor: palette.mid
         property var viewportSize: Qt.vector2d(width, height)
 
         vertexShader: Qt.resolvedUrl("shaders/grid.vert.qsb")
@@ -156,10 +157,10 @@ Item {
 
             // Minor grid
             if (params.showMinor) {
-                drawLines(minorStepPx, DV.Theme.colors.gridMinor, gridShader.minorThicknessPx);
+                drawLines(minorStepPx, gridShader.minorColor, gridShader.minorThicknessPx);
             }
             // Major grid overlays minor
-            drawLines(majorStepPx, DV.Theme.colors.gridMajor, gridShader.majorThicknessPx);
+            drawLines(majorStepPx, gridShader.majorColor, gridShader.majorThicknessPx);
         }
 
         onVisibleChanged: {
