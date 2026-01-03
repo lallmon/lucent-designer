@@ -49,6 +49,8 @@ Item {
             var strokeWidth = settings && settings.strokeWidth !== undefined ? settings.strokeWidth : 1;
             var strokeColor = tool._colorString(settings && settings.strokeColor);
             var strokeOpacity = settings && settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
+            var fillColor = tool._colorString(settings && settings.fillColor);
+            var fillOpacity = settings && settings.fillOpacity !== undefined ? settings.fillOpacity : 0.0;
 
             ctx.save();
             ctx.lineWidth = strokeWidth / Math.max(tool.zoomLevel, 0.0001);
@@ -66,6 +68,13 @@ Item {
                 ctx.lineTo(originX + tool.previewPoint.x, originY + tool.previewPoint.y);
             } else if (tool.isClosed) {
                 ctx.closePath();
+            }
+            if (fillOpacity > 0.0) {
+                ctx.save();
+                ctx.globalAlpha = fillOpacity;
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                ctx.restore();
             }
             ctx.stroke();
             ctx.restore();
@@ -150,13 +159,16 @@ Item {
         var strokeWidth = s.strokeWidth !== undefined ? s.strokeWidth : 1;
         var strokeColor = tool._colorString(s.strokeColor);
         var strokeOpacity = s.strokeOpacity !== undefined ? s.strokeOpacity : 1.0;
+        var fillColor = tool._colorString(s.fillColor);
+        var fillOpacity = s.fillOpacity !== undefined ? s.fillOpacity : 0.0;
         itemCompleted({
             type: "path",
             points: tool.points,
             strokeWidth: strokeWidth,
             strokeColor: strokeColor,
             strokeOpacity: strokeOpacity,
-            fillOpacity: 0.0,
+            fillColor: fillColor,
+            fillOpacity: fillOpacity,
             closed: true
         });
         reset();

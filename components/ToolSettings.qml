@@ -30,6 +30,8 @@ ToolBar {
     property real penStrokeWidth: 1
     property color penStrokeColor: "#ffffff"
     property real penStrokeOpacity: 1.0
+    property color penFillColor: "#ffffff"
+    property real penFillOpacity: 0.0
 
     // Construct toolSettings object from individual properties
     readonly property var toolSettings: ({
@@ -51,7 +53,8 @@ ToolBar {
                 strokeWidth: penStrokeWidth,
                 strokeColor: penStrokeColor,
                 strokeOpacity: penStrokeOpacity,
-                fillOpacity: 0.0
+                fillColor: penFillColor,
+                fillOpacity: penFillOpacity
             }
         })
 
@@ -697,6 +700,186 @@ ToolBar {
                 font.pixelSize: 11
                 Layout.alignment: Qt.AlignVCenter
             }
+
+            // Separator
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 16
+                Layout.alignment: Qt.AlignVCenter
+                Layout.leftMargin: 6
+                Layout.rightMargin: 6
+                color: DV.Theme.colors.borderSubtle
+            }
+
+            Label {
+                text: qsTr("Fill Color:")
+                font.pixelSize: 11
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Button {
+                id: penFillColorButton
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                Layout.alignment: Qt.AlignVCenter
+
+                onClicked: penFillColorDialog.open()
+
+                background: Rectangle {
+                    border.color: DV.Theme.colors.borderSubtle
+                    border.width: 1
+                    radius: DV.Theme.sizes.radiusSm
+                    color: "transparent"
+                    clip: true
+
+                    // Checkerboard
+                    Canvas {
+                        anchors.fill: parent
+                        z: 0
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            ctx.clearRect(0, 0, width, height);
+                            var size = 4;
+                            for (var y = 0; y < height; y += size) {
+                                for (var x = 0; x < width; x += size) {
+                                    if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
+                                        ctx.fillStyle = "#999999";
+                                    } else {
+                                        ctx.fillStyle = "#666666";
+                                    }
+                                    ctx.fillRect(x, y, size, size);
+                                }
+                            }
+                        }
+                        Component.onCompleted: requestPaint()
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        z: 1
+                        color: root.penFillColor
+                        opacity: root.penFillOpacity
+                    }
+                }
+            }
+
+            Label {
+                text: qsTr("Fill Opacity:")
+                font.pixelSize: 11
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Slider {
+                id: penFillOpacitySlider
+                Layout.preferredWidth: 80
+                Layout.preferredHeight: DV.Theme.sizes.sliderHeight
+                implicitHeight: DV.Theme.sizes.sliderHeight
+                Layout.alignment: Qt.AlignVCenter
+                from: 0
+                to: 100
+                stepSize: 1
+                value: 0
+
+                onPressedChanged: {
+                    if (!pressed) {
+                        root.penFillOpacity = value / 100.0;
+                    }
+                }
+
+                onValueChanged: root.penFillOpacity = value / 100.0
+
+                Component.onCompleted: value = Math.round(root.penFillOpacity * 100)
+
+                Binding {
+                    target: penFillOpacitySlider
+                    property: "value"
+                    value: Math.round(root.penFillOpacity * 100)
+                    when: !penFillOpacitySlider.pressed
+                }
+
+                background: Rectangle {
+                    x: penFillOpacitySlider.leftPadding
+                    y: penFillOpacitySlider.topPadding + penFillOpacitySlider.availableHeight / 2 - height / 2
+                    width: penFillOpacitySlider.availableWidth
+                    height: DV.Theme.sizes.sliderTrackHeight
+                    implicitWidth: 80
+                    implicitHeight: DV.Theme.sizes.sliderTrackHeight
+                    radius: DV.Theme.sizes.radiusSm
+                    color: DV.Theme.colors.gridMinor
+
+                    Rectangle {
+                        width: penFillOpacitySlider.visualPosition * parent.width
+                        height: parent.height
+                        color: DV.Theme.colors.accent
+                        radius: DV.Theme.sizes.radiusSm
+                    }
+                }
+
+                handle: Rectangle {
+                    x: penFillOpacitySlider.leftPadding + penFillOpacitySlider.visualPosition * (penFillOpacitySlider.availableWidth - width)
+                    y: penFillOpacitySlider.topPadding + penFillOpacitySlider.availableHeight / 2 - height / 2
+                    width: DV.Theme.sizes.sliderHandleSize
+                    height: DV.Theme.sizes.sliderHandleSize
+                    implicitWidth: DV.Theme.sizes.sliderHandleSize
+                    implicitHeight: DV.Theme.sizes.sliderHandleSize
+                    radius: DV.Theme.sizes.radiusLg
+                    color: penFillOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
+                    border.color: DV.Theme.colors.borderSubtle
+                    border.width: 1
+                }
+            }
+
+            TextField {
+                id: penFillOpacityInput
+                Layout.preferredWidth: DV.Theme.sizes.settingsOpacityFieldWidth
+                Layout.preferredHeight: DV.Theme.sizes.settingsFieldHeight
+                Layout.alignment: Qt.AlignVCenter
+                text: Math.round(root.penFillOpacity * 100).toString()
+                horizontalAlignment: TextInput.AlignHCenter
+                font.pixelSize: 11
+                validator: IntValidator {
+                    bottom: 0
+                    top: 100
+                }
+
+                function commitValue() {
+                    var value = parseInt(text);
+                    if (!isNaN(value) && value >= 0 && value <= 100) {
+                        root.penFillOpacity = value / 100.0;
+                    } else {
+                        text = Math.round(root.penFillOpacity * 100).toString();
+                    }
+                }
+
+                onEditingFinished: commitValue()
+                onActiveFocusChanged: {
+                    if (!activeFocus)
+                        commitValue();
+                }
+
+                Connections {
+                    target: root
+                    function onPenFillOpacityChanged() {
+                        if (!penFillOpacityInput.activeFocus) {
+                            penFillOpacityInput.text = Math.round(root.penFillOpacity * 100).toString();
+                        }
+                    }
+                }
+
+                background: Rectangle {
+                    color: DV.Theme.colors.gridMinor
+                    border.color: penFillOpacityInput.activeFocus ? DV.Theme.colors.accent : DV.Theme.colors.borderSubtle
+                    border.width: 1
+                    radius: DV.Theme.sizes.radiusSm
+                }
+                color: "#ffffff"
+            }
+
+            Label {
+                text: qsTr("%")
+                font.pixelSize: 11
+                Layout.alignment: Qt.AlignVCenter
+            }
         }
 
         // Stroke color picker dialog
@@ -1176,6 +1359,17 @@ ToolBar {
 
             onAccepted: {
                 root.penStrokeColor = selectedColor;
+            }
+        }
+
+        // Pen fill color picker dialog
+        ColorDialog {
+            id: penFillColorDialog
+            title: qsTr("Choose Pen Fill Color")
+            selectedColor: root.penFillColor
+
+            onAccepted: {
+                root.penFillColor = selectedColor;
             }
         }
 

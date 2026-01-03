@@ -422,6 +422,110 @@ ScrollView {
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }
+
+                    Label {
+                        text: qsTr("Fill Color:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    RowLayout {
+                        spacing: 6
+                        Layout.fillWidth: true
+
+                        Rectangle {
+                            width: 28
+                            height: 16
+                            radius: 2
+                            color: root.isPathSelected ? root.selectedItem.fillColor : "transparent"
+                            border.color: DV.Theme.colors.borderSubtle
+                            border.width: 1
+                            Layout.alignment: Qt.AlignVCenter
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    root.originalFillColor = root.selectedItem.fillColor;
+                                    canvasModel.beginTransaction();
+                                    pathFillColorDialog.open();
+                                }
+                            }
+                        }
+
+                        TextField {
+                            text: root.isPathSelected ? root.selectedItem.fillColor : ""
+                            font.pixelSize: 10
+                            Layout.fillWidth: true
+                            selectByMouse: true
+                            onEditingFinished: root.updateProperty("fillColor", text)
+                        }
+                    }
+
+                    Label {
+                        text: qsTr("Fill Opacity:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Slider {
+                            id: pathFillOpacitySlider
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: DV.Theme.sizes.sliderHeight
+                            from: 0
+                            to: 100
+                            stepSize: 1
+                            onPressedChanged: pressed ? canvasModel.beginTransaction() : canvasModel.endTransaction()
+                            onValueChanged: if (pressed)
+                                root.updateProperty("fillOpacity", value / 100.0)
+                            Component.onCompleted: value = root.selectedItem ? Math.round((root.selectedItem.fillOpacity || 0) * 100) : 0
+
+                            Binding {
+                                target: pathFillOpacitySlider
+                                property: "value"
+                                value: root.selectedItem ? Math.round((root.selectedItem.fillOpacity || 0) * 100) : 0
+                                when: !pathFillOpacitySlider.pressed
+                            }
+
+                            background: Rectangle {
+                                x: pathFillOpacitySlider.leftPadding
+                                y: pathFillOpacitySlider.topPadding + pathFillOpacitySlider.availableHeight / 2 - height / 2
+                                width: pathFillOpacitySlider.availableWidth
+                                height: DV.Theme.sizes.sliderTrackHeight
+                                implicitWidth: 80
+                                implicitHeight: DV.Theme.sizes.sliderTrackHeight
+                                radius: DV.Theme.sizes.radiusSm
+                                color: DV.Theme.colors.gridMinor
+
+                                Rectangle {
+                                    width: pathFillOpacitySlider.visualPosition * parent.width
+                                    height: parent.height
+                                    color: DV.Theme.colors.accent
+                                    radius: DV.Theme.sizes.radiusSm
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: pathFillOpacitySlider.leftPadding + pathFillOpacitySlider.visualPosition * (pathFillOpacitySlider.availableWidth - width)
+                                y: pathFillOpacitySlider.topPadding + pathFillOpacitySlider.availableHeight / 2 - height / 2
+                                width: DV.Theme.sizes.sliderHandleSize
+                                height: DV.Theme.sizes.sliderHandleSize
+                                implicitWidth: DV.Theme.sizes.sliderHandleSize
+                                implicitHeight: DV.Theme.sizes.sliderHandleSize
+                                radius: DV.Theme.sizes.radiusLg
+                                color: pathFillOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
+                                border.color: DV.Theme.colors.borderSubtle
+                                border.width: 1
+                            }
+                        }
+
+                        Label {
+                            text: Math.round(pathFillOpacitySlider.value) + "%"
+                            font.pixelSize: 11
+                            color: "white"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                    }
                 }
             }
 
@@ -697,6 +801,18 @@ ScrollView {
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
                         root.updateProperty("strokeColor", root.originalStrokeColor);
+                        canvasModel.endTransaction();
+                    }
+                }
+
+                ColorDialog {
+                    id: pathFillColorDialog
+                    title: qsTr("Choose Fill Color")
+                    selectedColor: root.isPathSelected ? root.selectedItem.fillColor : "#ffffff"
+                    onSelectedColorChanged: root.updateProperty("fillColor", selectedColor.toString())
+                    onAccepted: canvasModel.endTransaction()
+                    onRejected: {
+                        root.updateProperty("fillColor", root.originalFillColor);
                         canvasModel.endTransaction();
                     }
                 }
