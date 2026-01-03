@@ -16,6 +16,7 @@ ScrollView {
 
     // Helper to check if selected item is a shape with stroke/fill properties
     readonly property bool isShapeSelected: !!selectedItem && (selectedItem.type === "rectangle" || selectedItem.type === "ellipse")
+    readonly property bool isPathSelected: !!selectedItem && selectedItem.type === "path"
 
     // Helper to check if selected item is effectively locked (own state or parent layer locked)
     readonly property bool isLocked: (DV.SelectionManager.selectedItemIndex >= 0) && canvasModel && canvasModel.isEffectivelyLocked(DV.SelectionManager.selectedItemIndex)
@@ -257,6 +258,170 @@ ScrollView {
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     Layout.topMargin: 8
+                }
+            }
+
+            // Path section - shown when a path is selected
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: !!root.selectedItem && root.selectedItem.type === "path"
+
+                Label {
+                    text: qsTr("Path")
+                    font.pixelSize: 12
+                    font.bold: true
+                    color: root.labelColor
+                }
+
+                GridLayout {
+                    columns: 2
+                    rowSpacing: 4
+                    columnSpacing: 8
+                    Layout.fillWidth: true
+                    enabled: !root.isLocked
+
+                    Label {
+                        text: qsTr("Stroke Width:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    RowLayout {
+                        spacing: 6
+                        Layout.fillWidth: true
+
+                        TextField {
+                            id: pathStrokeWidthInput
+                            Layout.fillWidth: true
+                            text: root.selectedItem ? root.selectedItem.strokeWidth.toString() : "1"
+                            font.pixelSize: 10
+                            inputMethodHints: Qt.ImhFormattedNumbersOnly
+                            validator: DoubleValidator {
+                                bottom: 0.1
+                                top: 1000.0
+                                decimals: 2
+                            }
+                            onEditingFinished: {
+                                var v = parseFloat(text);
+                                if (!isNaN(v) && v >= 0.1 && v <= 1000.0) {
+                                    root.updateProperty("strokeWidth", v);
+                                } else {
+                                    text = root.selectedItem ? root.selectedItem.strokeWidth.toString() : "1";
+                                }
+                            }
+                        }
+
+                        Label {
+                            text: qsTr("px")
+                            font.pixelSize: root.labelSize
+                            color: root.labelColor
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                    }
+
+                    Label {
+                        text: qsTr("Stroke Color:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    RowLayout {
+                        spacing: 6
+                        Layout.fillWidth: true
+
+                        Rectangle {
+                            width: 28
+                            height: 16
+                            radius: 2
+                            color: root.isPathSelected ? root.selectedItem.strokeColor : "transparent"
+                            border.color: DV.Theme.colors.borderSubtle
+                            border.width: 1
+                            Layout.alignment: Qt.AlignVCenter
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    root.originalStrokeColor = root.selectedItem.strokeColor;
+                                    canvasModel.beginTransaction();
+                                    pathStrokeColorDialog.open();
+                                }
+                            }
+                        }
+
+                        TextField {
+                            text: root.isPathSelected ? root.selectedItem.strokeColor : ""
+                            font.pixelSize: 10
+                            Layout.fillWidth: true
+                            selectByMouse: true
+                            onEditingFinished: root.updateProperty("strokeColor", text)
+                        }
+                    }
+
+                    Label {
+                        text: qsTr("Stroke Opacity:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Slider {
+                            id: pathStrokeOpacitySlider
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: DV.Theme.sizes.sliderHeight
+                            from: 0
+                            to: 100
+                            stepSize: 1
+                            onPressedChanged: pressed ? canvasModel.beginTransaction() : canvasModel.endTransaction()
+                            onValueChanged: if (pressed)
+                                root.updateProperty("strokeOpacity", value / 100.0)
+                            Component.onCompleted: value = root.selectedItem && root.selectedItem.strokeOpacity !== undefined ? Math.round(root.selectedItem.strokeOpacity * 100) : 100
+
+                            Binding {
+                                target: pathStrokeOpacitySlider
+                                property: "value"
+                                value: root.selectedItem && root.selectedItem.strokeOpacity !== undefined ? Math.round(root.selectedItem.strokeOpacity * 100) : 100
+                                when: !pathStrokeOpacitySlider.pressed
+                            }
+
+                            background: Rectangle {
+                                x: pathStrokeOpacitySlider.leftPadding
+                                y: pathStrokeOpacitySlider.topPadding + pathStrokeOpacitySlider.availableHeight / 2 - height / 2
+                                width: pathStrokeOpacitySlider.availableWidth
+                                height: DV.Theme.sizes.sliderTrackHeight
+                                implicitWidth: 80
+                                implicitHeight: DV.Theme.sizes.sliderTrackHeight
+                                radius: DV.Theme.sizes.radiusSm
+                                color: DV.Theme.colors.gridMinor
+
+                                Rectangle {
+                                    width: pathStrokeOpacitySlider.visualPosition * parent.width
+                                    height: parent.height
+                                    color: DV.Theme.colors.accent
+                                    radius: DV.Theme.sizes.radiusSm
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: pathStrokeOpacitySlider.leftPadding + pathStrokeOpacitySlider.visualPosition * (pathStrokeOpacitySlider.availableWidth - width)
+                                y: pathStrokeOpacitySlider.topPadding + pathStrokeOpacitySlider.availableHeight / 2 - height / 2
+                                width: DV.Theme.sizes.sliderHandleSize
+                                height: DV.Theme.sizes.sliderHandleSize
+                                implicitWidth: DV.Theme.sizes.sliderHandleSize
+                                implicitHeight: DV.Theme.sizes.sliderHandleSize
+                                radius: DV.Theme.sizes.radiusLg
+                                color: pathStrokeOpacitySlider.pressed ? DV.Theme.colors.accent : "#ffffff"
+                                border.color: DV.Theme.colors.borderSubtle
+                                border.width: 1
+                            }
+                        }
+
+                        Label {
+                            text: Math.round(pathStrokeOpacitySlider.value) + "%"
+                            font.pixelSize: 11
+                            color: "white"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                    }
                 }
             }
 
@@ -516,6 +681,18 @@ ScrollView {
                     id: strokeColorDialog
                     title: qsTr("Choose Stroke Color")
                     selectedColor: root.isShapeSelected ? root.selectedItem.strokeColor : "#ffffff"
+                    onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
+                    onAccepted: canvasModel.endTransaction()
+                    onRejected: {
+                        root.updateProperty("strokeColor", root.originalStrokeColor);
+                        canvasModel.endTransaction();
+                    }
+                }
+
+                ColorDialog {
+                    id: pathStrokeColorDialog
+                    title: qsTr("Choose Stroke Color")
+                    selectedColor: root.isPathSelected ? root.selectedItem.strokeColor : "#ffffff"
                     onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
