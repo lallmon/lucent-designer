@@ -37,4 +37,12 @@ repos:
         additional_dependencies:
           - PySide6==6.10.1
         files: "\\.qml$"
+  - repo: local
+    hooks:
+      - id: bake-shaders
+        name: bake-shaders
+        entry: ./scripts/bake_shaders.sh
+        language: script
+        pass_filenames: false
+        files: "^components/shaders/.*\\.(vert|frag|geom|comp|tesc|tese)$"
 
