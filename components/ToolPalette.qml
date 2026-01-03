@@ -46,7 +46,40 @@ Pane {
             }
         }
 
-        // Pen tool button
+        // Rectangle tool button
+        ToolButton {
+            id: rectButton
+            Layout.preferredWidth: DV.Theme.sizes.toolButtonSize
+            Layout.preferredHeight: DV.Theme.sizes.toolButtonSize
+            Layout.alignment: Qt.AlignHCenter
+            checkable: true
+            checked: root.activeTool === "rectangle"
+            ButtonGroup.group: toolButtonGroup
+
+            ToolTip.visible: rectButton.hovered
+            ToolTip.delay: 500
+            ToolTip.text: "Rectangle Tool\n\nShift: Constrain to square\nAlt: Draw from center"
+
+            contentItem: Item {
+                anchors.fill: parent
+                PhIcon {
+                    anchors.centerIn: parent
+                    name: "rectangle"
+                    color: "white"
+                }
+            }
+            onClicked: {
+                root.toolSelected(checked ? "rectangle" : "");
+            }
+            background: Rectangle {
+                color: rectButton.checked ? DV.Theme.colors.panelActive : (rectButton.hovered ? DV.Theme.colors.panelHover : DV.Theme.colors.panelBackground)
+                border.color: rectButton.checked ? "#ffffff" : DV.Theme.colors.borderDefault
+                border.width: 1
+                radius: DV.Theme.sizes.radiusMd
+            }
+        }
+
+        // Pen tool button (placed at bottom)
         ToolButton {
             id: penButton
             Layout.preferredWidth: DV.Theme.sizes.toolButtonSize
@@ -76,39 +109,6 @@ Pane {
             background: Rectangle {
                 color: penButton.checked ? DV.Theme.colors.panelActive : (penButton.hovered ? DV.Theme.colors.panelHover : DV.Theme.colors.panelBackground)
                 border.color: penButton.checked ? "#ffffff" : DV.Theme.colors.borderDefault
-                border.width: 1
-                radius: DV.Theme.sizes.radiusMd
-            }
-        }
-
-        // Rectangle tool button
-        ToolButton {
-            id: rectButton
-            Layout.preferredWidth: DV.Theme.sizes.toolButtonSize
-            Layout.preferredHeight: DV.Theme.sizes.toolButtonSize
-            Layout.alignment: Qt.AlignHCenter
-            checkable: true
-            checked: root.activeTool === "rectangle"
-            ButtonGroup.group: toolButtonGroup
-
-            ToolTip.visible: rectButton.hovered
-            ToolTip.delay: 500
-            ToolTip.text: "Rectangle Tool\n\nShift: Constrain to square\nAlt: Draw from center"
-
-            contentItem: Item {
-                anchors.fill: parent
-                PhIcon {
-                    anchors.centerIn: parent
-                    name: "rectangle"
-                    color: "white"
-                }
-            }
-            onClicked: {
-                root.toolSelected(checked ? "rectangle" : "");
-            }
-            background: Rectangle {
-                color: rectButton.checked ? DV.Theme.colors.panelActive : (rectButton.hovered ? DV.Theme.colors.panelHover : DV.Theme.colors.panelBackground)
-                border.color: rectButton.checked ? "#ffffff" : DV.Theme.colors.borderDefault
                 border.width: 1
                 radius: DV.Theme.sizes.radiusMd
             }
