@@ -24,11 +24,13 @@ QtObject {
                 if (dx * dx + dy * dy <= 1.0) {
                     return i;
                 }
-            } else if (item.type === "group" || item.type === "layer") {
+            } else if (item.type === "group" || item.type === "layer" || item.type === "path") {
                 if (boundingBoxCallback) {
                     var bounds = boundingBoxCallback(i);
                     if (bounds && bounds.width >= 0 && bounds.height >= 0) {
-                        if (canvasX >= bounds.x && canvasX <= bounds.x + bounds.width && canvasY >= bounds.y && canvasY <= bounds.y + bounds.height) {
+                        // Expand bounds slightly to account for stroke width
+                        var expand = item.strokeWidth ? item.strokeWidth * 0.5 : 1;
+                        if (canvasX >= bounds.x - expand && canvasX <= bounds.x + bounds.width + expand && canvasY >= bounds.y - expand && canvasY <= bounds.y + bounds.height + expand) {
                             return i;
                         }
                     }

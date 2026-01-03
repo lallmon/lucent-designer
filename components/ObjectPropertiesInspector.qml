@@ -796,7 +796,11 @@ ScrollView {
                 ColorDialog {
                     id: pathStrokeColorDialog
                     title: qsTr("Choose Stroke Color")
-                    selectedColor: root.isPathSelected ? root.selectedItem.strokeColor : "#ffffff"
+                    onVisibleChanged: {
+                        if (visible) {
+                            selectedColor = root.isPathSelected ? root.selectedItem.strokeColor : "#ffffff";
+                        }
+                    }
                     onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
@@ -808,7 +812,11 @@ ScrollView {
                 ColorDialog {
                     id: pathFillColorDialog
                     title: qsTr("Choose Fill Color")
-                    selectedColor: root.isPathSelected ? root.selectedItem.fillColor : "#ffffff"
+                    onVisibleChanged: {
+                        if (visible) {
+                            selectedColor = root.isPathSelected ? root.selectedItem.fillColor : "#ffffff";
+                        }
+                    }
                     onSelectedColorChanged: root.updateProperty("fillColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
