@@ -119,6 +119,16 @@ Item {
                     item.settings = Qt.binding(function () {
                         return root.toolSettings[root.drawingMode];
                     });
+                    if (item.hasOwnProperty("viewportWidth")) {
+                        item.viewportWidth = Qt.binding(function () {
+                            return root.width;
+                        });
+                    }
+                    if (item.hasOwnProperty("viewportHeight")) {
+                        item.viewportHeight = Qt.binding(function () {
+                            return root.height;
+                        });
+                    }
 
                     // Connect the itemCompleted signal
                     item.itemCompleted.connect(root.handleItemCompleted);

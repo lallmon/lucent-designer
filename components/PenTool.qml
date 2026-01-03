@@ -8,6 +8,12 @@ Item {
     property real zoomLevel: 1.0
     property bool active: false
     property var settings: null  // Tool settings object
+    // Viewport size passed from Canvas; used to bound the preview surface
+    property real viewportWidth: 0
+    property real viewportHeight: 0
+    // Extra padding so strokes near the edge still render
+    // Pad the preview surface beyond the viewport to reduce clipping at edges
+    readonly property real previewPad: 256
 
     // Internal state
     property var points: []
@@ -22,10 +28,13 @@ Item {
     // Draw preview stroke and points
     Canvas {
         id: previewCanvas
-        width: 20000
-        height: 20000
-        anchors.centerIn: parent
+        width: Math.max(0, tool.viewportWidth + tool.previewPad * 2)
+        height: Math.max(0, tool.viewportHeight + tool.previewPad * 2)
+        // Center the preview around world origin (0,0)
+        x: -width / 2
+        y: -height / 2
         antialiasing: true
+        renderTarget: Canvas.FramebufferObject
 
         onPaint: {
             var ctx = getContext("2d");
@@ -38,7 +47,7 @@ Item {
             var originX = width / 2;
             var originY = height / 2;
             var strokeWidth = settings && settings.strokeWidth !== undefined ? settings.strokeWidth : 1;
-            var strokeColor = settings && settings.strokeColor ? settings.strokeColor : "#ffffff";
+            var strokeColor = tool._colorString(settings && settings.strokeColor);
             var strokeOpacity = settings && settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
 
             ctx.save();
@@ -139,7 +148,7 @@ Item {
         }
         var s = settings || {};
         var strokeWidth = s.strokeWidth !== undefined ? s.strokeWidth : 1;
-        var strokeColor = s.strokeColor || "#ffffff";
+        var strokeColor = tool._colorString(s.strokeColor);
         var strokeOpacity = s.strokeOpacity !== undefined ? s.strokeOpacity : 1.0;
         itemCompleted({
             type: "path",
@@ -151,6 +160,16 @@ Item {
             closed: true
         });
         reset();
+    }
+
+    function _colorString(value) {
+        if (value === null || value === undefined)
+            return "#ffffff";
+        if (typeof value === "string")
+            return value;
+        if (value.toString)
+            return value.toString();
+        return "#ffffff";
     }
 
     function _isNearFirst(x, y) {

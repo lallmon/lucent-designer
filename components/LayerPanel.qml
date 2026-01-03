@@ -297,6 +297,8 @@ Item {
                                                     return "rectangle";
                                                 if (delegateRoot.itemType === "ellipse")
                                                     return "circle";
+                                                if (delegateRoot.itemType === "path")
+                                                    return "pen-nib";
                                                 return "shapes";
                                             }
                                             size: 18
