@@ -216,31 +216,43 @@ Item {
         if (!tool.active)
             return;
 
-        // Skip click if we just finished resizing (avoid accidental commit)
-        if (tool.justFinishedResizing) {
-            tool.justFinishedResizing = false;
-            return;
-        }
-
         if (tool.isEditing) {
-            // If clicking outside current edit, commit and potentially start new
+            // Check if click is inside the text box
             var insideX = canvasX >= tool.boxX && canvasX <= tool.boxX + tool.boxWidth;
-            var insideY = canvasY >= tool.boxY && canvasY <= tool.boxY + tool.boxHeight;
-            if (!insideX || !insideY) {
-                if (textEdit.text.trim().length > 0 && textEdit.text !== tool.placeholderText) {
-                    tool.commitText();
-                } else {
-                    tool.cancelText();
-                }
-                // Start drawing new box
-                helper.begin(canvasX, canvasY);
-                currentBox = {
-                    x: canvasX,
-                    y: canvasY,
-                    width: 1,
-                    height: 1
-                };
+            var insideY = canvasY >= tool.boxY && canvasY <= tool.boxY + textEditContainer.height;
+
+            if (insideX && insideY) {
+                // Click inside: position cursor at click location
+                // Convert canvas coords to TextEdit local coords
+                var localX = canvasX - tool.boxX - tool.textPadding;
+                var localY = canvasY - tool.boxY - tool.textPadding;
+                var pos = textEdit.positionAt(localX, localY);
+                textEdit.cursorPosition = pos;
+                textEdit.forceActiveFocus();
+                tool.justFinishedResizing = false;
+                return;
             }
+
+            // Skip commit if we just finished resizing (avoid accidental commit)
+            if (tool.justFinishedResizing) {
+                tool.justFinishedResizing = false;
+                return;
+            }
+
+            // Clicking outside: commit and potentially start new
+            if (textEdit.text.trim().length > 0 && textEdit.text !== tool.placeholderText) {
+                tool.commitText();
+            } else {
+                tool.cancelText();
+            }
+            // Start drawing new box
+            helper.begin(canvasX, canvasY);
+            currentBox = {
+                x: canvasX,
+                y: canvasY,
+                width: 1,
+                height: 1
+            };
             return;
         }
 
