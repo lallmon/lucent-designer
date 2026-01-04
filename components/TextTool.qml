@@ -94,6 +94,7 @@ Item {
             wrapMode: TextEdit.Wrap
             selectByMouse: true
             focus: tool.isEditing
+            cursorVisible: tool.isEditing
 
             // Start with placeholder text selected
             text: tool.placeholderText
