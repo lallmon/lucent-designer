@@ -80,6 +80,12 @@ Item {
             anchors.fill: parent
             anchors.margins: tool.textPadding
 
+            // Ensure no internal padding for precise positioning
+            leftPadding: 0
+            rightPadding: 0
+            topPadding: 0
+            bottomPadding: 0
+
             font.family: settings ? settings.fontFamily : "Sans Serif"
             font.pointSize: settings ? settings.fontSize : 16
             color: {

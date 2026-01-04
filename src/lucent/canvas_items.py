@@ -20,7 +20,8 @@ from PySide6.QtGui import (
     QColor,
     QPainterPath,
     QFont,
-    QFontMetricsF,
+    QTextDocument,
+    QTextOption,
 )
 from PySide6.QtCore import QRectF, Qt, QPointF
 
@@ -493,7 +494,7 @@ class TextItem(CanvasItem):
         offset_x: float = CANVAS_OFFSET_X,
         offset_y: float = CANVAS_OFFSET_Y,
     ) -> None:
-        """Render this text item using QPainter."""
+        """Render this text item using QTextDocument for rich text support."""
         if not self.text:
             return
 
@@ -503,26 +504,38 @@ class TextItem(CanvasItem):
         # Set up font (use point size for typography standard)
         font = QFont(self.font_family)
         font.setPointSizeF(self.font_size)
-        painter.setFont(font)
 
-        # Set up pen for text color
+        # Set up text color with opacity
         text_qcolor = QColor(self.text_color)
         text_qcolor.setAlphaF(self.text_opacity)
-        pen = QPen(text_qcolor)
-        painter.setPen(pen)
 
-        # No brush needed for text
-        painter.setBrush(Qt.BrushStyle.NoBrush)
+        # Create and configure QTextDocument
+        doc = QTextDocument()
+        doc.setDocumentMargin(0)  # Remove default margin for precise positioning
+        doc.setDefaultFont(font)
+        doc.setPlainText(self.text)
 
-        # Get font metrics for line height calculation
-        fm = QFontMetricsF(font)
-        line_height = fm.lineSpacing()
+        # Set text width for word wrap (0 means no wrap)
+        if self.width > 0:
+            doc.setTextWidth(self.width)
 
-        # Draw each line separately to preserve explicit line breaks
-        lines = self.text.split("\n")
-        for i, line in enumerate(lines):
-            baseline_y = local_y + fm.ascent() + (i * line_height)
-            painter.drawText(QPointF(local_x, baseline_y), line)
+        # Configure text options (alignment can be extended later)
+        option = QTextOption()
+        option.setWrapMode(QTextOption.WrapMode.WordWrap)
+        doc.setDefaultTextOption(option)
+
+        # Apply text color via stylesheet
+        doc.setDefaultStyleSheet(
+            f"body {{ color: {text_qcolor.name(QColor.NameFormat.HexArgb)}; }}"
+        )
+        # Re-set text to apply stylesheet
+        doc.setHtml(f"<body>{self.text.replace(chr(10), '<br>')}</body>")
+
+        # Save painter state, translate to position, draw, restore
+        painter.save()
+        painter.translate(local_x, local_y)
+        doc.drawContents(painter)
+        painter.restore()
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "TextItem":
