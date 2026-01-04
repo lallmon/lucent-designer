@@ -17,6 +17,7 @@ from PySide6.QtCore import Qt, QObject, Property, Signal
 from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
 from lucent.canvas_renderer import CanvasRenderer
 from lucent.canvas_model import CanvasModel
+from lucent.font_provider import FontProvider
 
 # Version placeholder - replaced by GitHub Actions during release builds
 __version__ = "__VERSION__"
@@ -103,6 +104,10 @@ if __name__ == "__main__":
     # Create and register canvas model as global singleton
     canvas_model = CanvasModel()
     engine.rootContext().setContextProperty("canvasModel", canvas_model)
+
+    # Create and register font provider for dynamic font lists
+    font_provider = FontProvider()
+    engine.rootContext().setContextProperty("fontProvider", font_provider)
 
     app_info = AppInfo(__version__)
     engine.rootContext().setContextProperty("appInfo", app_info)

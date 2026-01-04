@@ -600,9 +600,19 @@ ScrollView {
                     ComboBox {
                         id: fontFamilyCombo
                         Layout.fillWidth: true
-                        model: ["Sans Serif", "Serif", "Monospace", "Cursive", "Fantasy"]
-                        currentIndex: root.isTextSelected ? model.indexOf(root.selectedItem.fontFamily) : 0
+                        model: fontProvider ? fontProvider.fonts : []
+                        currentIndex: root.isTextSelected && fontProvider ? fontProvider.indexOf(root.selectedItem.fontFamily) : 0
                         onActivated: root.updateProperty("fontFamily", model[currentIndex])
+
+                        contentItem: Text {
+                            text: fontFamilyCombo.displayText
+                            color: palette.text
+                            font.pixelSize: 10
+                            font.family: fontFamilyCombo.displayText
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 6
+                            elide: Text.ElideRight
+                        }
                     }
 
                     Label {
@@ -614,24 +624,63 @@ ScrollView {
                         spacing: 6
                         Layout.fillWidth: true
 
-                        TextField {
-                            id: textFontSizeInput
+                        ComboBox {
+                            id: textFontSizeCombo
                             Layout.fillWidth: true
-                            text: root.isTextSelected ? root.selectedItem.fontSize.toString() : "16"
-                            font.pixelSize: 10
-                            inputMethodHints: Qt.ImhFormattedNumbersOnly
-                            validator: DoubleValidator {
-                                bottom: 8.0
-                                top: 200.0
-                                decimals: 1
+                            editable: true
+                            model: [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96, 128]
+
+                            currentIndex: {
+                                if (!root.isTextSelected)
+                                    return 6; // Default to 16
+                                var idx = model.indexOf(Math.round(root.selectedItem.fontSize));
+                                return idx >= 0 ? idx : -1;
                             }
-                            onEditingFinished: {
-                                var v = parseFloat(text);
-                                if (!isNaN(v) && v >= 8.0 && v <= 200.0) {
-                                    root.updateProperty("fontSize", v);
-                                } else {
-                                    text = root.isTextSelected ? root.selectedItem.fontSize.toString() : "16";
+
+                            Component.onCompleted: {
+                                editText = root.isTextSelected ? Math.round(root.selectedItem.fontSize).toString() : "16";
+                            }
+
+                            onCurrentIndexChanged: {
+                                if (currentIndex >= 0 && root.isTextSelected) {
+                                    root.updateProperty("fontSize", model[currentIndex]);
                                 }
+                            }
+
+                            onAccepted: {
+                                var value = parseFloat(editText);
+                                if (!isNaN(value) && value >= 8 && value <= 200 && root.isTextSelected) {
+                                    root.updateProperty("fontSize", Math.round(value));
+                                }
+                                editText = root.isTextSelected ? Math.round(root.selectedItem.fontSize).toString() : "16";
+                            }
+
+                            Connections {
+                                target: root
+                                function onSelectedItemChanged() {
+                                    if (root.isTextSelected) {
+                                        textFontSizeCombo.editText = Math.round(root.selectedItem.fontSize).toString();
+                                    }
+                                }
+                            }
+
+                            validator: IntValidator {
+                                bottom: 8
+                                top: 200
+                            }
+
+                            contentItem: TextInput {
+                                text: textFontSizeCombo.editText
+                                font.pixelSize: 10
+                                color: palette.text
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignLeft
+                                leftPadding: 6
+                                selectByMouse: true
+                                validator: textFontSizeCombo.validator
+
+                                onTextChanged: textFontSizeCombo.editText = text
+                                onAccepted: textFontSizeCombo.accepted()
                             }
                         }
 

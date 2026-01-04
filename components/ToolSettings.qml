@@ -1408,17 +1408,23 @@ ToolBar {
 
             ComboBox {
                 id: fontFamilyCombo
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 160
                 Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
-                model: ["Sans Serif", "Serif", "Monospace", "Cursive", "Fantasy"]
-                currentIndex: {
-                    var idx = model.indexOf(root.textFontFamily);
-                    return idx >= 0 ? idx : 0;
-                }
+                model: fontProvider ? fontProvider.fonts : []
+                currentIndex: fontProvider ? fontProvider.indexOf(root.textFontFamily) : 0
 
                 onCurrentTextChanged: {
-                    root.textFontFamily = currentText;
+                    if (currentText && currentText.length > 0) {
+                        root.textFontFamily = currentText;
+                    }
+                }
+
+                Component.onCompleted: {
+                    // Set default font if not already set
+                    if (fontProvider && (!root.textFontFamily || root.textFontFamily === "Sans Serif")) {
+                        root.textFontFamily = fontProvider.defaultFont();
+                    }
                 }
 
                 background: Rectangle {
@@ -1432,8 +1438,10 @@ ToolBar {
                     text: fontFamilyCombo.displayText
                     color: palette.text
                     font.pixelSize: 11
+                    font.family: fontFamilyCombo.displayText
                     verticalAlignment: Text.AlignVCenter
                     leftPadding: 6
+                    elide: Text.ElideRight
                 }
             }
 
@@ -1453,43 +1461,75 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            TextField {
-                id: textFontSizeInput
-                Layout.preferredWidth: 50
+            ComboBox {
+                id: textFontSizeCombo
+                Layout.preferredWidth: 70
                 Layout.preferredHeight: DV.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
-                text: root.textFontSize.toString()
-                horizontalAlignment: TextInput.AlignHCenter
-                font.pixelSize: 11
-                validator: DoubleValidator {
+                editable: true
+                model: [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96, 128]
+
+                // Find current index or -1 for custom values
+                currentIndex: {
+                    var idx = model.indexOf(Math.round(root.textFontSize));
+                    return idx >= 0 ? idx : -1;
+                }
+
+                // Update text field to show current size
+                Component.onCompleted: {
+                    editText = Math.round(root.textFontSize).toString();
+                }
+
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0) {
+                        root.textFontSize = model[currentIndex];
+                    }
+                }
+
+                onAccepted: {
+                    var value = parseFloat(editText);
+                    if (!isNaN(value) && value >= 8 && value <= 200) {
+                        root.textFontSize = Math.round(value);
+                    }
+                    editText = Math.round(root.textFontSize).toString();
+                }
+
+                // Sync editText when textFontSize changes externally
+                Connections {
+                    target: root
+                    function onTextFontSizeChanged() {
+                        if (!textFontSizeCombo.activeFocus) {
+                            textFontSizeCombo.editText = Math.round(root.textFontSize).toString();
+                        }
+                    }
+                }
+
+                validator: IntValidator {
                     bottom: 8
                     top: 200
-                    decimals: 0
-                }
-
-                function commitValue() {
-                    var value = parseFloat(text);
-                    if (!isNaN(value) && value >= 8 && value <= 200) {
-                        root.textFontSize = value;
-                    } else {
-                        text = root.textFontSize.toString();
-                    }
-                }
-
-                onEditingFinished: commitValue()
-                onActiveFocusChanged: {
-                    if (!activeFocus) {
-                        commitValue();
-                    }
                 }
 
                 background: Rectangle {
                     color: palette.base
-                    border.color: textFontSizeInput.activeFocus ? palette.highlight : palette.mid
+                    border.color: textFontSizeCombo.activeFocus ? palette.highlight : palette.mid
                     border.width: 1
                     radius: DV.Styles.rad.sm
                 }
-                color: palette.text
+
+                contentItem: TextInput {
+                    text: textFontSizeCombo.editText
+                    font.pixelSize: 11
+                    color: palette.text
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    leftPadding: 6
+                    rightPadding: 6
+                    selectByMouse: true
+                    validator: textFontSizeCombo.validator
+
+                    onTextChanged: textFontSizeCombo.editText = text
+                    onAccepted: textFontSizeCombo.accepted()
+                }
             }
 
             Label {
