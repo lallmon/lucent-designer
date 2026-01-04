@@ -32,6 +32,9 @@ Item {
     // Placeholder text constant
     readonly property string placeholderText: "Type here..."
 
+    // Padding inside the text edit container (in canvas coordinates)
+    readonly property real textPadding: 4
+
     // Box preview rectangle (shown while drawing)
     Rectangle {
         id: boxPreview
@@ -65,7 +68,7 @@ Item {
         x: tool.boxX
         y: tool.boxY
         width: tool.boxWidth
-        height: Math.max(tool.boxHeight, textEdit.contentHeight + 8 / tool.zoomLevel)
+        height: Math.max(tool.boxHeight, textEdit.contentHeight)
 
         color: "transparent"
         border.color: DV.PaletteBridge.active.highlight
@@ -75,10 +78,10 @@ Item {
         TextEdit {
             id: textEdit
             anchors.fill: parent
-            anchors.margins: 4 / tool.zoomLevel
+            anchors.margins: tool.textPadding
 
             font.family: settings ? settings.fontFamily : "Sans Serif"
-            font.pixelSize: (settings ? settings.fontSize : 16) / tool.zoomLevel
+            font.pointSize: settings ? settings.fontSize : 16
             color: {
                 if (!settings)
                     return DV.PaletteBridge.active.text;
@@ -237,10 +240,10 @@ Item {
 
         itemCompleted({
             type: "text",
-            x: tool.boxX,
-            y: tool.boxY,
-            width: tool.boxWidth,
-            height: tool.boxHeight,
+            x: tool.boxX + tool.textPadding,
+            y: tool.boxY + tool.textPadding,
+            width: tool.boxWidth - (tool.textPadding * 2),
+            height: tool.boxHeight - (tool.textPadding * 2),
             text: finalText,
             fontFamily: fontFamily,
             fontSize: fontSize,

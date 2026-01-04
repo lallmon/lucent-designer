@@ -1533,7 +1533,7 @@ ToolBar {
             }
 
             Label {
-                text: qsTr("px")
+                text: qsTr("pt")
                 font.pixelSize: 11
                 Layout.alignment: Qt.AlignVCenter
             }

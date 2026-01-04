@@ -497,7 +497,7 @@ class TextItem(CanvasItem):
         local_x = self.x + offset_x
         local_y = self.y + offset_y
 
-        # Set up font
+        # Set up font (use point size for typography standard)
         font = QFont(self.font_family)
         font.setPointSizeF(self.font_size)
         painter.setFont(font)

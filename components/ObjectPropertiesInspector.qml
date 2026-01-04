@@ -685,7 +685,7 @@ ScrollView {
                         }
 
                         Label {
-                            text: qsTr("px")
+                            text: qsTr("pt")
                             font.pixelSize: root.labelSize
                             color: root.labelColor
                             Layout.alignment: Qt.AlignVCenter
