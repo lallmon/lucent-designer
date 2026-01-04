@@ -494,6 +494,9 @@ class TextItem(CanvasItem):
         offset_y: float = CANVAS_OFFSET_Y,
     ) -> None:
         """Render this text item using QPainter."""
+        if not self.text:
+            return
+
         local_x = self.x + offset_x
         local_y = self.y + offset_y
 
@@ -511,13 +514,15 @@ class TextItem(CanvasItem):
         # No brush needed for text
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
-        # Get font metrics to calculate baseline from top
-        # y is stored as the TOP of the text, but drawText uses baseline
+        # Get font metrics for line height calculation
         fm = QFontMetricsF(font)
-        baseline_y = local_y + fm.ascent()
+        line_height = fm.lineSpacing()
 
-        # Draw text at position (x is left edge, y is baseline)
-        painter.drawText(QPointF(local_x, baseline_y), self.text)
+        # Draw each line separately to preserve explicit line breaks
+        lines = self.text.split("\n")
+        for i, line in enumerate(lines):
+            baseline_y = local_y + fm.ascent() + (i * line_height)
+            painter.drawText(QPointF(local_x, baseline_y), line)
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "TextItem":

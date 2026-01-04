@@ -114,8 +114,11 @@ Item {
 
             Keys.onReturnPressed: function (event) {
                 if (event.modifiers & Qt.ShiftModifier) {
-                    // Shift+Enter: Insert newline
-                    event.accepted = false;
+                    // Shift+Enter: Insert newline manually to maintain cursor
+                    textEdit.insert(textEdit.cursorPosition, "\n");
+                    textEdit.forceActiveFocus();
+                    textEdit.cursorVisible = true;
+                    event.accepted = true;
                 } else {
                     // Enter: Commit text
                     tool.commitText();
@@ -125,7 +128,11 @@ Item {
 
             Keys.onEnterPressed: function (event) {
                 if (event.modifiers & Qt.ShiftModifier) {
-                    event.accepted = false;
+                    // Shift+Enter: Insert newline manually to maintain cursor
+                    textEdit.insert(textEdit.cursorPosition, "\n");
+                    textEdit.forceActiveFocus();
+                    textEdit.cursorVisible = true;
+                    event.accepted = true;
                 } else {
                     tool.commitText();
                     event.accepted = true;
