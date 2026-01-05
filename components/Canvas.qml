@@ -71,6 +71,9 @@ Item {
             active: root.drawingMode === ""
             hitTestCallback: root.hitTest
             viewportToCanvasCallback: root.viewportToCanvas
+            getBoundsCallback: function (idx) {
+                return canvasModel.getBoundingBox(idx);
+            }
 
             onPanDelta: (dx, dy) => {
                 root.panRequested(dx, dy);

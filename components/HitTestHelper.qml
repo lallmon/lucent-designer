@@ -50,18 +50,9 @@ QtObject {
                         }
                     }
                 }
-            } else if (item.type === "group" || item.type === "layer") {
-                if (boundingBoxCallback) {
-                    var bounds = boundingBoxCallback(bbIndex);
-                    if (bounds && bounds.width >= 0 && bounds.height >= 0) {
-                        // Expand bounds slightly to account for stroke width
-                        var expand = item.strokeWidth ? item.strokeWidth * 0.5 : 1;
-                        if (canvasX >= bounds.x - expand && canvasX <= bounds.x + bounds.width + expand && canvasY >= bounds.y - expand && canvasY <= bounds.y + bounds.height + expand) {
-                            return resultIndex;
-                        }
-                    }
-                }
             }
+            // Groups and layers are not hit-testable on canvas - select via Layer Panel
+            // This allows clicking on shapes inside groups to select them directly
         }
         return -1;
     }
