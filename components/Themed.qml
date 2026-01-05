@@ -2,7 +2,7 @@ pragma Singleton
 
 import QtQuick
 
-// Shared palette access; single SystemPalette instance.
+// Single SystemPalette that follows the OS theme.
 QtObject {
     readonly property SystemPalette palette: SystemPalette {
         colorGroup: SystemPalette.Active

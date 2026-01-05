@@ -4,7 +4,7 @@ import "." as DV
 
 Item {
     id: root
-    readonly property SystemPalette palette: DV.Themed.palette
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     // Icon name (without extension), e.g. "cursor" or "square"
     property string name: ""
@@ -52,13 +52,13 @@ Item {
         anchors.fill: parent
         visible: image.status === Image.Error
         color: "#00000000"
-        border.color: palette.highlight
+        border.color: themePalette.highlight
         radius: DV.Styles.rad.sm
 
         Text {
             anchors.centerIn: parent
             text: "?"
-            color: palette.highlight
+            color: themePalette.highlight
             font.pixelSize: 10
         }
     }

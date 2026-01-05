@@ -8,7 +8,7 @@ Dialog {
     modal: true
     focus: true
     standardButtons: Dialog.Ok
-    readonly property SystemPalette palette: DV.Themed.palette
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     // Inputs
     property string appVersion: ""
@@ -17,9 +17,9 @@ Dialog {
     property string glVendor: ""
 
     background: Rectangle {
-        color: palette.base
+        color: themePalette.base
         radius: DV.Styles.rad.sm
-        border.color: palette.mid
+        border.color: themePalette.mid
         border.width: 1
     }
 
@@ -36,27 +36,27 @@ Dialog {
             Label {
                 text: qsTr("Lucent")
                 font.bold: true
-                color: palette.text
+                color: themePalette.text
             }
 
             Label {
                 text: qsTr("Version: %1").arg(root.appVersion || "unknown")
-                color: palette.text
+                color: themePalette.text
             }
 
             Label {
                 text: qsTr("Renderer backend: %1").arg(root.rendererBackend || "unknown")
-                color: palette.text
+                color: themePalette.text
             }
 
             Label {
                 text: qsTr("Renderer type: %1").arg(root.rendererType || "unknown")
-                color: palette.text
+                color: themePalette.text
             }
 
             Label {
                 text: qsTr("GL Vendor: %1").arg(root.glVendor || "unknown")
-                color: palette.text
+                color: themePalette.text
             }
         }
     }

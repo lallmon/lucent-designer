@@ -10,7 +10,7 @@ ToolBar {
     property ToolDefaults toolDefaults: ToolDefaults {}
 
     property string activeTool: ""  // Current tool ("select", "rectangle", "ellipse", etc.)
-    readonly property SystemPalette palette: DV.Themed.palette
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     property real rectangleStrokeWidth: 1
     property color rectangleStrokeColor: toolDefaults.defaultStrokeColor
@@ -120,13 +120,13 @@ ToolBar {
                 }
 
                 background: Rectangle {
-                    color: palette.base
-                    border.color: strokeWidthInput.activeFocus ? palette.highlight : palette.mid
+                    color: themePalette.base
+                    border.color: strokeWidthInput.activeFocus ? themePalette.highlight : themePalette.mid
                     border.width: 1
                     radius: DV.Styles.rad.sm
                 }
 
-                color: palette.text
+                color: themePalette.text
             }
 
             Label {
@@ -142,7 +142,7 @@ ToolBar {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.leftMargin: 6
                 Layout.rightMargin: 6
-                color: palette.mid
+                color: themePalette.mid
             }
 
             Label {
@@ -163,7 +163,7 @@ ToolBar {
 
                 background: Rectangle {
                     color: root.rectangleStrokeColor
-                    border.color: palette.mid
+                    border.color: themePalette.mid
                     border.width: 1
                     radius: DV.Styles.rad.sm
                 }
@@ -215,12 +215,12 @@ ToolBar {
                     implicitWidth: 80
                     implicitHeight: DV.Styles.height.xxxsm
                     radius: DV.Styles.rad.sm
-                    color: palette.base
+                    color: themePalette.base
 
                     Rectangle {
                         width: strokeOpacitySlider.visualPosition * parent.width
                         height: parent.height
-                        color: palette.highlight
+                        color: themePalette.highlight
                         radius: DV.Styles.rad.sm
                     }
                 }
@@ -233,8 +233,8 @@ ToolBar {
                     implicitWidth: DV.Styles.height.xs
                     implicitHeight: DV.Styles.height.xs
                     radius: DV.Styles.rad.lg
-                    color: strokeOpacitySlider.pressed ? palette.highlight : palette.button
-                    border.color: palette.mid
+                    color: strokeOpacitySlider.pressed ? themePalette.highlight : themePalette.button
+                    border.color: themePalette.mid
                     border.width: 1
                 }
             }

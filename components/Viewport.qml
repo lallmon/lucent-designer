@@ -6,7 +6,7 @@ import "." as DV
 Item {
     id: root
     clip: true  // Constrain rendering to viewport boundaries
-    readonly property SystemPalette palette: DV.Themed.palette
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     // Zoom/pan state (camera controls)
     property real zoomLevel: 0.7  // Start at 70%
@@ -35,7 +35,7 @@ Item {
     // Background color
     Rectangle {
         anchors.fill: parent
-        color: palette.window
+        color: themePalette.window
     }
 
     // GPU grid overlay: crisp, infinite-feel, tied to current viewport

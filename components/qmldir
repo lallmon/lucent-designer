@@ -1,4 +1,5 @@
 singleton Styles Styles.qml
 singleton SelectionManager SelectionManager.qml
 singleton Themed Themed.qml
+ToolIconButton 1.0 ToolIconButton.qml
 Viewport 1.0 Viewport.qml

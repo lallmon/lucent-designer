@@ -10,7 +10,7 @@ Pane {
 
     signal toolSelected(string toolName)
     property string activeTool: ""
-    readonly property SystemPalette palette: DV.Themed.palette
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     ButtonGroup {
         id: toolButtonGroup
@@ -18,146 +18,66 @@ Pane {
     }
 
     contentItem: ColumnLayout {
-        // Selection tool button
-        ToolButton {
+        DV.ToolIconButton {
             id: selButton
-            Layout.preferredWidth: DV.Styles.height.xlg
-            Layout.preferredHeight: DV.Styles.height.xlg
-            Layout.alignment: Qt.AlignHCenter
-            checkable: true
-            checked: root.activeTool === "select" || root.activeTool === ""
-            ButtonGroup.group: toolButtonGroup
-
-            contentItem: Item {
-                anchors.fill: parent
-                PhIcon {
-                    anchors.centerIn: parent
-                    name: "hand-pointing"
-                    color: palette.buttonText
-                }
+            toolName: "select"
+            iconName: "hand-pointing"
+            tooltipText: ""
+            activeTool: root.activeTool
+            buttonGroup: toolButtonGroup
+            isDefaultSelect: true
+            deselectValue: ""
+            onToolClicked: function (nextTool) {
+                root.toolSelected(nextTool);
             }
-
-            onClicked: {
-                root.toolSelected(checked ? "select" : "");
-            }
-
-            // No custom background; rely on default ToolButton visuals
         }
 
-        // Rectangle tool button
-        ToolButton {
+        DV.ToolIconButton {
             id: rectButton
-            Layout.preferredWidth: DV.Styles.height.xlg
-            Layout.preferredHeight: DV.Styles.height.xlg
-            Layout.alignment: Qt.AlignHCenter
-            checkable: true
-            checked: root.activeTool === "rectangle"
-            ButtonGroup.group: toolButtonGroup
-
-            ToolTip.visible: rectButton.hovered
-            ToolTip.delay: 500
-            ToolTip.text: "Rectangle Tool\n\nShift: Constrain to square\nAlt: Draw from center"
-
-            contentItem: Item {
-                anchors.fill: parent
-                PhIcon {
-                    anchors.centerIn: parent
-                    name: "rectangle"
-                    color: palette.buttonText
-                }
+            toolName: "rectangle"
+            iconName: "rectangle"
+            tooltipText: "Rectangle Tool\n\nShift: Constrain to square\nAlt: Draw from center"
+            activeTool: root.activeTool
+            buttonGroup: toolButtonGroup
+            onToolClicked: function (nextTool) {
+                root.toolSelected(nextTool);
             }
-            onClicked: {
-                root.toolSelected(checked ? "rectangle" : "");
-            }
-            // No custom background; rely on default ToolButton visuals
         }
 
-        ToolButton {
+        DV.ToolIconButton {
             id: ellipseButton
-            Layout.preferredWidth: DV.Styles.height.xlg
-            Layout.preferredHeight: DV.Styles.height.xlg
-            Layout.alignment: Qt.AlignHCenter
-            checkable: true
-            checked: root.activeTool === "ellipse"
-            ButtonGroup.group: toolButtonGroup
-
-            ToolTip.visible: ellipseButton.hovered
-            ToolTip.delay: 500
-            ToolTip.text: "Ellipse Tool\n\nShift: Constrain to circle\nAlt: Draw from center"
-
-            contentItem: Item {
-                anchors.fill: parent
-                PhIcon {
-                    anchors.centerIn: parent
-                    name: "circle"
-                    color: palette.buttonText
-                }
+            toolName: "ellipse"
+            iconName: "circle"
+            tooltipText: "Ellipse Tool\n\nShift: Constrain to circle\nAlt: Draw from center"
+            activeTool: root.activeTool
+            buttonGroup: toolButtonGroup
+            onToolClicked: function (nextTool) {
+                root.toolSelected(nextTool);
             }
-
-            onClicked: {
-                root.toolSelected(checked ? "ellipse" : "");
-            }
-
-            // No custom background; rely on default ToolButton visuals
         }
-        // Pen tool button
-        ToolButton {
+
+        DV.ToolIconButton {
             id: penButton
-            Layout.preferredWidth: DV.Styles.height.xlg
-            Layout.preferredHeight: DV.Styles.height.xlg
-            Layout.alignment: Qt.AlignHCenter
-            checkable: true
-            checked: root.activeTool === "pen"
-            ButtonGroup.group: toolButtonGroup
-
-            ToolTip.visible: penButton.hovered
-            ToolTip.delay: 500
-            ToolTip.text: "Pen Tool\n\nClick to add points, click first point to close"
-
-            contentItem: Item {
-                anchors.fill: parent
-                PhIcon {
-                    anchors.centerIn: parent
-                    name: "pen-nib"
-                    color: palette.buttonText
-                }
+            toolName: "pen"
+            iconName: "pen-nib"
+            tooltipText: "Pen Tool\n\nClick to add points, click first point to close"
+            activeTool: root.activeTool
+            buttonGroup: toolButtonGroup
+            onToolClicked: function (nextTool) {
+                root.toolSelected(nextTool);
             }
-
-            onClicked: {
-                root.toolSelected(checked ? "pen" : "");
-            }
-
-            // No custom background; rely on default ToolButton visuals
         }
 
-        // Text tool button
-        ToolButton {
+        DV.ToolIconButton {
             id: textButton
-            Layout.preferredWidth: DV.Styles.height.xlg
-            Layout.preferredHeight: DV.Styles.height.xlg
-            Layout.alignment: Qt.AlignHCenter
-            checkable: true
-            checked: root.activeTool === "text"
-            ButtonGroup.group: toolButtonGroup
-
-            ToolTip.visible: textButton.hovered
-            ToolTip.delay: 500
-            ToolTip.text: "Text Tool\n\nClick to place text, type, then press Enter to confirm"
-
-            contentItem: Item {
-                anchors.fill: parent
-                PhIcon {
-                    anchors.centerIn: parent
-                    name: "text-t"
-                    color: palette.buttonText
-                }
+            toolName: "text"
+            iconName: "text-t"
+            tooltipText: "Text Tool\n\nClick to place text, type, then press Enter to confirm"
+            activeTool: root.activeTool
+            buttonGroup: toolButtonGroup
+            onToolClicked: function (nextTool) {
+                root.toolSelected(nextTool);
             }
-
-            onClicked: {
-                root.toolSelected(checked ? "text" : "");
-            }
-
-            // No custom background; rely on default ToolButton visuals
         }
 
         Item {
