@@ -7,6 +7,21 @@ QtObject {
     property var selectedItem: null
     property var selectedIndices: []
 
+    function hasSelection() {
+        return ((selectedIndices && selectedIndices.length > 0) || selectedItemIndex >= 0);
+    }
+
+    function currentSelectionIndices() {
+        var indices = selectedIndices || [];
+        if (indices.length > 0) {
+            return indices.slice();
+        }
+        if (selectedItemIndex >= 0) {
+            return [selectedItemIndex];
+        }
+        return [];
+    }
+
     function setSelection(indices) {
         var next = indices ? indices.slice() : [];
         selectedIndices = next;

@@ -94,9 +94,7 @@ Item {
                                 "type": "group"
                             });
                             const idx = canvasModel.count() - 1;
-                            DV.SelectionManager.selectedIndices = [idx];
-                            DV.SelectionManager.selectedItemIndex = idx;
-                            DV.SelectionManager.selectedItem = canvasModel.getItemData(idx);
+                            DV.SelectionManager.setSelection([idx]);
                         }
                     }
                 }
@@ -122,17 +120,12 @@ Item {
 
                     TapHandler {
                         onTapped: {
-                            var indices = DV.SelectionManager.selectedIndices || [];
-                            if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
-                                indices = [DV.SelectionManager.selectedItemIndex];
-                            }
+                            var indices = DV.SelectionManager.currentSelectionIndices();
                             if (indices.length === 0)
                                 return;
                             var finalGroupIndex = canvasModel.groupItems(indices);
                             if (finalGroupIndex >= 0) {
-                                DV.SelectionManager.selectedIndices = [finalGroupIndex];
-                                DV.SelectionManager.selectedItemIndex = finalGroupIndex;
-                                DV.SelectionManager.selectedItem = canvasModel.getItemData(finalGroupIndex);
+                                DV.SelectionManager.setSelection([finalGroupIndex]);
                             }
                         }
                     }

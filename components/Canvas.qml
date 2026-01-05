@@ -371,10 +371,7 @@ Item {
     }
 
     function deleteSelectedItem() {
-        var indices = DV.SelectionManager.selectedIndices || [];
-        if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
-            indices = [DV.SelectionManager.selectedItemIndex];
-        }
+        var indices = DV.SelectionManager.currentSelectionIndices();
         if (indices.length === 0)
             return;
         indices.sort(function (a, b) {
@@ -386,24 +383,17 @@ Item {
                 continue;
             canvasModel.removeItem(idx);
         }
-        DV.SelectionManager.selectedIndices = [];
-        DV.SelectionManager.selectedItemIndex = -1;
-        DV.SelectionManager.selectedItem = null;
+        DV.SelectionManager.setSelection([]);
     }
 
     function duplicateSelectedItem() {
-        var indices = DV.SelectionManager.selectedIndices || [];
-        if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
-            indices = [DV.SelectionManager.selectedItemIndex];
-        }
+        var indices = DV.SelectionManager.currentSelectionIndices();
         if (indices.length === 0)
             return;
         var newIndices = canvasModel.duplicateItems(indices);
         if (!newIndices || newIndices.length === 0)
             return;
-        DV.SelectionManager.selectedIndices = newIndices;
-        DV.SelectionManager.selectedItemIndex = newIndices[newIndices.length - 1];
-        DV.SelectionManager.selectedItem = canvasModel.getItemData(DV.SelectionManager.selectedItemIndex);
+        DV.SelectionManager.setSelection(newIndices);
         refreshSelectionOverlayBounds();
     }
 

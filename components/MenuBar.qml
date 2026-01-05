@@ -41,7 +41,7 @@ MenuBar {
         Action {
             text: qsTr("&Duplicate Selection (Ctrl+D)")
             shortcut: StandardKey.Duplicate
-            enabled: root.canvas && ((DV.SelectionManager.selectedIndices && DV.SelectionManager.selectedIndices.length > 0) || DV.SelectionManager.selectedItemIndex >= 0)
+            enabled: root.canvas && DV.SelectionManager.hasSelection()
             onTriggered: {
                 if (root.canvas) {
                     root.canvas.duplicateSelectedItem();
@@ -51,23 +51,16 @@ MenuBar {
         Action {
             text: qsTr("&Group Selection (Ctrl+G)")
             shortcut: "Ctrl+G"
-            enabled: canvasModel && ((DV.SelectionManager.selectedIndices && DV.SelectionManager.selectedIndices.length > 0) || DV.SelectionManager.selectedItemIndex >= 0)
+            enabled: canvasModel && DV.SelectionManager.hasSelection()
             onTriggered: {
                 if (!canvasModel)
                     return;
-                let indices = [];
-                if (DV.SelectionManager.selectedIndices && DV.SelectionManager.selectedIndices.length > 0) {
-                    indices = DV.SelectionManager.selectedIndices.slice();
-                } else if (DV.SelectionManager.selectedItemIndex >= 0) {
-                    indices = [DV.SelectionManager.selectedItemIndex];
-                }
+                let indices = DV.SelectionManager.currentSelectionIndices();
                 if (indices.length === 0)
                     return;
                 const finalGroupIndex = canvasModel.groupItems(indices);
                 if (finalGroupIndex >= 0) {
-                    DV.SelectionManager.selectedIndices = [finalGroupIndex];
-                    DV.SelectionManager.selectedItemIndex = finalGroupIndex;
-                    DV.SelectionManager.selectedItem = canvasModel.getItemData(finalGroupIndex);
+                    DV.SelectionManager.setSelection([finalGroupIndex]);
                 }
             }
         }
