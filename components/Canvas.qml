@@ -85,7 +85,7 @@ Item {
 
             onObjectClicked: (viewportX, viewportY, modifiers) => {
                 var canvasCoords = root.viewportToCanvas(viewportX, viewportY);
-                root.selectItemAt(canvasCoords.x, canvasCoords.y, !!(modifiers & Qt.ShiftModifier));
+                root.selectItemAt(canvasCoords.x, canvasCoords.y, !!(modifiers & Qt.ControlModifier));
             }
 
             onObjectDragged: (viewportDx, viewportDy) => {

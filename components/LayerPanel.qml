@@ -522,10 +522,10 @@ Item {
                                             acceptedButtons: Qt.LeftButton
                                             preventStealing: true
                                             onClicked: function (mouse) {
-                                                root.setSelectionFromDelegate(delegateRoot.modelIndex, mouse.modifiers & Qt.ShiftModifier);
+                                                root.setSelectionFromDelegate(delegateRoot.modelIndex, mouse.modifiers & Qt.ControlModifier);
                                             }
                                             onDoubleClicked: function (mouse) {
-                                                root.setSelectionFromDelegate(delegateRoot.modelIndex, mouse.modifiers & Qt.ShiftModifier);
+                                                root.setSelectionFromDelegate(delegateRoot.modelIndex, mouse.modifiers & Qt.ControlModifier);
                                                 nameEditor.startEditing();
                                             }
                                         }
