@@ -11,12 +11,14 @@ import os
 from pathlib import Path
 
 from typing import Optional, cast
-from PySide6.QtGui import QGuiApplication, QOpenGLContext
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QOpenGLContext
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtCore import Qt, QObject, Property, Signal
 from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
 from lucent.canvas_renderer import CanvasRenderer
 from lucent.canvas_model import CanvasModel
+from lucent.document_manager import DocumentManager
 from lucent.font_provider import FontProvider
 
 # Version placeholder - replaced by GitHub Actions during release builds
@@ -28,9 +30,10 @@ if __name__ == "__main__":
     os.environ["QSG_RENDER_LOOP"] = "basic"  # Use basic render loop for better sync
 
     # Enable desktop OpenGL for better performance
-    QGuiApplication.setAttribute(Qt.AA_UseDesktopOpenGL)  # type: ignore[attr-defined]
+    QApplication.setAttribute(Qt.AA_UseDesktopOpenGL)  # type: ignore[attr-defined]
 
-    app = QGuiApplication(sys.argv)
+    # Use QApplication (not QGuiApplication) to support Qt.labs.platform native dialogs
+    app = QApplication(sys.argv)
 
     class AppInfo(QObject):
         rendererBackendChanged = Signal()
@@ -104,6 +107,10 @@ if __name__ == "__main__":
     # Create and register canvas model as global singleton
     canvas_model = CanvasModel()
     engine.rootContext().setContextProperty("canvasModel", canvas_model)
+
+    # Create and register document manager for file operations
+    document_manager = DocumentManager(canvas_model)
+    engine.rootContext().setContextProperty("documentManager", document_manager)
 
     # Create and register font provider for dynamic font lists
     font_provider = FontProvider()

@@ -1,0 +1,265 @@
+"""Document manager for Lucent - handles file operations and document state."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from PySide6.QtCore import QObject, Property, Signal, Slot, QUrl
+
+from lucent.file_io import save_document, load_document, FileVersionError
+from lucent.item_schema import item_to_dict
+
+if TYPE_CHECKING:
+    from lucent.canvas_model import CanvasModel
+
+
+class DocumentManager(QObject):
+    """Manages document state including file path, dirty flag, and file operations.
+
+    This class bridges the CanvasModel with file I/O operations and tracks
+    document state for the UI (dirty indicator, window title, etc.).
+    """
+
+    dirtyChanged = Signal()
+    filePathChanged = Signal()
+    documentTitleChanged = Signal()
+    viewportChanged = Signal()
+
+    def __init__(
+        self, canvas_model: "CanvasModel", parent: Optional[QObject] = None
+    ) -> None:
+        super().__init__(parent)
+        self._canvas_model = canvas_model
+        self._dirty = False
+        self._file_path = ""
+        self._document_title = "Untitled"
+
+        # Viewport state (to be saved/restored with document)
+        self._viewport_zoom = 1.0
+        self._viewport_offset_x = 0.0
+        self._viewport_offset_y = 0.0
+
+        # Don't track changes until app is fully initialized
+        # Call startTracking() from QML after Component.onCompleted
+        self._tracking_enabled = False
+
+    def _connect_model_signals(self) -> None:
+        """Connect to CanvasModel signals for dirty tracking."""
+        self._canvas_model.itemAdded.connect(self._on_model_changed)
+        self._canvas_model.itemRemoved.connect(self._on_model_changed)
+        self._canvas_model.itemModified.connect(self._on_model_changed)
+        self._canvas_model.itemsCleared.connect(self._on_model_changed)
+        self._canvas_model.itemsReordered.connect(self._on_model_changed)
+
+    def _disconnect_model_signals(self) -> None:
+        """Disconnect from CanvasModel signals temporarily."""
+        try:
+            self._canvas_model.itemAdded.disconnect(self._on_model_changed)
+            self._canvas_model.itemRemoved.disconnect(self._on_model_changed)
+            self._canvas_model.itemModified.disconnect(self._on_model_changed)
+            self._canvas_model.itemsCleared.disconnect(self._on_model_changed)
+            self._canvas_model.itemsReordered.disconnect(self._on_model_changed)
+        except RuntimeError:
+            # Signals may not be connected
+            pass
+
+    def _on_model_changed(self, *args: Any) -> None:
+        """Handle any change to the canvas model."""
+        if self._tracking_enabled:
+            self._set_dirty(True)
+
+    def _set_dirty(self, value: bool) -> None:
+        """Set dirty flag and emit signal if changed."""
+        if self._dirty != value:
+            self._dirty = value
+            self.dirtyChanged.emit()
+
+    def _set_file_path(self, value: str) -> None:
+        """Set file path and emit signal if changed."""
+        if self._file_path != value:
+            self._file_path = value
+            self.filePathChanged.emit()
+            self._update_title()
+
+    def _update_title(self) -> None:
+        """Update document title based on current file path."""
+        if self._file_path:
+            new_title = Path(self._file_path).stem
+        else:
+            new_title = "Untitled"
+
+        if self._document_title != new_title:
+            self._document_title = new_title
+            self.documentTitleChanged.emit()
+
+    def _url_to_path(self, url_or_path: str) -> str:
+        """Convert a file URL or path to a local file path.
+
+        Handles both 'file:///path' URLs and plain '/path' strings.
+        """
+        if url_or_path.startswith("file:"):
+            qurl = QUrl(url_or_path)
+            return qurl.toLocalFile()
+        return url_or_path
+
+    def _get_dirty(self) -> bool:
+        return self._dirty
+
+    dirty = Property(bool, _get_dirty, notify=dirtyChanged)
+
+    def _get_file_path(self) -> str:
+        return self._file_path
+
+    filePath = Property(str, _get_file_path, notify=filePathChanged)
+
+    def _get_document_title(self) -> str:
+        return self._document_title
+
+    documentTitle = Property(str, _get_document_title, notify=documentTitleChanged)
+
+    @Slot(result=bool)
+    def hasUnsavedChanges(self) -> bool:
+        """Check if document has unsaved changes."""
+        return self._dirty
+
+    @Slot()
+    def startTracking(self) -> None:
+        """Enable dirty tracking after app initialization.
+
+        Call this from QML after Component.onCompleted to avoid
+        marking the document dirty during app startup.
+        """
+        if not self._tracking_enabled:
+            self._connect_model_signals()
+            self._tracking_enabled = True
+
+    @Slot(result=bool)
+    def newDocument(self) -> bool:
+        """Create a new empty document.
+
+        Clears the canvas, resets file path and dirty flag.
+
+        Returns:
+            True always (operation cannot fail)
+        """
+        # Disconnect signals to avoid dirty flag during clear
+        self._disconnect_model_signals()
+
+        self._canvas_model.clear()
+        self._connect_model_signals()
+        self._set_file_path("")
+        self._set_dirty(False)
+
+        return True
+
+    @Slot(str, result=bool)
+    def openDocument(self, path: str) -> bool:
+        """Open a document from the specified file path.
+
+        Args:
+            path: Path or file URL to the .lucent file to open
+
+        Returns:
+            True if document was opened successfully, False on error
+        """
+        local_path = self._url_to_path(path)
+
+        try:
+            data = load_document(local_path)
+        except (FileNotFoundError, ValueError, FileVersionError) as e:
+            print(f"Error opening document: {e}")
+            return False
+
+        # Disconnect during load to avoid marking document dirty
+        self._disconnect_model_signals()
+        self._canvas_model.clear()
+
+        for item_data in data.get("items", []):
+            self._canvas_model.addItem(item_data)
+
+        viewport = data.get("viewport", {})
+        self._viewport_zoom = viewport.get("zoomLevel", 1.0)
+        self._viewport_offset_x = viewport.get("offsetX", 0.0)
+        self._viewport_offset_y = viewport.get("offsetY", 0.0)
+        self.viewportChanged.emit()
+
+        self._connect_model_signals()
+
+        self._set_file_path(local_path)
+        self._set_dirty(False)
+
+        return True
+
+    @Slot(result=bool)
+    def saveDocument(self) -> bool:
+        """Save document to current file path.
+
+        Returns:
+            True if saved successfully, False if no path set or error
+        """
+        if not self._file_path:
+            return False
+
+        return self.saveDocumentAs(self._file_path)
+
+    @Slot(str, result=bool)
+    def saveDocumentAs(self, path: str) -> bool:
+        """Save document to the specified file path.
+
+        Args:
+            path: Path or file URL to save the .lucent file to
+
+        Returns:
+            True if saved successfully, False on error
+        """
+        local_path = self._url_to_path(path)
+
+        try:
+            items: List[Dict[str, Any]] = []
+            for item in self._canvas_model.getItems():
+                items.append(item_to_dict(item))
+
+            viewport = {
+                "zoomLevel": self._viewport_zoom,
+                "offsetX": self._viewport_offset_x,
+                "offsetY": self._viewport_offset_y,
+            }
+
+            meta = {"name": Path(local_path).stem}
+
+            save_document(path=local_path, items=items, viewport=viewport, meta=meta)
+
+            self._set_file_path(local_path)
+            self._set_dirty(False)
+
+            return True
+        except OSError as e:
+            print(f"Error saving document: {e}")
+            return False
+
+    @Slot(float, float, float)
+    def setViewport(self, zoom: float, offset_x: float, offset_y: float) -> None:
+        """Set viewport state for saving with document.
+
+        Args:
+            zoom: Current zoom level
+            offset_x: Current X offset
+            offset_y: Current Y offset
+        """
+        self._viewport_zoom = zoom
+        self._viewport_offset_x = offset_x
+        self._viewport_offset_y = offset_y
+
+    @Slot(result="QVariant")  # type: ignore[arg-type]
+    def getViewport(self) -> Dict[str, float]:
+        """Get current viewport state.
+
+        Returns:
+            Dictionary with zoomLevel, offsetX, offsetY
+        """
+        return {
+            "zoomLevel": self._viewport_zoom,
+            "offsetX": self._viewport_offset_x,
+            "offsetY": self._viewport_offset_y,
+        }

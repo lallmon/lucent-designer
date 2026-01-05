@@ -10,15 +10,49 @@ MenuBar {
     property var viewport: null
     // Property to reference the canvas for edit operations
     property var canvas: null
-    // Signal to request About dialog from parent
+
+    // Signals for file operations (handled by App.qml)
     signal aboutRequested
+    signal newRequested
+    signal openRequested
+    signal saveRequested
+    signal saveAsRequested
+    signal exitRequested
 
     Menu {
         title: qsTr("&File")
+
+        Action {
+            text: qsTr("&New (Ctrl+N)")
+            shortcut: StandardKey.New
+            onTriggered: root.newRequested()
+        }
+
+        Action {
+            text: qsTr("&Open... (Ctrl+O)")
+            shortcut: StandardKey.Open
+            onTriggered: root.openRequested()
+        }
+
+        Action {
+            text: qsTr("&Save (Ctrl+S)")
+            shortcut: StandardKey.Save
+            enabled: documentManager ? (documentManager.dirty || documentManager.filePath === "") : false
+            onTriggered: root.saveRequested()
+        }
+
+        Action {
+            text: qsTr("Save &As... (Ctrl+Shift+S)")
+            shortcut: "Ctrl+Shift+S"
+            onTriggered: root.saveAsRequested()
+        }
+
+        MenuSeparator {}
+
         Action {
             text: qsTr("E&xit (Ctrl+Q)")
             shortcut: StandardKey.Quit
-            onTriggered: Qt.quit()
+            onTriggered: root.exitRequested()
         }
     }
 
