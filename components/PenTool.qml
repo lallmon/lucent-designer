@@ -91,8 +91,8 @@ Item {
             radius: width / 2
             x: point.x - width / 2
             y: point.y - height / 2
-            color: DV.PaletteBridge.active.mid
-            border.color: DV.PaletteBridge.active.text
+            color: DV.Themed.palette.mid
+            border.color: DV.Themed.palette.text
             border.width: 1 / Math.max(tool.zoomLevel, 0.0001)
         }
     }

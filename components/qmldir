@@ -1,4 +1,12 @@
 singleton Styles Styles.qml
 singleton SelectionManager SelectionManager.qml
-singleton PaletteBridge PaletteBridge.qml
+singleton Themed Themed.qml
+ToolIconButton 1.0 ToolIconButton.qml
+LabeledNumericField 1.0 LabeledNumericField.qml
+OpacitySlider 1.0 OpacitySlider.qml
+ColorPickerButton 1.0 ColorPickerButton.qml
+RectangleToolSettings 1.0 RectangleToolSettings.qml
+EllipseToolSettings 1.0 EllipseToolSettings.qml
+PenToolSettings 1.0 PenToolSettings.qml
+TextToolSettings 1.0 TextToolSettings.qml
 Viewport 1.0 Viewport.qml

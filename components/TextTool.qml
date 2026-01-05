@@ -43,7 +43,7 @@ Item {
         height: currentBox ? currentBox.height : 0
 
         color: "transparent"
-        border.color: DV.PaletteBridge.active.highlight
+        border.color: DV.Themed.palette.highlight
         border.width: 2 / tool.zoomLevel
 
         // Dashed border effect using inner rectangle
@@ -51,7 +51,7 @@ Item {
             anchors.fill: parent
             anchors.margins: 1 / tool.zoomLevel
             color: "transparent"
-            border.color: DV.PaletteBridge.active.base
+            border.color: DV.Themed.palette.base
             border.width: 1 / tool.zoomLevel
             opacity: 0.5
         }
@@ -79,7 +79,7 @@ Item {
         height: Math.max(tool.boxHeight, textEdit.contentHeight + tool.textPadding * 2)
 
         color: "transparent"
-        border.color: DV.PaletteBridge.active.highlight
+        border.color: DV.Themed.palette.highlight
         border.width: 2 / tool.zoomLevel
         radius: 2 / tool.zoomLevel
 
@@ -98,12 +98,12 @@ Item {
             font.pointSize: settings ? settings.fontSize : 16
             color: {
                 if (!settings)
-                    return DV.PaletteBridge.active.text;
+                    return DV.Themed.palette.text;
                 var c = Qt.color(settings.textColor);
                 c.a = settings.textOpacity !== undefined ? settings.textOpacity : 1.0;
                 return c;
             }
-            selectionColor: DV.PaletteBridge.active.highlight
+            selectionColor: DV.Themed.palette.highlight
 
             wrapMode: TextEdit.Wrap
             selectByMouse: true
@@ -148,8 +148,8 @@ Item {
             width: 10 / tool.zoomLevel
             height: 10 / tool.zoomLevel
             radius: 5 / tool.zoomLevel
-            color: DV.PaletteBridge.active.highlight
-            border.color: DV.PaletteBridge.active.base
+            color: DV.Themed.palette.highlight
+            border.color: DV.Themed.palette.base
             border.width: 1 / tool.zoomLevel
 
             anchors.right: parent.right

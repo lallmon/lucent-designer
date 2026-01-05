@@ -5,7 +5,7 @@ import "." as DV
 
 Item {
     id: root
-    readonly property SystemPalette palette: DV.PaletteBridge.active
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     // Map between visual order (top-to-bottom) and model order (append order).
     // Top of the list should correspond to the highest Z on canvas, so visual
@@ -23,22 +23,7 @@ Item {
     property real lastDragYInFlick: 0
 
     function setSelectionFromDelegate(modelIndex, multi) {
-        var current = DV.SelectionManager.selectedIndices || [];
-        var next = current.slice();
-        if (multi) {
-            var pos = next.indexOf(modelIndex);
-            if (pos >= 0) {
-                next.splice(pos, 1);
-            } else {
-                next.push(modelIndex);
-            }
-        } else {
-            next = [modelIndex];
-        }
-        DV.SelectionManager.selectedIndices = next;
-        var primary = next.length > 0 ? next[next.length - 1] : -1;
-        DV.SelectionManager.selectedItemIndex = primary;
-        DV.SelectionManager.selectedItem = primary >= 0 ? canvasModel.getItemData(primary) : null;
+        DV.SelectionManager.toggleSelection(modelIndex, multi);
     }
 
     ColumnLayout {
@@ -53,7 +38,7 @@ Item {
                 text: qsTr("Layers")
                 font.pixelSize: 12
                 font.bold: true
-                color: palette.text
+                color: themePalette.text
                 Layout.fillWidth: true
             }
 
@@ -65,13 +50,13 @@ Item {
                     Layout.preferredWidth: 24
                     Layout.preferredHeight: 24
                     radius: DV.Styles.rad.sm
-                    color: addLayerHover.hovered ? palette.midlight : "transparent"
+                    color: addLayerHover.hovered ? themePalette.midlight : "transparent"
 
                     DV.PhIcon {
                         anchors.centerIn: parent
                         name: "stack-plus"
                         size: 18
-                        color: palette.text
+                        color: themePalette.text
                     }
 
                     HoverHandler {
@@ -89,13 +74,13 @@ Item {
                     Layout.preferredWidth: 24
                     Layout.preferredHeight: 24
                     radius: DV.Styles.rad.sm
-                    color: addGroupHover.hovered ? palette.midlight : "transparent"
+                    color: addGroupHover.hovered ? themePalette.midlight : "transparent"
 
                     DV.PhIcon {
                         anchors.centerIn: parent
                         name: "folder-simple-plus"
                         size: 18
-                        color: palette.text
+                        color: themePalette.text
                     }
 
                     HoverHandler {
@@ -109,9 +94,7 @@ Item {
                                 "type": "group"
                             });
                             const idx = canvasModel.count() - 1;
-                            DV.SelectionManager.selectedIndices = [idx];
-                            DV.SelectionManager.selectedItemIndex = idx;
-                            DV.SelectionManager.selectedItem = canvasModel.getItemData(idx);
+                            DV.SelectionManager.setSelection([idx]);
                         }
                     }
                 }
@@ -121,13 +104,13 @@ Item {
                     Layout.preferredWidth: 24
                     Layout.preferredHeight: 24
                     radius: DV.Styles.rad.sm
-                    color: addGroupFromSelectionHover.hovered ? palette.midlight : "transparent"
+                    color: addGroupFromSelectionHover.hovered ? themePalette.midlight : "transparent"
 
                     DV.PhIcon {
                         anchors.centerIn: parent
                         name: "folders"
                         size: 18
-                        color: palette.text
+                        color: themePalette.text
                     }
 
                     HoverHandler {
@@ -137,17 +120,12 @@ Item {
 
                     TapHandler {
                         onTapped: {
-                            var indices = DV.SelectionManager.selectedIndices || [];
-                            if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
-                                indices = [DV.SelectionManager.selectedItemIndex];
-                            }
+                            var indices = DV.SelectionManager.currentSelectionIndices();
                             if (indices.length === 0)
                                 return;
                             var finalGroupIndex = canvasModel.groupItems(indices);
                             if (finalGroupIndex >= 0) {
-                                DV.SelectionManager.selectedIndices = [finalGroupIndex];
-                                DV.SelectionManager.selectedItemIndex = finalGroupIndex;
-                                DV.SelectionManager.selectedItem = canvasModel.getItemData(finalGroupIndex);
+                                DV.SelectionManager.setSelection([finalGroupIndex]);
                             }
                         }
                     }
@@ -158,7 +136,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             height: 1
-            color: palette.mid
+            color: themePalette.mid
         }
 
         Item {
@@ -261,9 +239,9 @@ Item {
                                 id: background
                                 anchors.fill: parent
                                 radius: DV.Styles.rad.sm
-                                color: delegateRoot.isDropTarget ? palette.highlight : delegateRoot.isSelected ? palette.highlight : nameHoverHandler.hovered ? palette.midlight : "transparent"
+                                color: delegateRoot.isDropTarget ? themePalette.highlight : delegateRoot.isSelected ? themePalette.highlight : nameHoverHandler.hovered ? themePalette.midlight : "transparent"
                                 border.width: delegateRoot.isDropTarget ? 2 : 0
-                                border.color: palette.highlight
+                                border.color: themePalette.highlight
 
                                 Rectangle {
                                     // Separator between items; thickens and highlights when this is the insertion target
@@ -272,7 +250,7 @@ Item {
                                     anchors.right: parent.right
                                     anchors.top: parent.top
                                     height: isInsertTarget ? 3 : 1
-                                    color: isInsertTarget ? palette.highlight : palette.mid
+                                    color: isInsertTarget ? themePalette.highlight : themePalette.mid
                                     visible: delegateRoot.displayIndex > 0 || isInsertTarget
                                 }
 
@@ -305,7 +283,7 @@ Item {
                                                 return "shapes";
                                             }
                                             size: 18
-                                            color: delegateRoot.isSelected ? palette.highlightedText : palette.text
+                                            color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
                                         }
 
                                         DragHandler {
@@ -557,7 +535,7 @@ Item {
                                             visible: !nameEditor.isEditing
                                             text: delegateRoot.name
                                             font.pixelSize: 11
-                                            color: delegateRoot.isSelected ? palette.highlightedText : palette.text
+                                            color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
                                             elide: Text.ElideRight
                                             Layout.fillWidth: true
                                             Layout.minimumWidth: 40
@@ -568,7 +546,7 @@ Item {
                                             visible: nameEditor.isEditing
                                             text: nameEditor.draftName
                                             font.pixelSize: 11
-                                            color: delegateRoot.isSelected ? palette.highlightedText : palette.text
+                                            color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
                                             horizontalAlignment: Text.AlignLeft
                                             verticalAlignment: TextInput.AlignVCenter
                                             padding: 0
@@ -625,14 +603,14 @@ Item {
 
                                         Rectangle {
                                             anchors.fill: parent
-                                            color: visibilityHover.hovered ? palette.midlight : "transparent"
+                                            color: visibilityHover.hovered ? themePalette.midlight : "transparent"
                                             radius: DV.Styles.rad.sm
 
                                             DV.PhIcon {
                                                 anchors.centerIn: parent
                                                 name: delegateRoot.modelVisible ? "eye" : "eye-closed"
                                                 size: 16
-                                                color: delegateRoot.isSelected ? palette.highlightedText : palette.text
+                                                color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
                                             }
                                         }
                                     }
@@ -658,14 +636,14 @@ Item {
 
                                         Rectangle {
                                             anchors.fill: parent
-                                            color: lockHover.hovered ? palette.midlight : "transparent"
+                                            color: lockHover.hovered ? themePalette.midlight : "transparent"
                                             radius: DV.Styles.rad.sm
 
                                             DV.PhIcon {
                                                 anchors.centerIn: parent
                                                 name: delegateRoot.modelLocked ? "lock" : "lock-open"
                                                 size: 16
-                                                color: delegateRoot.isSelected ? palette.highlightedText : palette.text
+                                                color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
                                             }
                                         }
                                     }
@@ -695,14 +673,14 @@ Item {
 
                                         Rectangle {
                                             anchors.fill: parent
-                                            color: deleteHover.hovered ? palette.midlight : "transparent"
+                                            color: deleteHover.hovered ? themePalette.midlight : "transparent"
                                             radius: DV.Styles.rad.sm
 
                                             DV.PhIcon {
                                                 anchors.centerIn: parent
                                                 name: "trash"
                                                 size: 16
-                                                color: delegateRoot.isSelected ? palette.highlightedText : palette.text
+                                                color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
                                             }
                                         }
                                     }
@@ -724,7 +702,7 @@ Item {
                     visible: layerRepeater.count === 0
                     text: qsTr("No objects")
                     font.pixelSize: 11
-                    color: palette.text
+                    color: themePalette.text
                 }
             }
         }

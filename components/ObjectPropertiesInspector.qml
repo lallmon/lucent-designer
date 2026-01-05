@@ -9,7 +9,7 @@ ScrollView {
     id: root
     clip: true
     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-    readonly property SystemPalette palette: DV.PaletteBridge.active
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     property var selectedItem: null
     property string originalStrokeColor: ""
@@ -24,7 +24,7 @@ ScrollView {
     readonly property bool isLocked: (DV.SelectionManager.selectedItemIndex >= 0) && canvasModel && canvasModel.isEffectivelyLocked(DV.SelectionManager.selectedItemIndex)
 
     readonly property int labelSize: 11
-    readonly property color labelColor: palette.text
+    readonly property color labelColor: themePalette.text
 
     function updateProperty(property, value) {
         if (selectedItem && DV.SelectionManager.selectedItemIndex >= 0) {
@@ -37,7 +37,7 @@ ScrollView {
     component PropertySeparator: Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 1
-        color: palette.mid
+        color: themePalette.mid
         Layout.topMargin: 4
         Layout.bottomMargin: 4
     }
@@ -50,14 +50,14 @@ ScrollView {
             text: qsTr("Properties")
             font.pixelSize: 12
             font.bold: true
-            color: palette.text
+            color: themePalette.text
             Layout.fillWidth: true
         }
 
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: palette.mid
+            color: themePalette.mid
         }
 
         ColumnLayout {
@@ -247,7 +247,7 @@ ScrollView {
                     Label {
                         text: root.selectedItem ? root.selectedItem.name : ""
                         font.pixelSize: root.labelSize
-                        color: palette.text
+                        color: themePalette.text
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
@@ -335,7 +335,7 @@ ScrollView {
                             height: 16
                             radius: 2
                             color: root.isPathSelected ? root.selectedItem.strokeColor : "transparent"
-                            border.color: palette.mid
+                            border.color: themePalette.mid
                             border.width: 1
                             Layout.alignment: Qt.AlignVCenter
                             MouseArea {
@@ -393,12 +393,12 @@ ScrollView {
                                 implicitWidth: 80
                                 implicitHeight: DV.Styles.height.xxxsm
                                 radius: DV.Styles.rad.sm
-                                color: palette.midlight
+                                color: themePalette.midlight
 
                                 Rectangle {
                                     width: pathStrokeOpacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: palette.highlight
+                                    color: themePalette.highlight
                                     radius: DV.Styles.rad.sm
                                 }
                             }
@@ -411,8 +411,8 @@ ScrollView {
                                 implicitWidth: DV.Styles.height.xs
                                 implicitHeight: DV.Styles.height.xs
                                 radius: DV.Styles.rad.lg
-                                color: pathStrokeOpacitySlider.pressed ? palette.highlight : palette.text
-                                border.color: palette.mid
+                                color: pathStrokeOpacitySlider.pressed ? themePalette.highlight : themePalette.text
+                                border.color: themePalette.mid
                                 border.width: 1
                             }
                         }
@@ -420,7 +420,7 @@ ScrollView {
                         Label {
                             text: Math.round(pathStrokeOpacitySlider.value) + "%"
                             font.pixelSize: 11
-                            color: palette.text
+                            color: themePalette.text
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }
@@ -439,7 +439,7 @@ ScrollView {
                             height: 16
                             radius: 2
                             color: root.isPathSelected ? root.selectedItem.fillColor : "transparent"
-                            border.color: palette.mid
+                            border.color: themePalette.mid
                             border.width: 1
                             Layout.alignment: Qt.AlignVCenter
                             MouseArea {
@@ -497,12 +497,12 @@ ScrollView {
                                 implicitWidth: 80
                                 implicitHeight: DV.Styles.height.xxxsm
                                 radius: DV.Styles.rad.sm
-                                color: palette.midlight
+                                color: themePalette.midlight
 
                                 Rectangle {
                                     width: pathFillOpacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: palette.highlight
+                                    color: themePalette.highlight
                                     radius: DV.Styles.rad.sm
                                 }
                             }
@@ -515,8 +515,8 @@ ScrollView {
                                 implicitWidth: DV.Styles.height.xs
                                 implicitHeight: DV.Styles.height.xs
                                 radius: DV.Styles.rad.lg
-                                color: pathFillOpacitySlider.pressed ? palette.highlight : palette.text
-                                border.color: palette.mid
+                                color: pathFillOpacitySlider.pressed ? themePalette.highlight : themePalette.text
+                                border.color: themePalette.mid
                                 border.width: 1
                             }
                         }
@@ -524,7 +524,7 @@ ScrollView {
                         Label {
                             text: Math.round(pathFillOpacitySlider.value) + "%"
                             font.pixelSize: 11
-                            color: palette.text
+                            color: themePalette.text
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }
@@ -606,7 +606,7 @@ ScrollView {
 
                         contentItem: Text {
                             text: fontFamilyCombo.displayText
-                            color: palette.text
+                            color: themePalette.text
                             font.pixelSize: 10
                             font.family: fontFamilyCombo.displayText
                             verticalAlignment: Text.AlignVCenter
@@ -672,7 +672,7 @@ ScrollView {
                             contentItem: TextInput {
                                 text: textFontSizeCombo.editText
                                 font.pixelSize: 10
-                                color: palette.text
+                                color: themePalette.text
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignLeft
                                 leftPadding: 6
@@ -706,7 +706,7 @@ ScrollView {
                             height: 16
                             radius: 2
                             color: root.isTextSelected ? root.selectedItem.textColor : "transparent"
-                            border.color: palette.mid
+                            border.color: themePalette.mid
                             border.width: 1
                             Layout.alignment: Qt.AlignVCenter
                             MouseArea {
@@ -763,12 +763,12 @@ ScrollView {
                                 implicitWidth: 80
                                 implicitHeight: DV.Styles.height.xxxsm
                                 radius: DV.Styles.rad.sm
-                                color: palette.midlight
+                                color: themePalette.midlight
 
                                 Rectangle {
                                     width: textOpacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: palette.highlight
+                                    color: themePalette.highlight
                                     radius: DV.Styles.rad.sm
                                 }
                             }
@@ -781,8 +781,8 @@ ScrollView {
                                 implicitWidth: DV.Styles.height.xs
                                 implicitHeight: DV.Styles.height.xs
                                 radius: DV.Styles.rad.lg
-                                color: textOpacitySlider.pressed ? palette.highlight : palette.text
-                                border.color: palette.mid
+                                color: textOpacitySlider.pressed ? themePalette.highlight : themePalette.text
+                                border.color: themePalette.mid
                                 border.width: 1
                             }
                         }
@@ -790,7 +790,7 @@ ScrollView {
                         Label {
                             text: Math.round(textOpacitySlider.value) + "%"
                             font.pixelSize: 11
-                            color: palette.text
+                            color: themePalette.text
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }
@@ -801,7 +801,7 @@ ScrollView {
                     title: qsTr("Choose Text Color")
                     onVisibleChanged: {
                         if (visible) {
-                            selectedColor = root.isTextSelected ? root.selectedItem.textColor : palette.text;
+                            selectedColor = root.isTextSelected ? root.selectedItem.textColor : themePalette.text;
                         }
                     }
                     onSelectedColorChanged: root.updateProperty("textColor", selectedColor.toString())
@@ -872,7 +872,7 @@ ScrollView {
                             }
                             background: Rectangle {
                                 color: root.isShapeSelected ? root.selectedItem.strokeColor : "transparent"
-                                border.color: palette.mid
+                                border.color: themePalette.mid
                                 border.width: 1
                                 radius: DV.Styles.rad.sm
                             }
@@ -924,11 +924,11 @@ ScrollView {
                                 implicitWidth: 80
                                 implicitHeight: DV.Styles.height.xxxsm
                                 radius: DV.Styles.rad.sm
-                                color: palette.midlight
+                                color: themePalette.midlight
                                 Rectangle {
                                     width: strokeOpacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: palette.highlight
+                                    color: themePalette.highlight
                                     radius: DV.Styles.rad.sm
                                 }
                             }
@@ -940,15 +940,15 @@ ScrollView {
                                 implicitWidth: DV.Styles.height.xs
                                 implicitHeight: DV.Styles.height.xs
                                 radius: DV.Styles.rad.lg
-                                color: strokeOpacitySlider.pressed ? palette.highlight : palette.text
-                                border.color: palette.mid
+                                color: strokeOpacitySlider.pressed ? themePalette.highlight : themePalette.text
+                                border.color: themePalette.mid
                                 border.width: 1
                             }
                         }
                         Label {
                             text: Math.round(strokeOpacitySlider.value) + "%"
                             font.pixelSize: 11
-                            color: palette.text
+                            color: themePalette.text
                             Layout.preferredWidth: 40
                         }
                     }
@@ -980,7 +980,7 @@ ScrollView {
                             }
                             background: Rectangle {
                                 color: root.isShapeSelected ? root.selectedItem.fillColor : "transparent"
-                                border.color: palette.mid
+                                border.color: themePalette.mid
                                 border.width: 1
                                 radius: DV.Styles.rad.sm
                             }
@@ -1032,11 +1032,11 @@ ScrollView {
                                 implicitWidth: 80
                                 implicitHeight: DV.Styles.height.xxxsm
                                 radius: DV.Styles.rad.sm
-                                color: palette.midlight
+                                color: themePalette.midlight
                                 Rectangle {
                                     width: opacitySlider.visualPosition * parent.width
                                     height: parent.height
-                                    color: palette.highlight
+                                    color: themePalette.highlight
                                     radius: DV.Styles.rad.sm
                                 }
                             }
@@ -1048,15 +1048,15 @@ ScrollView {
                                 implicitWidth: DV.Styles.height.xs
                                 implicitHeight: DV.Styles.height.xs
                                 radius: DV.Styles.rad.lg
-                                color: opacitySlider.pressed ? palette.highlight : palette.text
-                                border.color: palette.mid
+                                color: opacitySlider.pressed ? themePalette.highlight : themePalette.text
+                                border.color: themePalette.mid
                                 border.width: 1
                             }
                         }
                         Label {
                             text: Math.round(opacitySlider.value) + "%"
                             font.pixelSize: 11
-                            color: palette.text
+                            color: themePalette.text
                             Layout.preferredWidth: 40
                         }
                     }
@@ -1065,7 +1065,7 @@ ScrollView {
                 ColorDialog {
                     id: strokeColorDialog
                     title: qsTr("Choose Stroke Color")
-                    selectedColor: root.isShapeSelected ? root.selectedItem.strokeColor : palette.text
+                    selectedColor: root.isShapeSelected ? root.selectedItem.strokeColor : themePalette.text
                     onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
@@ -1079,7 +1079,7 @@ ScrollView {
                     title: qsTr("Choose Stroke Color")
                     onVisibleChanged: {
                         if (visible) {
-                            selectedColor = root.isPathSelected ? root.selectedItem.strokeColor : palette.text;
+                            selectedColor = root.isPathSelected ? root.selectedItem.strokeColor : themePalette.text;
                         }
                     }
                     onSelectedColorChanged: root.updateProperty("strokeColor", selectedColor.toString())
@@ -1095,7 +1095,7 @@ ScrollView {
                     title: qsTr("Choose Fill Color")
                     onVisibleChanged: {
                         if (visible) {
-                            selectedColor = root.isPathSelected ? root.selectedItem.fillColor : palette.text;
+                            selectedColor = root.isPathSelected ? root.selectedItem.fillColor : themePalette.text;
                         }
                     }
                     onSelectedColorChanged: root.updateProperty("fillColor", selectedColor.toString())
@@ -1109,7 +1109,7 @@ ScrollView {
                 ColorDialog {
                     id: fillColorDialog
                     title: qsTr("Choose Fill Color")
-                    selectedColor: root.isShapeSelected ? root.selectedItem.fillColor : palette.text
+                    selectedColor: root.isShapeSelected ? root.selectedItem.fillColor : themePalette.text
                     onSelectedColorChanged: root.updateProperty("fillColor", selectedColor.toString())
                     onAccepted: canvasModel.endTransaction()
                     onRejected: {
@@ -1130,7 +1130,7 @@ ScrollView {
                 anchors.centerIn: parent
                 text: qsTr("No object selected")
                 font.pixelSize: 12
-                color: palette.text
+                color: themePalette.text
             }
         }
 

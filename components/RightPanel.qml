@@ -6,7 +6,7 @@ import "." as DV
 Pane {
     id: root
     padding: 0
-    readonly property SystemPalette palette: DV.PaletteBridge.active
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     ColumnLayout {
         anchors.fill: parent
@@ -28,7 +28,7 @@ Pane {
         Rectangle {
             Layout.fillWidth: true
             height: 1
-            color: palette.mid
+            color: themePalette.mid
         }
 
         // Layers section

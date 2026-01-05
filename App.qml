@@ -12,7 +12,7 @@ ApplicationWindow {
     visible: true
     title: qsTr("Lucent")
     font: Qt.application.font
-    readonly property SystemPalette palette: DV.PaletteBridge.active
+    readonly property SystemPalette themePalette: DV.Themed.palette
 
     readonly property var systemFont: Qt.application.font
 

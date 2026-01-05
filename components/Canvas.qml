@@ -22,17 +22,12 @@ Item {
     // Drawing mode
     property string drawingMode: ""  // "" for pan, "rectangle" for drawing rectangles, "ellipse" for drawing ellipses
 
-    ToolDefaults {
-        id: toolDefaults
-    }
     HitTestHelper {
         id: hitTestHelper
     }
 
-    // Tool settings model - organized by tool type
-    property var toolSettings: Qt.binding(function () {
-        return toolDefaults.defaults();
-    })
+    // Tool settings - bound from parent (App.qml)
+    property var toolSettings: null
 
     // Current cursor shape (for dynamic cursor changes)
     property int currentCursorShape: Qt.OpenHandCursor
@@ -67,7 +62,7 @@ Item {
             selectedItem: DV.SelectionManager.selectedItem
             boundsOverride: root.selectionBounds()
             zoomLevel: root.zoomLevel
-            accentColor: DV.PaletteBridge.active.highlight
+            accentColor: DV.Themed.palette.highlight
         }
 
         // Select tool for object selection (panning handled by Viewport)
@@ -283,30 +278,7 @@ Item {
     }
 
     function updateSelection(hitIndex, multiSelect) {
-        var current = DV.SelectionManager.selectedIndices || [];
-        if (hitIndex < 0) {
-            if (!multiSelect) {
-                DV.SelectionManager.selectedIndices = [];
-                DV.SelectionManager.selectedItemIndex = -1;
-                DV.SelectionManager.selectedItem = null;
-            }
-            return;
-        }
-        var next = current.slice();
-        if (multiSelect) {
-            var pos = next.indexOf(hitIndex);
-            if (pos >= 0) {
-                next.splice(pos, 1);
-            } else {
-                next.push(hitIndex);
-            }
-        } else {
-            next = [hitIndex];
-        }
-        DV.SelectionManager.selectedIndices = next;
-        var primary = next.length > 0 ? next[next.length - 1] : -1;
-        DV.SelectionManager.selectedItemIndex = primary;
-        DV.SelectionManager.selectedItem = primary >= 0 ? canvasModel.getItemData(primary) : null;
+        DV.SelectionManager.toggleSelection(hitIndex, multiSelect);
     }
 
     function updateSelectedItemPosition(canvasDx, canvasDy) {
@@ -394,10 +366,7 @@ Item {
     }
 
     function deleteSelectedItem() {
-        var indices = DV.SelectionManager.selectedIndices || [];
-        if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
-            indices = [DV.SelectionManager.selectedItemIndex];
-        }
+        var indices = DV.SelectionManager.currentSelectionIndices();
         if (indices.length === 0)
             return;
         indices.sort(function (a, b) {
@@ -409,24 +378,17 @@ Item {
                 continue;
             canvasModel.removeItem(idx);
         }
-        DV.SelectionManager.selectedIndices = [];
-        DV.SelectionManager.selectedItemIndex = -1;
-        DV.SelectionManager.selectedItem = null;
+        DV.SelectionManager.setSelection([]);
     }
 
     function duplicateSelectedItem() {
-        var indices = DV.SelectionManager.selectedIndices || [];
-        if (indices.length === 0 && DV.SelectionManager.selectedItemIndex >= 0) {
-            indices = [DV.SelectionManager.selectedItemIndex];
-        }
+        var indices = DV.SelectionManager.currentSelectionIndices();
         if (indices.length === 0)
             return;
         var newIndices = canvasModel.duplicateItems(indices);
         if (!newIndices || newIndices.length === 0)
             return;
-        DV.SelectionManager.selectedIndices = newIndices;
-        DV.SelectionManager.selectedItemIndex = newIndices[newIndices.length - 1];
-        DV.SelectionManager.selectedItem = canvasModel.getItemData(DV.SelectionManager.selectedItemIndex);
+        DV.SelectionManager.setSelection(newIndices);
         refreshSelectionOverlayBounds();
     }
 
