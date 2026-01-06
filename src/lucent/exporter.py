@@ -42,7 +42,6 @@ def compute_bounds(items: List["CanvasItem"], padding: float = 0.0) -> QRectF:
     if combined.isEmpty():
         return QRectF()
 
-    # Add padding to all sides
     if padding > 0:
         combined = QRectF(
             combined.x() - padding,
@@ -74,42 +73,30 @@ def export_png(
     if bounds.isEmpty():
         return False
 
-    # Calculate image dimensions
     width = int(bounds.width() * options.scale)
     height = int(bounds.height() * options.scale)
-
     if width <= 0 or height <= 0:
         return False
 
-    # Create image with alpha channel
     image = QImage(width, height, QImage.Format.Format_ARGB32)
-
-    # Fill background
     if options.background:
         image.fill(QColor(options.background))
     else:
-        image.fill(QColor(0, 0, 0, 0))  # Transparent
+        image.fill(QColor(0, 0, 0, 0))
 
-    # Set up painter
     painter = QPainter(image)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-
-    # Scale for export resolution
     painter.scale(options.scale, options.scale)
-
-    # Translate so bounds.topLeft() maps to (0, 0)
     painter.translate(-bounds.x(), -bounds.y())
 
-    # Render each item
     for item in items:
         try:
             item.paint(painter, zoom_level=1.0, offset_x=0, offset_y=0)
         except Exception:
-            pass  # Skip items that fail to render
+            pass
 
     painter.end()
 
-    # Save to file
     try:
         return image.save(str(path))
     except Exception:
@@ -153,7 +140,6 @@ def _item_to_svg_element(item: "CanvasItem") -> Optional[ET.Element]:
 
     if isinstance(item, PathItem):
         elem = ET.Element("path")
-        # Build path data
         if item.points:
             d_parts = [f"M {item.points[0]['x']} {item.points[0]['y']}"]
             for p in item.points[1:]:
@@ -202,10 +188,7 @@ def export_svg(
     if bounds.isEmpty():
         return False
 
-    # Register namespace to avoid ns0: prefixes
     ET.register_namespace("", SVG_NS)
-
-    # Create SVG root element
     svg = ET.Element("svg")
     svg.set("xmlns", SVG_NS)
     viewbox = (
@@ -216,7 +199,6 @@ def export_svg(
     svg.set("width", str(bounds.width()))
     svg.set("height", str(bounds.height()))
 
-    # Add background if specified
     if options.background:
         bg = ET.Element("rect")
         bg.set("x", str(bounds.x()))
@@ -226,13 +208,11 @@ def export_svg(
         bg.set("fill", options.background)
         svg.append(bg)
 
-    # Convert each item to SVG
     for item in items:
         elem = _item_to_svg_element(item)
         if elem is not None:
             svg.append(elem)
 
-    # Write to file
     try:
         tree = ET.ElementTree(svg)
         tree.write(str(path), encoding="unicode", xml_declaration=True)

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Qt.labs.platform as Platform
+import "." as DV
 
 Dialog {
     id: root
@@ -37,7 +38,7 @@ Dialog {
         defaultSuffix: formatCombo.currentIndex === 0 ? "png" : "svg"
         onAccepted: {
             if (documentManager) {
-                var bg = transparentCheck.checked ? "" : bgColorField.text;
+                var bg = transparentCheck.checked ? "" : bgColorPicker.color.toString();
                 documentManager.exportLayer(root.layerId, file, scaleCombo.currentValue, paddingInput.value, bg);
             }
             root.close();
@@ -117,12 +118,13 @@ Dialog {
                     text: qsTr("Transparent")
                     checked: true
                 }
-                TextField {
-                    id: bgColorField
-                    text: "#ffffff"
-                    enabled: !transparentCheck.checked
-                    Layout.fillWidth: true
+                DV.ColorPickerButton {
+                    id: bgColorPicker
+                    color: "#ffffff"
                     visible: !transparentCheck.checked
+                    Layout.preferredWidth: 24
+                    Layout.preferredHeight: 24
+                    onColorPicked: newColor => color = newColor
                 }
             }
         }
