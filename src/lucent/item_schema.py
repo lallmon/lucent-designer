@@ -15,8 +15,14 @@ from lucent.canvas_items import (
     PathItem,
     TextItem,
 )
-from lucent.geometry import RectGeometry, EllipseGeometry, PolylineGeometry
+from lucent.geometry import (
+    RectGeometry,
+    EllipseGeometry,
+    PolylineGeometry,
+    TextGeometry,
+)
 from lucent.appearances import Fill, Stroke
+from lucent.transforms import Transform
 
 
 class ItemSchemaError(ValueError):
@@ -102,6 +108,37 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     return result
 
 
+def _parse_transform(data: Dict[str, Any]) -> Dict[str, Any] | None:
+    """Parse transform from data, returning None for identity or missing."""
+    t = data.get("transform")
+    if not t:
+        return None
+
+    translate_x = float(t.get("translateX", 0))
+    translate_y = float(t.get("translateY", 0))
+    rotate = float(t.get("rotate", 0))
+    scale_x = float(t.get("scaleX", 1))
+    scale_y = float(t.get("scaleY", 1))
+
+    # Return None for identity transforms to keep serialized data clean
+    if (
+        translate_x == 0
+        and translate_y == 0
+        and rotate == 0
+        and scale_x == 1
+        and scale_y == 1
+    ):
+        return None
+
+    return {
+        "translateX": translate_x,
+        "translateY": translate_y,
+        "rotate": rotate,
+        "scaleX": scale_x,
+        "scaleY": scale_y,
+    }
+
+
 def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
     """Validate rectangle data."""
     try:
@@ -114,12 +151,13 @@ def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
         raise ItemSchemaError(f"Invalid rectangle numeric field: {exc}") from exc
 
     appearances = _parse_appearances(data)
+    transform = _parse_transform(data)
     name = str(data.get("name", ""))
     parent_id = data.get("parentId") or None
     visible = bool(data.get("visible", True))
     locked = bool(data.get("locked", False))
 
-    return {
+    result: Dict[str, Any] = {
         "type": ItemType.RECTANGLE.value,
         "name": name,
         "parentId": parent_id,
@@ -128,6 +166,9 @@ def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
         "geometry": {"x": x, "y": y, "width": width, "height": height},
         "appearances": appearances,
     }
+    if transform is not None:
+        result["transform"] = transform
+    return result
 
 
 def validate_ellipse(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -142,12 +183,13 @@ def validate_ellipse(data: Dict[str, Any]) -> Dict[str, Any]:
         raise ItemSchemaError(f"Invalid ellipse numeric field: {exc}") from exc
 
     appearances = _parse_appearances(data)
+    transform = _parse_transform(data)
     name = str(data.get("name", ""))
     parent_id = data.get("parentId") or None
     visible = bool(data.get("visible", True))
     locked = bool(data.get("locked", False))
 
-    return {
+    result: Dict[str, Any] = {
         "type": ItemType.ELLIPSE.value,
         "name": name,
         "parentId": parent_id,
@@ -161,6 +203,9 @@ def validate_ellipse(data: Dict[str, Any]) -> Dict[str, Any]:
         },
         "appearances": appearances,
     }
+    if transform is not None:
+        result["transform"] = transform
+    return result
 
 
 def validate_path(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -182,12 +227,13 @@ def validate_path(data: Dict[str, Any]) -> Dict[str, Any]:
         raise ItemSchemaError(f"Invalid path field: {exc}") from exc
 
     appearances = _parse_appearances(data)
+    transform = _parse_transform(data)
     name = str(data.get("name", ""))
     parent_id = data.get("parentId") or None
     visible = bool(data.get("visible", True))
     locked = bool(data.get("locked", False))
 
-    return {
+    result: Dict[str, Any] = {
         "type": ItemType.PATH.value,
         "name": name,
         "parentId": parent_id,
@@ -196,6 +242,9 @@ def validate_path(data: Dict[str, Any]) -> Dict[str, Any]:
         "geometry": {"points": points, "closed": closed},
         "appearances": appearances,
     }
+    if transform is not None:
+        result["transform"] = transform
+    return result
 
 
 def validate_layer(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -231,15 +280,18 @@ def validate_group(data: Dict[str, Any]) -> Dict[str, Any]:
 def validate_text(data: Dict[str, Any]) -> Dict[str, Any]:
     """Validate text item data."""
     try:
-        x = float(data.get("x", 0))
-        y = float(data.get("y", 0))
+        # Support both new geometry format and legacy x/y format
+        geom = data.get("geometry", {})
+        x = float(geom.get("x", data.get("x", 0)))
+        y = float(geom.get("y", data.get("y", 0)))
+        width = _clamp_min(float(geom.get("width", data.get("width", 100))), 1.0)
+        height = _clamp_min(float(geom.get("height", data.get("height", 0))), 0.0)
         font_size = _clamp_range(float(data.get("fontSize", 16)), 8.0, 200.0)
         text_opacity = _clamp_range(float(data.get("textOpacity", 1.0)), 0.0, 1.0)
-        width = _clamp_min(float(data.get("width", 100)), 1.0)
-        height = _clamp_min(float(data.get("height", 0)), 0.0)
     except (TypeError, ValueError) as exc:
         raise ItemSchemaError(f"Invalid text numeric field: {exc}") from exc
 
+    transform = _parse_transform(data)
     text = str(data.get("text", ""))
     font_family = str(data.get("fontFamily", "Sans Serif"))
     text_color = str(data.get("textColor", "#ffffff"))
@@ -248,22 +300,22 @@ def validate_text(data: Dict[str, Any]) -> Dict[str, Any]:
     visible = bool(data.get("visible", True))
     locked = bool(data.get("locked", False))
 
-    return {
+    result: Dict[str, Any] = {
         "type": ItemType.TEXT.value,
         "name": name,
         "parentId": parent_id,
         "visible": visible,
         "locked": locked,
-        "x": x,
-        "y": y,
-        "width": width,
-        "height": height,
+        "geometry": {"x": x, "y": y, "width": width, "height": height},
         "text": text,
         "fontFamily": font_family,
         "fontSize": font_size,
         "textColor": text_color,
         "textOpacity": text_opacity,
     }
+    if transform is not None:
+        result["transform"] = transform
+    return result
 
 
 def parse_item_data(data: Dict[str, Any]) -> ParsedItem:
@@ -286,6 +338,20 @@ def parse_item_data(data: Dict[str, Any]) -> ParsedItem:
     return ParsedItem(type=item_type, name=validated.get("name", ""), data=validated)
 
 
+def _create_transform(data: Dict[str, Any]) -> Transform | None:
+    """Create a Transform object from validated data, or None for identity."""
+    t = data.get("transform")
+    if not t:
+        return None
+    return Transform(
+        translate_x=t["translateX"],
+        translate_y=t["translateY"],
+        rotate=t["rotate"],
+        scale_x=t["scaleX"],
+        scale_y=t["scaleY"],
+    )
+
+
 def parse_item(data: Dict[str, Any]) -> CanvasItem:
     parsed = parse_item_data(data)
     t = parsed.type
@@ -302,6 +368,7 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
                 else Stroke(a["color"], a["width"], a["opacity"], a["visible"])
                 for a in d["appearances"]
             ],
+            transform=_create_transform(d),
             name=d["name"],
             parent_id=d["parentId"],
             visible=d.get("visible", True),
@@ -322,6 +389,7 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
                 else Stroke(a["color"], a["width"], a["opacity"], a["visible"])
                 for a in d["appearances"]
             ],
+            transform=_create_transform(d),
             name=d["name"],
             parent_id=d["parentId"],
             visible=d.get("visible", True),
@@ -337,6 +405,7 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
                 else Stroke(a["color"], a["width"], a["opacity"], a["visible"])
                 for a in d["appearances"]
             ],
+            transform=_create_transform(d),
             name=d.get("name", ""),
             parent_id=d.get("parentId"),
             visible=d.get("visible", True),
@@ -358,16 +427,17 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
             locked=d.get("locked", False),
         )
     if t is ItemType.TEXT:
+        geom = d["geometry"]
         return TextItem(
-            x=d["x"],
-            y=d["y"],
+            geometry=TextGeometry(
+                x=geom["x"], y=geom["y"], width=geom["width"], height=geom["height"]
+            ),
             text=d["text"],
             font_family=d["fontFamily"],
             font_size=d["fontSize"],
             text_color=d["textColor"],
             text_opacity=d["textOpacity"],
-            width=d["width"],
-            height=d["height"],
+            transform=_create_transform(d),
             name=d["name"],
             parent_id=d["parentId"],
             visible=d.get("visible", True),
@@ -379,7 +449,7 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
 def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
     """Serialize a CanvasItem to dictionary."""
     if isinstance(item, RectangleItem):
-        return {
+        result: Dict[str, Any] = {
             "type": ItemType.RECTANGLE.value,
             "name": item.name,
             "parentId": item.parent_id,
@@ -388,8 +458,11 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "geometry": item.geometry.to_dict(),
             "appearances": [a.to_dict() for a in item.appearances],
         }
+        if not item.transform.is_identity():
+            result["transform"] = item.transform.to_dict()
+        return result
     if isinstance(item, EllipseItem):
-        return {
+        result = {
             "type": ItemType.ELLIPSE.value,
             "name": item.name,
             "parentId": item.parent_id,
@@ -398,8 +471,11 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "geometry": item.geometry.to_dict(),
             "appearances": [a.to_dict() for a in item.appearances],
         }
+        if not item.transform.is_identity():
+            result["transform"] = item.transform.to_dict()
+        return result
     if isinstance(item, PathItem):
-        return {
+        result = {
             "type": ItemType.PATH.value,
             "name": item.name,
             "parentId": item.parent_id,
@@ -408,6 +484,9 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "geometry": item.geometry.to_dict(),
             "appearances": [a.to_dict() for a in item.appearances],
         }
+        if not item.transform.is_identity():
+            result["transform"] = item.transform.to_dict()
+        return result
     if isinstance(item, LayerItem):
         return {
             "type": ItemType.LAYER.value,
@@ -426,20 +505,20 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "locked": item.locked,
         }
     if isinstance(item, TextItem):
-        return {
+        result = {
             "type": ItemType.TEXT.value,
             "name": item.name,
             "parentId": item.parent_id,
             "visible": item.visible,
             "locked": item.locked,
-            "x": item.x,
-            "y": item.y,
-            "width": item.width,
-            "height": item.height,
+            "geometry": item.geometry.to_dict(),
             "text": item.text,
             "fontFamily": item.font_family,
             "fontSize": item.font_size,
             "textColor": item.text_color,
             "textOpacity": item.text_opacity,
         }
+        if not item.transform.is_identity():
+            result["transform"] = item.transform.to_dict()
+        return result
     raise ItemSchemaError(f"Cannot serialize unknown item type: {type(item).__name__}")

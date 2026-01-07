@@ -12,7 +12,12 @@ from lucent.canvas_items import (
     CANVAS_OFFSET_X,
     CANVAS_OFFSET_Y,
 )
-from lucent.geometry import RectGeometry, EllipseGeometry, PolylineGeometry
+from lucent.geometry import (
+    RectGeometry,
+    EllipseGeometry,
+    PolylineGeometry,
+    TextGeometry,
+)
 from lucent.appearances import Fill, Stroke
 from lucent.transforms import Transform
 from PySide6.QtGui import QImage
@@ -455,7 +460,8 @@ class TestTextItem:
 
     def test_basic_creation(self):
         """Test creating a basic text item with default parameters."""
-        text = TextItem(x=10, y=20, text="Hello")
+        geometry = TextGeometry(x=10, y=20, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello")
         assert text.x == 10
         assert text.y == 20
         assert text.text == "Hello"
@@ -466,9 +472,9 @@ class TestTextItem:
 
     def test_creation_with_styling(self):
         """Test creating a text item with custom styling."""
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
         text = TextItem(
-            x=0,
-            y=0,
+            geometry=geometry,
             text="Styled",
             font_family="Monospace",
             font_size=24,
@@ -482,22 +488,26 @@ class TestTextItem:
 
     def test_font_size_minimum_clamped(self):
         """Test that font size below 8 is clamped to 8."""
-        text = TextItem(x=0, y=0, text="Small", font_size=2)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Small", font_size=2)
         assert text.font_size == 8
 
     def test_font_size_maximum_clamped(self):
         """Test that font size above 200 is clamped to 200."""
-        text = TextItem(x=0, y=0, text="Large", font_size=500)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Large", font_size=500)
         assert text.font_size == 200
 
     def test_text_opacity_minimum_clamped(self):
         """Test that text opacity below 0 is clamped to 0."""
-        text = TextItem(x=0, y=0, text="Faded", text_opacity=-0.5)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Faded", text_opacity=-0.5)
         assert text.text_opacity == 0.0
 
     def test_text_opacity_maximum_clamped(self):
         """Test that text opacity above 1 is clamped to 1."""
-        text = TextItem(x=0, y=0, text="Solid", text_opacity=1.5)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Solid", text_opacity=1.5)
         assert text.text_opacity == 1.0
 
     def test_from_dict_basic(self):
@@ -528,7 +538,8 @@ class TestTextItem:
 
     def test_text_is_canvas_item(self):
         """TextItem should be a CanvasItem subclass."""
-        text = TextItem(x=0, y=0, text="Hello")
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello")
         assert isinstance(text, CanvasItem)
 
     def test_paint_runs(self, qtbot):
@@ -536,7 +547,8 @@ class TestTextItem:
         img = QImage(QSize(100, 50), QImage.Format_ARGB32)
         img.fill(0)
         painter = QPainter(img)
-        text = TextItem(x=0, y=0, text="Hello World", font_size=16)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello World", font_size=16)
         text.paint(painter, zoom_level=1.0)
         painter.end()
 
@@ -545,13 +557,15 @@ class TestTextItem:
         img = QImage(QSize(100, 50), QImage.Format_ARGB32)
         img.fill(0)
         painter = QPainter(img)
-        text = TextItem(x=0, y=0, text="")
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="")
         text.paint(painter, zoom_level=1.0)
         painter.end()
 
     def test_get_bounds(self):
         """TextItem.get_bounds() returns bounding rect based on position and width."""
-        text = TextItem(x=10, y=20, text="Hello", width=100, height=30)
+        geometry = TextGeometry(x=10, y=20, width=100, height=30)
+        text = TextItem(geometry=geometry, text="Hello")
         bounds = text.get_bounds()
         assert bounds.x() == 10
         assert bounds.y() == 20
@@ -560,28 +574,33 @@ class TestTextItem:
 
     def test_width_height_properties(self):
         """TextItem should have width and height properties."""
-        text = TextItem(x=0, y=0, text="Hello", width=200, height=50)
+        geometry = TextGeometry(x=0, y=0, width=200, height=50)
+        text = TextItem(geometry=geometry, text="Hello")
         assert text.width == 200
         assert text.height == 50
 
     def test_name_property(self):
         """TextItem should have a name property."""
-        text = TextItem(x=0, y=0, text="Hello", name="Text 1")
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello", name="Text 1")
         assert text.name == "Text 1"
 
     def test_parent_id_property(self):
         """TextItem should have parent_id property."""
-        text = TextItem(x=0, y=0, text="Hello", parent_id="layer-123")
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello", parent_id="layer-123")
         assert text.parent_id == "layer-123"
 
     def test_locked_property(self):
         """TextItem should have locked property."""
-        text = TextItem(x=0, y=0, text="Hello", locked=True)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello", locked=True)
         assert text.locked is True
 
     def test_visible_property(self):
         """TextItem should have visible property."""
-        text = TextItem(x=0, y=0, text="Hello", visible=False)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello", visible=False)
         assert text.visible is False
 
 

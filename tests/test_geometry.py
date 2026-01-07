@@ -9,6 +9,7 @@ from lucent.geometry import (
     RectGeometry,
     EllipseGeometry,
     PolylineGeometry,
+    TextGeometry,
 )
 
 
@@ -311,6 +312,76 @@ class TestPolylineGeometry:
         restored = PolylineGeometry.from_dict(data)
         assert restored.points == original.points
         assert restored.closed == original.closed
+
+
+class TestTextGeometry:
+    """Tests for TextGeometry class."""
+
+    def test_basic_creation(self):
+        """Test creating a basic text geometry."""
+        text_geom = TextGeometry(x=10, y=20, width=200, height=50)
+        assert text_geom.x == 10
+        assert text_geom.y == 20
+        assert text_geom.width == 200
+        assert text_geom.height == 50
+
+    def test_width_clamped_to_minimum(self):
+        """Test that width below minimum is clamped to 1."""
+        text_geom = TextGeometry(x=0, y=0, width=0, height=20)
+        assert text_geom.width == 1.0
+
+    def test_height_clamped_to_zero(self):
+        """Test that negative height is clamped to 0."""
+        text_geom = TextGeometry(x=0, y=0, width=100, height=-15)
+        assert text_geom.height == 0.0
+
+    def test_get_bounds(self):
+        """Test get_bounds returns correct bounding rectangle."""
+        text_geom = TextGeometry(x=10, y=20, width=200, height=50)
+        bounds = text_geom.get_bounds()
+        assert bounds == QRectF(10, 20, 200, 50)
+
+    def test_to_painter_path(self):
+        """Test to_painter_path creates correct path."""
+        text_geom = TextGeometry(x=10, y=20, width=200, height=50)
+        path = text_geom.to_painter_path()
+        assert isinstance(path, QPainterPath)
+        # Path bounding rect should match geometry bounds
+        assert path.boundingRect() == QRectF(10, 20, 200, 50)
+
+    def test_to_dict(self):
+        """Test serialization to dictionary."""
+        text_geom = TextGeometry(x=10, y=20, width=200, height=50)
+        data = text_geom.to_dict()
+        assert data == {"x": 10, "y": 20, "width": 200, "height": 50}
+
+    def test_from_dict(self):
+        """Test deserialization from dictionary."""
+        data = {"x": 15, "y": 25, "width": 180, "height": 60}
+        text_geom = TextGeometry.from_dict(data)
+        assert text_geom.x == 15
+        assert text_geom.y == 25
+        assert text_geom.width == 180
+        assert text_geom.height == 60
+
+    def test_from_dict_missing_fields_use_defaults(self):
+        """Test from_dict uses defaults for missing fields."""
+        data = {}
+        text_geom = TextGeometry.from_dict(data)
+        assert text_geom.x == 0
+        assert text_geom.y == 0
+        assert text_geom.width == 1  # Minimum width
+        assert text_geom.height == 0
+
+    def test_round_trip(self):
+        """Test serialization round-trip."""
+        original = TextGeometry(x=10, y=20, width=200, height=50)
+        data = original.to_dict()
+        restored = TextGeometry.from_dict(data)
+        assert restored.x == original.x
+        assert restored.y == original.y
+        assert restored.width == original.width
+        assert restored.height == original.height
 
 
 class TestGeometryIsAbstract:

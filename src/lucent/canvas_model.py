@@ -256,8 +256,8 @@ class CanvasModel(QAbstractListModel):
                 item_data["geometry"]["centerY"] = item.geometry.center_y + dy
                 self.updateItem(idx, item_data)
             elif isinstance(item, TextItem):
-                item_data["x"] = item.x + dx
-                item_data["y"] = item.y + dy
+                item_data["geometry"]["x"] = item.x + dx
+                item_data["geometry"]["y"] = item.y + dy
                 self.updateItem(idx, item_data)
             elif isinstance(item, PathItem):
                 new_points = [
@@ -754,6 +754,43 @@ class CanvasModel(QAbstractListModel):
             return self._itemToDict(self._items[index])
         return None
 
+    @Slot(int, result="QVariant")  # type: ignore[arg-type]
+    def getItemTransform(self, index: int) -> Optional[Dict[str, Any]]:
+        """Get transform properties for an item.
+
+        Args:
+            index: Index of the item.
+
+        Returns:
+            Dictionary with translateX, translateY, rotate, scaleX, scaleY
+            or None if item doesn't support transforms.
+        """
+        if not (0 <= index < len(self._items)):
+            return None
+        item = self._items[index]
+        if not hasattr(item, "transform"):
+            return None
+        return item.transform.to_dict()
+
+    @Slot(int, dict)
+    def setItemTransform(self, index: int, transform: Dict[str, Any]) -> None:
+        """Set transform properties for an item.
+
+        Args:
+            index: Index of the item.
+            transform: Dictionary with transform properties.
+        """
+        if not (0 <= index < len(self._items)):
+            return
+        item = self._items[index]
+        if not hasattr(item, "transform"):
+            return
+
+        # Get current item data and update transform
+        current_data = self._itemToDict(item)
+        current_data["transform"] = transform
+        self.updateItem(index, current_data)
+
     @Slot(result="QVariant")  # type: ignore[arg-type]
     def getItemsForHitTest(self) -> List[Dict[str, Any]]:
         return get_hit_test_items(
@@ -832,10 +869,10 @@ class CanvasModel(QAbstractListModel):
             return True
 
         if isinstance(item, TextItem):
-            current_data["x"] = new_x
-            current_data["y"] = new_y
-            current_data["width"] = new_width
-            current_data["height"] = new_height
+            current_data["geometry"]["x"] = new_x
+            current_data["geometry"]["y"] = new_y
+            current_data["geometry"]["width"] = new_width
+            current_data["geometry"]["height"] = new_height
             self.updateItem(index, current_data)
             return True
 

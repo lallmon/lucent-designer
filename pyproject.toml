@@ -13,4 +13,4 @@ readme = "README.md"
 where = ["src"]
 
 [tool.pyside6-project]
-files = ["main.py", "main.qml", "components/Canvas.qml", "components/SelectTool.qml", "components/RectangleTool.qml", "components/ToolSettings.qml", "components/StatusBar.qml", "components/ToolPalette.qml", "components/RightPanel.qml", "components/MenuBar.qml", "components/SelectionManager.qml", "components/TranslationPanel.qml"]
+files = ["main.py", "main.qml", "components/Canvas.qml", "components/SelectTool.qml", "components/RectangleTool.qml", "components/ToolSettings.qml", "components/StatusBar.qml", "components/ToolPalette.qml", "components/RightPanel.qml", "components/MenuBar.qml", "components/SelectionManager.qml", "components/TransformPanel.qml"]

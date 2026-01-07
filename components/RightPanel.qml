@@ -19,8 +19,8 @@ Pane {
             Layout.fillWidth: true
             padding: 12
 
-            TranslationPanel {
-                id: translationPanel
+            TransformPanel {
+                id: transformPanel
                 anchors.left: parent.left
                 anchors.right: parent.right
                 implicitHeight: 100
@@ -49,18 +49,18 @@ Pane {
 
     // Keep panel selection in sync without introducing a binding loop
     Component.onCompleted: {
-        translationPanel.selectedItem = Lucent.SelectionManager.selectedItem;
+        transformPanel.selectedItem = Lucent.SelectionManager.selectedItem;
     }
     Connections {
         target: Lucent.SelectionManager
         function onSelectedItemChanged() {
-            translationPanel.selectedItem = Lucent.SelectionManager.selectedItem;
+            transformPanel.selectedItem = Lucent.SelectionManager.selectedItem;
         }
         function onSelectedItemIndexChanged() {
-            translationPanel.selectedItem = Lucent.SelectionManager.selectedItem;
+            transformPanel.selectedItem = Lucent.SelectionManager.selectedItem;
         }
         function onSelectedIndicesChanged() {
-            translationPanel.selectedItem = Lucent.SelectionManager.selectedItem;
+            transformPanel.selectedItem = Lucent.SelectionManager.selectedItem;
         }
     }
 }

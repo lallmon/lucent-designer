@@ -194,3 +194,42 @@ class PolylineGeometry(Geometry):
             points=points,
             closed=bool(data.get("closed", False)),
         )
+
+
+class TextGeometry(Geometry):
+    """Text geometry defined by position and dimensions."""
+
+    def __init__(self, x: float, y: float, width: float, height: float) -> None:
+        self.x = float(x)
+        self.y = float(y)
+        self.width = max(1.0, float(width))  # Minimum width of 1
+        self.height = max(0.0, float(height))
+
+    def to_painter_path(self) -> QPainterPath:
+        """Convert to QPainterPath (rectangle representing text bounds)."""
+        path = QPainterPath()
+        path.addRect(self.x, self.y, self.width, self.height)
+        return path
+
+    def get_bounds(self) -> QRectF:
+        """Return bounding rectangle."""
+        return QRectF(self.x, self.y, self.width, self.height)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize to dictionary."""
+        return {
+            "x": self.x,
+            "y": self.y,
+            "width": self.width,
+            "height": self.height,
+        }
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "TextGeometry":
+        """Deserialize from dictionary."""
+        return TextGeometry(
+            x=float(data.get("x", 0)),
+            y=float(data.get("y", 0)),
+            width=float(data.get("width", 1)),  # Default minimum width
+            height=float(data.get("height", 0)),
+        )

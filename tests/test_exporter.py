@@ -276,12 +276,11 @@ class TestExportSvg:
     def test_export_text_to_svg(self, tmp_path, qtbot):
         """export_svg creates correct text element."""
         from lucent.canvas_items import TextItem
+        from lucent.geometry import TextGeometry
 
+        geometry = TextGeometry(x=10, y=20, width=100, height=30)
         text_item = TextItem(
-            x=10,
-            y=20,
-            width=100,
-            height=30,
+            geometry=geometry,
             text="Hello World",
             font_family="Arial",
             font_size=16,
@@ -297,7 +296,7 @@ class TestExportSvg:
         root = tree.getroot()
         text_elem = root.find(".//{http://www.w3.org/2000/svg}text")
         assert text_elem is not None
-        assert text_elem.get("x") == "10"
+        assert float(text_elem.get("x")) == 10
         assert text_elem.get("font-family") == "Arial"
         assert text_elem.get("font-size") == "16"
         assert text_elem.text == "Hello World"

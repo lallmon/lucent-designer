@@ -26,7 +26,13 @@ from PySide6.QtGui import (
 )
 from PySide6.QtCore import QRectF
 
-from lucent.geometry import Geometry, RectGeometry, EllipseGeometry, PolylineGeometry
+from lucent.geometry import (
+    Geometry,
+    RectGeometry,
+    EllipseGeometry,
+    PolylineGeometry,
+    TextGeometry,
+)
 from lucent.appearances import Appearance, Fill, Stroke
 from lucent.transforms import Transform
 
@@ -111,7 +117,11 @@ class ShapeItem(CanvasItem):
 
         path = self.geometry.to_painter_path()
         if not self.transform.is_identity():
-            path = self.transform.to_qtransform().map(path)
+            # Apply transform around geometry center
+            bounds = self.geometry.get_bounds()
+            center = bounds.center()
+            qtransform = self.transform.to_qtransform_centered(center.x(), center.y())
+            path = qtransform.map(path)
 
         for appearance in self.appearances:
             appearance.render(painter, path, zoom_level, offset_x, offset_y)
@@ -120,7 +130,10 @@ class ShapeItem(CanvasItem):
         """Return bounding rectangle in canvas coordinates."""
         bounds = self.geometry.get_bounds()
         if not self.transform.is_identity():
-            return self.transform.to_qtransform().mapRect(bounds)
+            # Apply transform around geometry center
+            center = bounds.center()
+            qtransform = self.transform.to_qtransform_centered(center.x(), center.y())
+            return qtransform.mapRect(bounds)
         return bounds
 
     @staticmethod
@@ -354,38 +367,55 @@ class GroupItem(CanvasItem):
         )
 
 
-class TextItem(CanvasItem):
-    """Text canvas item."""
+class TextItem(ShapeItem):
+    """Text canvas item using geometry+transform pattern."""
 
     def __init__(
         self,
-        x: float,
-        y: float,
+        geometry: TextGeometry,
         text: str,
         font_family: str = "Sans Serif",
         font_size: float = 16,
         text_color: str = "#ffffff",
         text_opacity: float = 1.0,
-        width: float = 100,
-        height: float = 0,
+        transform: Optional[Transform] = None,
         name: str = "",
         parent_id: Optional[str] = None,
         visible: bool = True,
         locked: bool = False,
     ) -> None:
-        self.name = name
-        self.parent_id = parent_id
-        self.visible = bool(visible)
-        self.locked = bool(locked)
-        self.x = x
-        self.y = y
+        # TextItem uses empty appearances list - text has its own rendering
+        super().__init__(
+            geometry=geometry,
+            appearances=[],
+            transform=transform,
+            name=name,
+            parent_id=parent_id,
+            visible=visible,
+            locked=locked,
+        )
         self.text = text
         self.font_family = font_family
         self.font_size = max(8.0, min(200.0, font_size))
         self.text_color = text_color
         self.text_opacity = max(0.0, min(1.0, text_opacity))
-        self.width = max(1.0, width)
-        self.height = max(0.0, height)
+
+    # Convenience properties for backward compatibility
+    @property
+    def x(self) -> float:
+        return self.geometry.x  # type: ignore[attr-defined]
+
+    @property
+    def y(self) -> float:
+        return self.geometry.y  # type: ignore[attr-defined]
+
+    @property
+    def width(self) -> float:
+        return self.geometry.width  # type: ignore[attr-defined]
+
+    @property
+    def height(self) -> float:
+        return self.geometry.height  # type: ignore[attr-defined]
 
     def paint(
         self,
@@ -395,11 +425,12 @@ class TextItem(CanvasItem):
         offset_y: float = CANVAS_OFFSET_Y,
     ) -> None:
         """Render this text item."""
-        if not self.text:
+        if not self.visible or not self.text:
             return
 
-        local_x = self.x + offset_x
-        local_y = self.y + offset_y
+        geom = self.geometry
+        local_x = geom.x + offset_x  # type: ignore[attr-defined]
+        local_y = geom.y + offset_x  # type: ignore[attr-defined]
 
         font = QFont(self.font_family)
         font.setPointSizeF(self.font_size)
@@ -410,8 +441,8 @@ class TextItem(CanvasItem):
         doc = QTextDocument()
         doc.setDocumentMargin(0)
         doc.setDefaultFont(font)
-        if self.width > 0:
-            doc.setTextWidth(self.width)
+        if geom.width > 0:  # type: ignore[attr-defined]
+            doc.setTextWidth(geom.width)  # type: ignore[attr-defined]
 
         option = QTextOption()
         option.setWrapMode(QTextOption.WrapMode.WordWrap)
@@ -423,37 +454,68 @@ class TextItem(CanvasItem):
         doc.setHtml(f"<body>{self.text.replace(chr(10), '<br>')}</body>")
 
         painter.save()
-        painter.translate(local_x, local_y)
+
+        # Apply transform if not identity
+        if not self.transform.is_identity():
+            bounds = geom.get_bounds()
+            center = bounds.center()
+            painter.translate(offset_x + center.x(), offset_y + center.y())
+            painter.rotate(self.transform.rotate)
+            painter.scale(self.transform.scale_x, self.transform.scale_y)
+            painter.translate(
+                self.transform.translate_x - center.x(),
+                self.transform.translate_y - center.y(),
+            )
+            painter.translate(geom.x, geom.y)  # type: ignore[attr-defined]
+        else:
+            painter.translate(local_x, local_y)
+
         doc.drawContents(painter)
         painter.restore()
 
     def get_bounds(self) -> QRectF:
         """Return bounding rectangle in canvas coordinates."""
-        if self.height > 0:
-            return QRectF(self.x, self.y, self.width, self.height)
-        doc = QTextDocument()
-        doc.setDocumentMargin(0)
-        font = QFont(self.font_family)
-        font.setPointSizeF(self.font_size)
-        doc.setDefaultFont(font)
-        if self.width > 0:
-            doc.setTextWidth(self.width)
-        doc.setPlainText(self.text or " ")
-        return QRectF(self.x, self.y, self.width, doc.size().height())
+        geom = self.geometry
+        if geom.height > 0:  # type: ignore[attr-defined]
+            bounds = geom.get_bounds()
+        else:
+            # Calculate height from text content
+            doc = QTextDocument()
+            doc.setDocumentMargin(0)
+            font = QFont(self.font_family)
+            font.setPointSizeF(self.font_size)
+            doc.setDefaultFont(font)
+            if geom.width > 0:  # type: ignore[attr-defined]
+                doc.setTextWidth(geom.width)  # type: ignore[attr-defined]
+            doc.setPlainText(self.text or " ")
+            bounds = QRectF(geom.x, geom.y, geom.width, doc.size().height())  # type: ignore[attr-defined]
+
+        # Apply transform if not identity
+        if not self.transform.is_identity():
+            return self.transform.to_qtransform().mapRect(bounds)
+        return bounds
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "TextItem":
         """Create TextItem from dictionary."""
+        geom = data.get("geometry", {})
+        geometry = TextGeometry(
+            x=float(geom.get("x", data.get("x", 0))),
+            y=float(geom.get("y", data.get("y", 0))),
+            width=float(geom.get("width", data.get("width", 100))),
+            height=float(geom.get("height", data.get("height", 0))),
+        )
+        transform = (
+            Transform.from_dict(data["transform"]) if "transform" in data else None
+        )
         return TextItem(
-            x=float(data.get("x", 0)),
-            y=float(data.get("y", 0)),
+            geometry=geometry,
             text=str(data.get("text", "")),
             font_family=str(data.get("fontFamily", "Sans Serif")),
             font_size=float(data.get("fontSize", 16)),
             text_color=str(data.get("textColor", "#ffffff")),
             text_opacity=float(data.get("textOpacity", 1.0)),
-            width=float(data.get("width", 100)),
-            height=float(data.get("height", 0)),
+            transform=transform,
             name=str(data.get("name", "")),
             parent_id=data.get("parentId"),
             visible=data.get("visible", True),

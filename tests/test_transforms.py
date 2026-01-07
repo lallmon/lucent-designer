@@ -208,3 +208,66 @@ class TestTransform:
         result = qtransform.map(point)
         assert abs(result.x() + 1) < 0.001
         assert abs(result.y() + 1) < 0.001
+
+    def test_to_qtransform_centered_identity(self):
+        """Identity transform should not move center point."""
+        transform = Transform()
+        qtransform = transform.to_qtransform_centered(50, 50)
+        assert qtransform.isIdentity()
+
+    def test_to_qtransform_centered_rotation_keeps_center(self):
+        """90 degree rotation around center should keep center stationary."""
+        transform = Transform(rotate=90)
+        # Center of a 100x100 rectangle at origin is (50, 50)
+        qtransform = transform.to_qtransform_centered(50, 50)
+
+        # The center point should stay at (50, 50)
+        center = QPointF(50, 50)
+        result = qtransform.map(center)
+        assert abs(result.x() - 50) < 0.001
+        assert abs(result.y() - 50) < 0.001
+
+    def test_to_qtransform_centered_rotation_moves_corners(self):
+        """90 degree rotation should move corners appropriately."""
+        transform = Transform(rotate=90)
+        # Center at (50, 50)
+        qtransform = transform.to_qtransform_centered(50, 50)
+
+        # Top-left (0, 0) should rotate to bottom-left (0, 100) relative to center
+        top_left = QPointF(0, 0)
+        result = qtransform.map(top_left)
+        assert abs(result.x() - 100) < 0.001
+        assert abs(result.y() - 0) < 0.001
+
+    def test_to_qtransform_centered_scale_keeps_center(self):
+        """Scale around center should keep center stationary."""
+        transform = Transform(scale_x=2, scale_y=2)
+        qtransform = transform.to_qtransform_centered(50, 50)
+
+        # Center should stay at (50, 50)
+        center = QPointF(50, 50)
+        result = qtransform.map(center)
+        assert abs(result.x() - 50) < 0.001
+        assert abs(result.y() - 50) < 0.001
+
+    def test_to_qtransform_centered_scale_moves_edges(self):
+        """Scale 2x around center should double distance from center."""
+        transform = Transform(scale_x=2, scale_y=2)
+        qtransform = transform.to_qtransform_centered(50, 50)
+
+        # Point at origin is 50 units from center, should move to -50
+        origin = QPointF(0, 0)
+        result = qtransform.map(origin)
+        assert abs(result.x() + 50) < 0.001
+        assert abs(result.y() + 50) < 0.001
+
+    def test_to_qtransform_centered_with_translation(self):
+        """Translation should be applied after center-based rotation/scale."""
+        transform = Transform(translate_x=10, translate_y=20, rotate=0)
+        qtransform = transform.to_qtransform_centered(50, 50)
+
+        # Point at origin should be translated by (10, 20)
+        origin = QPointF(0, 0)
+        result = qtransform.map(origin)
+        assert abs(result.x() - 10) < 0.001
+        assert abs(result.y() - 20) < 0.001

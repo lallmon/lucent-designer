@@ -29,6 +29,14 @@ Item {
         return canvasModel.getBoundingBox(idx);
     }
 
+    // Current transform from the model
+    readonly property var currentTransform: {
+        var idx = Lucent.SelectionManager.selectedItemIndex;
+        if (idx < 0 || !canvasModel)
+            return null;
+        return canvasModel.getItemTransform(idx);
+    }
+
     // Controls are enabled only when an editable item is selected and not locked
     readonly property bool controlsEnabled: hasEditableBounds && !isLocked
 
@@ -48,6 +56,28 @@ Item {
         };
         newBounds[property] = value;
         canvasModel.setBoundingBox(idx, newBounds);
+    }
+
+    function updateTransform(property, value) {
+        var idx = Lucent.SelectionManager.selectedItemIndex;
+        if (idx < 0 || !canvasModel)
+            return;
+
+        var newTransform = currentTransform ? {
+            translateX: currentTransform.translateX || 0,
+            translateY: currentTransform.translateY || 0,
+            rotate: currentTransform.rotate || 0,
+            scaleX: currentTransform.scaleX || 1,
+            scaleY: currentTransform.scaleY || 1
+        } : {
+            translateX: 0,
+            translateY: 0,
+            rotate: 0,
+            scaleX: 1,
+            scaleY: 1
+        };
+        newTransform[property] = value;
+        canvasModel.setItemTransform(idx, newTransform);
     }
 
     ColumnLayout {
@@ -133,6 +163,22 @@ Item {
                 editable: true
                 Layout.fillWidth: true
                 onValueModified: root.updateBounds("height", value)
+            }
+
+            // Row 3: Rotation
+            Label {
+                text: qsTr("R:")
+                font.pixelSize: root.labelSize
+                color: root.labelColor
+            }
+            SpinBox {
+                from: -360
+                to: 360
+                value: root.currentTransform ? Math.round(root.currentTransform.rotate) : 0
+                editable: true
+                Layout.fillWidth: true
+                Layout.columnSpan: 3
+                onValueModified: root.updateTransform("rotate", value)
             }
         }
 

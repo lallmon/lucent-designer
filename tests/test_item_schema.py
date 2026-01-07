@@ -11,8 +11,14 @@ from lucent.canvas_items import (
     TextItem,
     GroupItem,
 )
-from lucent.geometry import RectGeometry, EllipseGeometry, PolylineGeometry
+from lucent.geometry import (
+    RectGeometry,
+    EllipseGeometry,
+    PolylineGeometry,
+    TextGeometry,
+)
 from lucent.appearances import Fill, Stroke
+from lucent.transforms import Transform
 from lucent.item_schema import (
     ItemSchemaError,
     ItemType,
@@ -193,8 +199,7 @@ def test_validate_text_clamps_and_defaults():
     """validate_text should clamp font size and opacity values."""
     data = {
         "type": "text",
-        "x": 10,
-        "y": 20,
+        "geometry": {"x": 10, "y": 20, "width": 100, "height": 0},
         "text": "Hello",
         "fontFamily": "Monospace",
         "fontSize": 5,  # Below minimum
@@ -204,8 +209,8 @@ def test_validate_text_clamps_and_defaults():
         "parentId": "layer-1",
     }
     out = validate_text(data)
-    assert out["x"] == 10
-    assert out["y"] == 20
+    assert out["geometry"]["x"] == 10
+    assert out["geometry"]["y"] == 20
     assert out["text"] == "Hello"
     assert out["fontFamily"] == "Monospace"
     assert out["fontSize"] == 8  # Clamped to minimum
@@ -219,15 +224,15 @@ def test_validate_text_defaults():
     """validate_text should use defaults for missing fields."""
     data = {"type": "text", "text": "Hello"}
     out = validate_text(data)
-    assert out["x"] == 0
-    assert out["y"] == 0
+    assert out["geometry"]["x"] == 0
+    assert out["geometry"]["y"] == 0
+    assert out["geometry"]["width"] == 100
+    assert out["geometry"]["height"] == 0
     assert out["fontFamily"] == "Sans Serif"
     assert out["fontSize"] == 16
     assert out["textColor"] == "#ffffff"
     assert out["textOpacity"] == 1.0
     assert out["name"] == ""
-    assert out["width"] == 100
-    assert out["height"] == 0
     assert out["parentId"] is None
     assert out["visible"] is True
     assert out["locked"] is False
@@ -377,25 +382,23 @@ def test_item_to_dict_round_trips_path():
 
 def test_item_to_dict_round_trips_text():
     """item_to_dict should serialize TextItem correctly."""
+    geometry = TextGeometry(x=10, y=20, width=200, height=50)
     text = TextItem(
-        x=10,
-        y=20,
+        geometry=geometry,
         text="Hello World",
         font_family="Monospace",
         font_size=24,
         text_color="#ff0000",
         text_opacity=0.8,
-        width=200,
-        height=50,
         name="T1",
         parent_id="layer-2",
     )
     out = item_to_dict(text)
     assert out["type"] == ItemType.TEXT.value
-    assert out["x"] == 10
-    assert out["y"] == 20
-    assert out["width"] == 200
-    assert out["height"] == 50
+    assert out["geometry"]["x"] == 10
+    assert out["geometry"]["y"] == 20
+    assert out["geometry"]["width"] == 200
+    assert out["geometry"]["height"] == 50
     assert out["text"] == "Hello World"
     assert out["fontFamily"] == "Monospace"
     assert out["fontSize"] == 24
@@ -519,12 +522,184 @@ class TestLockedSerialization:
 
     def test_item_to_dict_text_includes_locked(self):
         """item_to_dict should include locked for TextItem."""
-        text = TextItem(x=0, y=0, text="Hello", locked=True)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello", locked=True)
         out = item_to_dict(text)
         assert out["locked"] is True
 
     def test_item_to_dict_text_includes_visible(self):
         """item_to_dict should include visible for TextItem."""
-        text = TextItem(x=0, y=0, text="Hello", visible=False)
+        geometry = TextGeometry(x=0, y=0, width=100, height=0)
+        text = TextItem(geometry=geometry, text="Hello", visible=False)
         out = item_to_dict(text)
         assert out["visible"] is False
+
+
+class TestTransformSerialization:
+    """Tests for transform property validation and serialization."""
+
+    def test_validate_rectangle_includes_transform(self):
+        """validate_rectangle should include transform when provided."""
+        data = {
+            "type": "rectangle",
+            "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
+            "transform": {
+                "translateX": 5,
+                "translateY": 10,
+                "rotate": 45,
+                "scaleX": 2.0,
+                "scaleY": 0.5,
+            },
+        }
+        out = validate_rectangle(data)
+        assert out["transform"]["translateX"] == 5
+        assert out["transform"]["translateY"] == 10
+        assert out["transform"]["rotate"] == 45
+        assert out["transform"]["scaleX"] == 2.0
+        assert out["transform"]["scaleY"] == 0.5
+
+    def test_validate_rectangle_transform_defaults_none(self):
+        """validate_rectangle should have no transform key when not provided."""
+        data = {
+            "type": "rectangle",
+            "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
+        }
+        out = validate_rectangle(data)
+        assert out.get("transform") is None
+
+    def test_validate_rectangle_identity_transform_becomes_none(self):
+        """Identity transforms should be omitted from output."""
+        data = {
+            "type": "rectangle",
+            "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
+            "transform": {
+                "translateX": 0,
+                "translateY": 0,
+                "rotate": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+            },
+        }
+        out = validate_rectangle(data)
+        assert out.get("transform") is None
+
+    def test_validate_ellipse_includes_transform(self):
+        """validate_ellipse should include transform when provided."""
+        data = {
+            "type": "ellipse",
+            "geometry": {"centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10},
+            "transform": {"rotate": 90},
+        }
+        out = validate_ellipse(data)
+        assert out["transform"]["rotate"] == 90
+        # Defaults for missing fields
+        assert out["transform"]["translateX"] == 0
+        assert out["transform"]["scaleX"] == 1
+
+    def test_validate_path_includes_transform(self):
+        """validate_path should include transform when provided."""
+        data = {
+            "type": "path",
+            "geometry": {
+                "points": [{"x": 0, "y": 0}, {"x": 10, "y": 10}],
+                "closed": False,
+            },
+            "transform": {"scaleX": 2, "scaleY": 2},
+        }
+        out = validate_path(data)
+        assert out["transform"]["scaleX"] == 2
+        assert out["transform"]["scaleY"] == 2
+
+    def test_parse_item_rectangle_creates_transform(self):
+        """parse_item should create RectangleItem with Transform object."""
+        rect = parse_item(
+            {
+                "type": "rectangle",
+                "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
+                "transform": {"rotate": 45, "scaleX": 1.5},
+            }
+        )
+        assert rect.transform.rotate == 45
+        assert rect.transform.scale_x == 1.5
+        assert rect.transform.scale_y == 1  # Default
+
+    def test_parse_item_no_transform_uses_identity(self):
+        """parse_item without transform should use identity transform."""
+        rect = parse_item(
+            {
+                "type": "rectangle",
+                "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
+            }
+        )
+        assert rect.transform.is_identity()
+
+    def test_item_to_dict_includes_non_identity_transform(self):
+        """item_to_dict should include transform when not identity."""
+        geometry = RectGeometry(x=0, y=0, width=10, height=10)
+        transform = Transform(rotate=90)
+        rect = RectangleItem(
+            geometry=geometry,
+            appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
+            transform=transform,
+        )
+        out = item_to_dict(rect)
+        assert "transform" in out
+        assert out["transform"]["rotate"] == 90
+
+    def test_item_to_dict_omits_identity_transform(self):
+        """item_to_dict should not include identity transform."""
+        geometry = RectGeometry(x=0, y=0, width=10, height=10)
+        rect = RectangleItem(
+            geometry=geometry,
+            appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
+        )
+        out = item_to_dict(rect)
+        assert "transform" not in out
+
+    def test_transform_round_trip_rectangle(self):
+        """Transform should survive serialize/deserialize round trip."""
+        original = {
+            "type": "rectangle",
+            "geometry": {"x": 5, "y": 10, "width": 100, "height": 50},
+            "transform": {
+                "translateX": 15,
+                "translateY": -20,
+                "rotate": 180,
+                "scaleX": 0.5,
+                "scaleY": 2.0,
+            },
+        }
+        item = parse_item(original)
+        serialized = item_to_dict(item)
+        assert serialized["transform"]["translateX"] == 15
+        assert serialized["transform"]["translateY"] == -20
+        assert serialized["transform"]["rotate"] == 180
+        assert serialized["transform"]["scaleX"] == 0.5
+        assert serialized["transform"]["scaleY"] == 2.0
+
+    def test_transform_round_trip_ellipse(self):
+        """Ellipse transform should survive round trip."""
+        original = {
+            "type": "ellipse",
+            "geometry": {"centerX": 50, "centerY": 50, "radiusX": 25, "radiusY": 15},
+            "transform": {"rotate": 45},
+        }
+        item = parse_item(original)
+        serialized = item_to_dict(item)
+        assert serialized["transform"]["rotate"] == 45
+
+    def test_transform_round_trip_path(self):
+        """Path transform should survive round trip."""
+        original = {
+            "type": "path",
+            "geometry": {
+                "points": [{"x": 0, "y": 0}, {"x": 50, "y": 50}],
+                "closed": True,
+            },
+            "transform": {"scaleX": 3, "scaleY": 3, "rotate": 270},
+        }
+        item = parse_item(original)
+        serialized = item_to_dict(item)
+        assert serialized["transform"]["scaleX"] == 3
+        assert serialized["transform"]["scaleY"] == 3
+        assert serialized["transform"]["rotate"] == 270

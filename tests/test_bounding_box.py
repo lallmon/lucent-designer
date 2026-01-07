@@ -61,14 +61,21 @@ class MockPathItem:
         self.geometry = geometry
 
 
-class MockTextItem:
-    """Mock text item."""
+class MockTextGeometry:
+    """Mock geometry for text item."""
 
-    def __init__(self, x, y, width, height, font_size):
+    def __init__(self, x, y, width, height):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
+
+
+class MockTextItem:
+    """Mock text item with geometry attribute."""
+
+    def __init__(self, x, y, width, height, font_size):
+        self.geometry = MockTextGeometry(x, y, width, height)
         self.font_size = font_size
 
 

@@ -181,6 +181,13 @@ def get_item_bounds(
     Returns:
         Bounding box dictionary, or None if not applicable.
     """
+    # Text: Check first since it has geometry but needs special height handling
+    if hasattr(item, "font_size") and hasattr(item, "geometry"):
+        geometry = item.geometry
+        return get_text_bounds(
+            geometry.x, geometry.y, geometry.width, geometry.height, item.font_size
+        )
+
     # Check item type by looking for characteristic attributes
     if hasattr(item, "geometry"):
         geometry = item.geometry
@@ -193,10 +200,6 @@ def get_item_bounds(
         # Path: has points
         if hasattr(geometry, "points"):
             return get_path_bounds(geometry.points)
-
-    # Text: has x, y, width, height, font_size directly
-    if hasattr(item, "font_size") and hasattr(item, "x"):
-        return get_text_bounds(item.x, item.y, item.width, item.height, item.font_size)
 
     # Container (Layer/Group): use callback if provided
     if hasattr(item, "id") and get_descendant_bounds:

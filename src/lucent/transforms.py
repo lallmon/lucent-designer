@@ -51,6 +51,38 @@ class Transform:
         t.scale(self.scale_x, self.scale_y)
         return t
 
+    def to_qtransform_centered(self, center_x: float, center_y: float) -> QTransform:
+        """Convert to Qt transform with rotation/scale around a center point.
+
+        Order of operations:
+        1. Translate by translate_x/translate_y
+        2. Move origin to center
+        3. Apply rotation
+        4. Apply scale
+        5. Move origin back from center
+
+        Args:
+            center_x: X coordinate of the center point for rotation/scale.
+            center_y: Y coordinate of the center point for rotation/scale.
+
+        Returns:
+            QTransform matrix with transforms applied around center.
+        """
+        if self.is_identity():
+            return QTransform()
+
+        t = QTransform()
+        # Apply translation
+        t.translate(self.translate_x, self.translate_y)
+        # Move to center
+        t.translate(center_x, center_y)
+        # Apply rotation and scale around center
+        t.rotate(self.rotate)
+        t.scale(self.scale_x, self.scale_y)
+        # Move back from center
+        t.translate(-center_x, -center_y)
+        return t
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary."""
         return {
