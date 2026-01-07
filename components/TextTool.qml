@@ -79,9 +79,9 @@ Item {
         height: Math.max(tool.boxHeight, textEdit.contentHeight + tool.textPadding * 2)
 
         color: "transparent"
-        border.color: Lucent.Themed.palette.highlight
-        border.width: 2 / tool.zoomLevel
-        radius: 2 / tool.zoomLevel
+        border.color: Lucent.Themed.selector
+        border.width: 1 / tool.zoomLevel
+        radius: 0
 
         TextEdit {
             id: textEdit
@@ -148,7 +148,7 @@ Item {
             width: 10 / tool.zoomLevel
             height: 10 / tool.zoomLevel
             radius: 5 / tool.zoomLevel
-            color: Lucent.Themed.palette.highlight
+            color: Lucent.Themed.selector
             border.color: Lucent.Themed.palette.base
             border.width: 1 / tool.zoomLevel
 

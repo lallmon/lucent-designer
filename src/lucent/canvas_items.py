@@ -430,7 +430,7 @@ class TextItem(ShapeItem):
 
         geom = self.geometry
         local_x = geom.x + offset_x  # type: ignore[attr-defined]
-        local_y = geom.y + offset_x  # type: ignore[attr-defined]
+        local_y = geom.y + offset_y  # type: ignore[attr-defined]
 
         font = QFont(self.font_family)
         font.setPointSizeF(self.font_size)
@@ -458,14 +458,14 @@ class TextItem(ShapeItem):
         # Apply transform if not identity
         if not self.transform.is_identity():
             bounds = geom.get_bounds()
-            center = bounds.center()
-            painter.translate(offset_x + center.x(), offset_y + center.y())
-            painter.rotate(self.transform.rotate)
-            painter.scale(self.transform.scale_x, self.transform.scale_y)
-            painter.translate(
-                self.transform.translate_x - center.x(),
-                self.transform.translate_y - center.y(),
-            )
+            # Calculate origin point based on transform origin settings
+            origin_x = bounds.x() + bounds.width() * self.transform.origin_x
+            origin_y = bounds.y() + bounds.height() * self.transform.origin_y
+            qtransform = self.transform.to_qtransform_centered(origin_x, origin_y)
+
+            # Apply offset, then transform, then translate to geometry position
+            painter.translate(offset_x, offset_y)
+            painter.setTransform(qtransform, True)
             painter.translate(geom.x, geom.y)  # type: ignore[attr-defined]
         else:
             painter.translate(local_x, local_y)
@@ -492,7 +492,10 @@ class TextItem(ShapeItem):
 
         # Apply transform if not identity
         if not self.transform.is_identity():
-            return self.transform.to_qtransform().mapRect(bounds)
+            origin_x = bounds.x() + bounds.width() * self.transform.origin_x
+            origin_y = bounds.y() + bounds.height() * self.transform.origin_y
+            qtransform = self.transform.to_qtransform_centered(origin_x, origin_y)
+            return qtransform.mapRect(bounds)
         return bounds
 
     @staticmethod
