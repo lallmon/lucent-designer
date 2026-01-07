@@ -60,19 +60,48 @@ def _parse_type(type_value: Any) -> ItemType:
 
 
 def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate rectangle data, supporting both flat and nested formats."""
     try:
-        x = float(data.get("x", 0))
-        y = float(data.get("y", 0))
-        width = _clamp_min(float(data.get("width", 0)), 0.0)
-        height = _clamp_min(float(data.get("height", 0)), 0.0)
-        stroke_width = _clamp_range(float(data.get("strokeWidth", 1)), 0.1, 100.0)
-        stroke_opacity = _clamp_range(float(data.get("strokeOpacity", 1.0)), 0.0, 1.0)
-        fill_opacity = _clamp_range(float(data.get("fillOpacity", 0.0)), 0.0, 1.0)
+        # Check for new nested format
+        if "geometry" in data:
+            geom = data["geometry"]
+            x = float(geom.get("x", 0))
+            y = float(geom.get("y", 0))
+            width = _clamp_min(float(geom.get("width", 0)), 0.0)
+            height = _clamp_min(float(geom.get("height", 0)), 0.0)
+
+            # Extract appearances
+            appearances = data.get("appearances", [])
+            fill_data: Dict[str, Any] = next(
+                (a for a in appearances if a.get("type") == "fill"), {}
+            )
+            stroke_data: Dict[str, Any] = next(
+                (a for a in appearances if a.get("type") == "stroke"), {}
+            )
+
+            fill_color = str(fill_data.get("color", "#ffffff"))
+            fill_opacity = _clamp_range(float(fill_data.get("opacity", 0.0)), 0.0, 1.0)
+            stroke_color = str(stroke_data.get("color", "#ffffff"))
+            stroke_width = _clamp_range(float(stroke_data.get("width", 1)), 0.0, 100.0)
+            stroke_opacity = _clamp_range(
+                float(stroke_data.get("opacity", 1.0)), 0.0, 1.0
+            )
+        else:
+            # Legacy flat format
+            x = float(data.get("x", 0))
+            y = float(data.get("y", 0))
+            width = _clamp_min(float(data.get("width", 0)), 0.0)
+            height = _clamp_min(float(data.get("height", 0)), 0.0)
+            stroke_width = _clamp_range(float(data.get("strokeWidth", 1)), 0.0, 100.0)
+            stroke_opacity = _clamp_range(
+                float(data.get("strokeOpacity", 1.0)), 0.0, 1.0
+            )
+            fill_opacity = _clamp_range(float(data.get("fillOpacity", 0.0)), 0.0, 1.0)
+            stroke_color = str(data.get("strokeColor", "#ffffff"))
+            fill_color = str(data.get("fillColor", "#ffffff"))
     except (TypeError, ValueError) as exc:
         raise ItemSchemaError(f"Invalid rectangle numeric field: {exc}") from exc
 
-    stroke_color = str(data.get("strokeColor", "#ffffff"))
-    fill_color = str(data.get("fillColor", "#ffffff"))
     name = str(data.get("name", ""))
     parent_id = data.get("parentId") or None
     visible = bool(data.get("visible", True))
@@ -97,19 +126,48 @@ def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def validate_ellipse(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate ellipse data, supporting both flat and nested formats."""
     try:
-        center_x = float(data.get("centerX", 0))
-        center_y = float(data.get("centerY", 0))
-        radius_x = _clamp_min(float(data.get("radiusX", 0)), 0.0)
-        radius_y = _clamp_min(float(data.get("radiusY", 0)), 0.0)
-        stroke_width = _clamp_range(float(data.get("strokeWidth", 1)), 0.1, 100.0)
-        stroke_opacity = _clamp_range(float(data.get("strokeOpacity", 1.0)), 0.0, 1.0)
-        fill_opacity = _clamp_range(float(data.get("fillOpacity", 0.0)), 0.0, 1.0)
+        # Check for new nested format
+        if "geometry" in data:
+            geom = data["geometry"]
+            center_x = float(geom.get("centerX", 0))
+            center_y = float(geom.get("centerY", 0))
+            radius_x = _clamp_min(float(geom.get("radiusX", 0)), 0.0)
+            radius_y = _clamp_min(float(geom.get("radiusY", 0)), 0.0)
+
+            # Extract appearances
+            appearances = data.get("appearances", [])
+            fill_data: Dict[str, Any] = next(
+                (a for a in appearances if a.get("type") == "fill"), {}
+            )
+            stroke_data: Dict[str, Any] = next(
+                (a for a in appearances if a.get("type") == "stroke"), {}
+            )
+
+            fill_color = str(fill_data.get("color", "#ffffff"))
+            fill_opacity = _clamp_range(float(fill_data.get("opacity", 0.0)), 0.0, 1.0)
+            stroke_color = str(stroke_data.get("color", "#ffffff"))
+            stroke_width = _clamp_range(float(stroke_data.get("width", 1)), 0.0, 100.0)
+            stroke_opacity = _clamp_range(
+                float(stroke_data.get("opacity", 1.0)), 0.0, 1.0
+            )
+        else:
+            # Legacy flat format
+            center_x = float(data.get("centerX", 0))
+            center_y = float(data.get("centerY", 0))
+            radius_x = _clamp_min(float(data.get("radiusX", 0)), 0.0)
+            radius_y = _clamp_min(float(data.get("radiusY", 0)), 0.0)
+            stroke_width = _clamp_range(float(data.get("strokeWidth", 1)), 0.0, 100.0)
+            stroke_opacity = _clamp_range(
+                float(data.get("strokeOpacity", 1.0)), 0.0, 1.0
+            )
+            fill_opacity = _clamp_range(float(data.get("fillOpacity", 0.0)), 0.0, 1.0)
+            stroke_color = str(data.get("strokeColor", "#ffffff"))
+            fill_color = str(data.get("fillColor", "#ffffff"))
     except (TypeError, ValueError) as exc:
         raise ItemSchemaError(f"Invalid ellipse numeric field: {exc}") from exc
 
-    stroke_color = str(data.get("strokeColor", "#ffffff"))
-    fill_color = str(data.get("fillColor", "#ffffff"))
     name = str(data.get("name", ""))
     parent_id = data.get("parentId") or None
     visible = bool(data.get("visible", True))
@@ -134,29 +192,56 @@ def validate_ellipse(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def validate_path(data: Dict[str, Any]) -> Dict[str, Any]:
-    points_raw = data.get("points") or []
-    if not isinstance(points_raw, list):
-        raise ItemSchemaError("Path points must be a list")
-    if len(points_raw) < 2:
-        raise ItemSchemaError("Path requires at least two points")
-    points = []
+    """Validate path data, supporting both flat and nested formats."""
     try:
+        # Check for new nested format
+        if "geometry" in data:
+            geom = data["geometry"]
+            points_raw = geom.get("points") or []
+            closed = bool(geom.get("closed", False))
+
+            # Extract appearances
+            appearances = data.get("appearances", [])
+            fill_data: Dict[str, Any] = next(
+                (a for a in appearances if a.get("type") == "fill"), {}
+            )
+            stroke_data: Dict[str, Any] = next(
+                (a for a in appearances if a.get("type") == "stroke"), {}
+            )
+
+            fill_color = str(fill_data.get("color", "#ffffff"))
+            fill_opacity = _clamp_range(float(fill_data.get("opacity", 0.0)), 0.0, 1.0)
+            stroke_color = str(stroke_data.get("color", "#ffffff"))
+            stroke_width = _clamp_range(float(stroke_data.get("width", 1)), 0.0, 100.0)
+            stroke_opacity = _clamp_range(
+                float(stroke_data.get("opacity", 1.0)), 0.0, 1.0
+            )
+        else:
+            # Legacy flat format
+            points_raw = data.get("points") or []
+            closed = bool(data.get("closed", False))
+            stroke_width = _clamp_range(float(data.get("strokeWidth", 1)), 0.0, 100.0)
+            stroke_opacity = _clamp_range(
+                float(data.get("strokeOpacity", 1.0)), 0.0, 1.0
+            )
+            fill_opacity = _clamp_range(float(data.get("fillOpacity", 0.0)), 0.0, 1.0)
+            stroke_color = str(data.get("strokeColor", "#ffffff"))
+            fill_color = str(data.get("fillColor", "#ffffff"))
+
+        if not isinstance(points_raw, list):
+            raise ItemSchemaError("Path points must be a list")
+        if len(points_raw) < 2:
+            raise ItemSchemaError("Path requires at least two points")
+        points = []
         for p in points_raw:
             points.append({"x": float(p.get("x", 0)), "y": float(p.get("y", 0))})
     except (TypeError, ValueError, AttributeError) as exc:
-        raise ItemSchemaError(f"Invalid path point: {exc}") from exc
+        raise ItemSchemaError(f"Invalid path field: {exc}") from exc
 
-    stroke_width = _clamp_range(float(data.get("strokeWidth", 1)), 0.1, 100.0)
-    stroke_opacity = _clamp_range(float(data.get("strokeOpacity", 1.0)), 0.0, 1.0)
-    fill_opacity = _clamp_range(float(data.get("fillOpacity", 0.0)), 0.0, 1.0)
-
-    stroke_color = str(data.get("strokeColor", "#ffffff"))
-    fill_color = str(data.get("fillColor", "#ffffff"))
     name = str(data.get("name", ""))
     parent_id = data.get("parentId") or None
     visible = bool(data.get("visible", True))
     locked = bool(data.get("locked", False))
-    closed = bool(data.get("closed", False))
 
     return {
         "type": ItemType.PATH.value,

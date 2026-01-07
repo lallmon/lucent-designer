@@ -163,13 +163,25 @@ Item {
         var fillOpacity = s.fillOpacity !== undefined ? s.fillOpacity : 0.0;
         itemCompleted({
             type: "path",
-            points: tool.points,
-            strokeWidth: strokeWidth,
-            strokeColor: strokeColor,
-            strokeOpacity: strokeOpacity,
-            fillColor: fillColor,
-            fillOpacity: fillOpacity,
-            closed: true
+            geometry: {
+                points: tool.points,
+                closed: true
+            },
+            appearances: [
+                {
+                    type: "fill",
+                    color: fillColor,
+                    opacity: fillOpacity,
+                    visible: true
+                },
+                {
+                    type: "stroke",
+                    color: strokeColor,
+                    width: strokeWidth,
+                    opacity: strokeOpacity,
+                    visible: true
+                }
+            ]
         });
         reset();
     }

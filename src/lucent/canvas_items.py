@@ -3,6 +3,7 @@ Canvas item classes for Lucent.
 
 This module defines the canvas item hierarchy, including:
 - CanvasItem: Abstract base class for all drawable items
+- ShapeItem: Base class for items with geometry + appearances
 - RectangleItem: Rectangular shapes
 - EllipseItem: Elliptical shapes
 - LayerItem: Organizational layers for grouping items
@@ -15,15 +16,16 @@ from typing import Dict, Any, Optional, List
 import uuid
 from PySide6.QtGui import (
     QPainter,
-    QPen,
-    QBrush,
     QColor,
-    QPainterPath,
     QFont,
     QTextDocument,
     QTextOption,
 )
-from PySide6.QtCore import QRectF, Qt, QPointF
+from PySide6.QtCore import QRectF
+
+from lucent.geometry import Geometry, RectGeometry, EllipseGeometry, PolylineGeometry
+from lucent.appearances import Appearance, Fill, Stroke
+from lucent.transforms import Transform
 
 # Canvas coordinate system defaults.
 # Renderers typically pass dynamic offsets (width/2, height/2) so these serve
@@ -58,8 +60,94 @@ class CanvasItem(ABC):
         pass
 
 
-class RectangleItem(CanvasItem):
-    """Rectangle canvas item"""
+class ShapeItem(CanvasItem):
+    """Base class for items with geometry + appearances.
+
+    Provides shared rendering logic for shapes that have:
+    - A geometry (defining the shape outline)
+    - A list of appearances (fill, stroke, etc.)
+    - A transform (non-destructive modifications)
+    """
+
+    def __init__(
+        self,
+        geometry: Geometry,
+        appearances: Optional[List[Appearance]] = None,
+        transform: Optional[Transform] = None,
+        name: str = "",
+        parent_id: Optional[str] = None,
+        visible: bool = True,
+        locked: bool = False,
+    ) -> None:
+        self.geometry = geometry
+        # Default: one fill (transparent) + one stroke
+        self.appearances = (
+            appearances
+            if appearances is not None
+            else [
+                Fill(color="#ffffff", opacity=0.0),
+                Stroke(color="#ffffff", width=1.0, opacity=1.0),
+            ]
+        )
+        self.transform = transform if transform is not None else Transform()
+        self.name = name
+        self.parent_id = parent_id
+        self.visible = bool(visible)
+        self.locked = bool(locked)
+
+    @property
+    def fill(self) -> Optional[Fill]:
+        """Get first fill appearance for backwards compatibility."""
+        for app in self.appearances:
+            if isinstance(app, Fill):
+                return app
+        return None
+
+    @property
+    def stroke(self) -> Optional[Stroke]:
+        """Get first stroke appearance for backwards compatibility."""
+        for app in self.appearances:
+            if isinstance(app, Stroke):
+                return app
+        return None
+
+    def paint(
+        self,
+        painter: QPainter,
+        zoom_level: float,
+        offset_x: float = CANVAS_OFFSET_X,
+        offset_y: float = CANVAS_OFFSET_Y,
+    ) -> None:
+        """Render this shape using QPainter."""
+        if not self.visible:
+            return
+
+        # Get base path from geometry
+        path = self.geometry.to_painter_path()
+
+        # Apply non-destructive transform if present
+        if not self.transform.is_identity():
+            path = self.transform.to_qtransform().map(path)
+
+        # Render each appearance in order
+        for appearance in self.appearances:
+            appearance.render(painter, path, zoom_level, offset_x, offset_y)
+
+    def get_bounds(self) -> QRectF:
+        """Return bounding rectangle in canvas coordinates."""
+        bounds = self.geometry.get_bounds()
+        if not self.transform.is_identity():
+            return self.transform.to_qtransform().mapRect(bounds)
+        return bounds
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "ShapeItem":
+        """Factory method - subclasses must override."""
+        raise NotImplementedError("ShapeItem.from_dict must be overridden")
+
+
+class RectangleItem(ShapeItem):
+    """Rectangle canvas item with geometry + appearances architecture."""
 
     def __init__(
         self,
@@ -76,78 +164,166 @@ class RectangleItem(CanvasItem):
         parent_id: Optional[str] = None,
         visible: bool = True,
         locked: bool = False,
+        # New architecture parameters (optional)
+        geometry: Optional[RectGeometry] = None,
+        appearances: Optional[List[Appearance]] = None,
+        transform: Optional[Transform] = None,
     ) -> None:
-        self.name = name
-        self.parent_id = parent_id  # ID of parent layer, or None if top-level
-        self.visible = bool(visible)
-        self.locked = bool(locked)
-        self.x = x
-        self.y = y
-        # Validate dimensions (must be non-negative)
-        self.width = max(0.0, width)
-        self.height = max(0.0, height)
-        # Validate stroke width (0 = no stroke, clamped to reasonable range)
-        self.stroke_width = max(0.0, min(100.0, stroke_width))
-        self.stroke_color = stroke_color
-        # Validate stroke opacity (must be in range 0.0-1.0)
-        self.stroke_opacity = max(0.0, min(1.0, stroke_opacity))
-        self.fill_color = fill_color
-        # Validate fill opacity (must be in range 0.0-1.0)
-        self.fill_opacity = max(0.0, min(1.0, fill_opacity))
+        # Create geometry from parameters if not provided
+        if geometry is None:
+            geometry = RectGeometry(
+                x=float(x),
+                y=float(y),
+                width=max(0.0, float(width)),
+                height=max(0.0, float(height)),
+            )
 
-    def paint(
-        self,
-        painter: QPainter,
-        zoom_level: float,
-        offset_x: float = CANVAS_OFFSET_X,
-        offset_y: float = CANVAS_OFFSET_Y,
-    ) -> None:
-        """Render this rectangle using QPainter"""
-        local_x = self.x + offset_x
-        local_y = self.y + offset_y
+        # Create appearances from parameters if not provided
+        if appearances is None:
+            appearances = [
+                Fill(
+                    color=fill_color,
+                    opacity=max(0.0, min(1.0, float(fill_opacity))),
+                ),
+                Stroke(
+                    color=stroke_color,
+                    width=max(0.0, min(100.0, float(stroke_width))),
+                    opacity=max(0.0, min(1.0, float(stroke_opacity))),
+                ),
+            ]
 
-        # Set up pen for stroke (NoPen if stroke_width is 0)
-        if self.stroke_width > 0:
-            stroke_px = self.stroke_width * zoom_level
-            clamped_px = max(0.3, min(6.0, stroke_px))
-            scaled_stroke_width = clamped_px / max(zoom_level, 0.0001)
+        super().__init__(
+            geometry=geometry,
+            appearances=appearances,
+            transform=transform,
+            name=name,
+            parent_id=parent_id,
+            visible=visible,
+            locked=locked,
+        )
 
-            stroke_qcolor = QColor(self.stroke_color)
-            stroke_qcolor.setAlphaF(self.stroke_opacity)
-            pen = QPen(stroke_qcolor)
-            pen.setWidthF(scaled_stroke_width)
-            pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
-            painter.setPen(pen)
-        else:
-            painter.setPen(Qt.PenStyle.NoPen)
+    # Backwards-compatible property accessors for geometry
+    @property
+    def x(self) -> float:
+        return self.geometry.x
 
-        # Set up brush for fill
-        fill_qcolor = QColor(self.fill_color)
-        fill_qcolor.setAlphaF(self.fill_opacity)
-        brush = QBrush(fill_qcolor)
-        painter.setBrush(brush)
+    @x.setter
+    def x(self, value: float) -> None:
+        self.geometry.x = float(value)
 
-        # Draw rectangle
-        painter.drawRect(QRectF(local_x, local_y, self.width, self.height))
+    @property
+    def y(self) -> float:
+        return self.geometry.y
 
-    def get_bounds(self) -> QRectF:
-        """Return bounding rectangle in canvas coordinates."""
-        return QRectF(self.x, self.y, self.width, self.height)
+    @y.setter
+    def y(self, value: float) -> None:
+        self.geometry.y = float(value)
+
+    @property
+    def width(self) -> float:
+        return self.geometry.width
+
+    @width.setter
+    def width(self, value: float) -> None:
+        self.geometry.width = max(0.0, float(value))
+
+    @property
+    def height(self) -> float:
+        return self.geometry.height
+
+    @height.setter
+    def height(self, value: float) -> None:
+        self.geometry.height = max(0.0, float(value))
+
+    # Backwards-compatible property accessors for fill
+    @property
+    def fill_color(self) -> str:
+        fill = self.fill
+        return fill.color if fill else "#ffffff"
+
+    @fill_color.setter
+    def fill_color(self, value: str) -> None:
+        fill = self.fill
+        if fill:
+            fill.color = value
+
+    @property
+    def fill_opacity(self) -> float:
+        fill = self.fill
+        return fill.opacity if fill else 0.0
+
+    @fill_opacity.setter
+    def fill_opacity(self, value: float) -> None:
+        fill = self.fill
+        if fill:
+            fill.opacity = max(0.0, min(1.0, float(value)))
+
+    # Backwards-compatible property accessors for stroke
+    @property
+    def stroke_color(self) -> str:
+        stroke = self.stroke
+        return stroke.color if stroke else "#ffffff"
+
+    @stroke_color.setter
+    def stroke_color(self, value: str) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.color = value
+
+    @property
+    def stroke_width(self) -> float:
+        stroke = self.stroke
+        return stroke.width if stroke else 1.0
+
+    @stroke_width.setter
+    def stroke_width(self, value: float) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.width = max(0.0, min(100.0, float(value)))
+
+    @property
+    def stroke_opacity(self) -> float:
+        stroke = self.stroke
+        return stroke.opacity if stroke else 1.0
+
+    @stroke_opacity.setter
+    def stroke_opacity(self, value: float) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.opacity = max(0.0, min(1.0, float(value)))
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "RectangleItem":
-        """Create RectangleItem from QML data dictionary"""
-        # Extract and validate dimensions (must be non-negative)
+        """Create RectangleItem from QML data dictionary.
+
+        Supports both legacy flat format and new nested format.
+        """
+        # Check for new nested format
+        if "geometry" in data:
+            geometry = RectGeometry.from_dict(data["geometry"])
+            appearances = [Appearance.from_dict(a) for a in data.get("appearances", [])]
+            transform = (
+                Transform.from_dict(data["transform"]) if "transform" in data else None
+            )
+            return RectangleItem(
+                x=geometry.x,
+                y=geometry.y,
+                width=geometry.width,
+                height=geometry.height,
+                geometry=geometry,
+                appearances=appearances if appearances else None,
+                transform=transform,
+                name=data.get("name", ""),
+                parent_id=data.get("parentId"),
+                visible=data.get("visible", True),
+                locked=data.get("locked", False),
+            )
+
+        # Legacy flat format
         width = max(0.0, float(data.get("width", 0)))
         height = max(0.0, float(data.get("height", 0)))
-
-        # Extract stroke width (0 = no stroke, clamped to reasonable range)
         stroke_width = max(0.0, min(100.0, float(data.get("strokeWidth", 1))))
-
-        # Extract and validate stroke opacity (must be in range 0.0-1.0)
         stroke_opacity = max(0.0, min(1.0, float(data.get("strokeOpacity", 1.0))))
-
-        # Extract and validate fill opacity (must be in range 0.0-1.0)
         fill_opacity = max(0.0, min(1.0, float(data.get("fillOpacity", 0.0))))
 
         return RectangleItem(
@@ -167,8 +343,8 @@ class RectangleItem(CanvasItem):
         )
 
 
-class EllipseItem(CanvasItem):
-    """Ellipse canvas item"""
+class EllipseItem(ShapeItem):
+    """Ellipse canvas item with geometry + appearances architecture."""
 
     def __init__(
         self,
@@ -185,89 +361,166 @@ class EllipseItem(CanvasItem):
         parent_id: Optional[str] = None,
         visible: bool = True,
         locked: bool = False,
+        # New architecture parameters (optional)
+        geometry: Optional[EllipseGeometry] = None,
+        appearances: Optional[List[Appearance]] = None,
+        transform: Optional[Transform] = None,
     ) -> None:
-        self.name = name
-        self.parent_id = parent_id  # ID of parent layer, or None if top-level
-        self.visible = bool(visible)
-        self.locked = bool(locked)
-        self.center_x = center_x
-        self.center_y = center_y
-        # Validate radii (must be non-negative)
-        self.radius_x = max(0.0, radius_x)
-        self.radius_y = max(0.0, radius_y)
-        # Validate stroke width (0 = no stroke, clamped to reasonable range)
-        self.stroke_width = max(0.0, min(100.0, stroke_width))
-        self.stroke_color = stroke_color
-        # Validate stroke opacity (must be in range 0.0-1.0)
-        self.stroke_opacity = max(0.0, min(1.0, stroke_opacity))
-        self.fill_color = fill_color
-        # Validate fill opacity (must be in range 0.0-1.0)
-        self.fill_opacity = max(0.0, min(1.0, fill_opacity))
-
-    def paint(
-        self,
-        painter: QPainter,
-        zoom_level: float,
-        offset_x: float = CANVAS_OFFSET_X,
-        offset_y: float = CANVAS_OFFSET_Y,
-    ) -> None:
-        """Render this ellipse using QPainter"""
-        local_center_x = self.center_x + offset_x
-        local_center_y = self.center_y + offset_y
-
-        # Set up pen for stroke (NoPen if stroke_width is 0)
-        if self.stroke_width > 0:
-            stroke_px = self.stroke_width * zoom_level
-            clamped_px = max(0.3, min(6.0, stroke_px))
-            scaled_stroke_width = clamped_px / max(zoom_level, 0.0001)
-
-            stroke_qcolor = QColor(self.stroke_color)
-            stroke_qcolor.setAlphaF(self.stroke_opacity)
-            pen = QPen(stroke_qcolor)
-            pen.setWidthF(scaled_stroke_width)
-            painter.setPen(pen)
-        else:
-            painter.setPen(Qt.PenStyle.NoPen)
-
-        # Set up brush for fill
-        fill_qcolor = QColor(self.fill_color)
-        fill_qcolor.setAlphaF(self.fill_opacity)
-        brush = QBrush(fill_qcolor)
-        painter.setBrush(brush)
-
-        # Draw ellipse (QRectF defines bounding box)
-        painter.drawEllipse(
-            QRectF(
-                local_center_x - self.radius_x,
-                local_center_y - self.radius_y,
-                2 * self.radius_x,
-                2 * self.radius_y,
+        # Create geometry from parameters if not provided
+        if geometry is None:
+            geometry = EllipseGeometry(
+                center_x=float(center_x),
+                center_y=float(center_y),
+                radius_x=max(0.0, float(radius_x)),
+                radius_y=max(0.0, float(radius_y)),
             )
+
+        # Create appearances from parameters if not provided
+        if appearances is None:
+            appearances = [
+                Fill(
+                    color=fill_color,
+                    opacity=max(0.0, min(1.0, float(fill_opacity))),
+                ),
+                Stroke(
+                    color=stroke_color,
+                    width=max(0.0, min(100.0, float(stroke_width))),
+                    opacity=max(0.0, min(1.0, float(stroke_opacity))),
+                ),
+            ]
+
+        super().__init__(
+            geometry=geometry,
+            appearances=appearances,
+            transform=transform,
+            name=name,
+            parent_id=parent_id,
+            visible=visible,
+            locked=locked,
         )
 
-    def get_bounds(self) -> QRectF:
-        """Return bounding rectangle in canvas coordinates."""
-        return QRectF(
-            self.center_x - self.radius_x,
-            self.center_y - self.radius_y,
-            2 * self.radius_x,
-            2 * self.radius_y,
-        )
+    # Backwards-compatible property accessors for geometry
+    @property
+    def center_x(self) -> float:
+        return self.geometry.center_x
+
+    @center_x.setter
+    def center_x(self, value: float) -> None:
+        self.geometry.center_x = float(value)
+
+    @property
+    def center_y(self) -> float:
+        return self.geometry.center_y
+
+    @center_y.setter
+    def center_y(self, value: float) -> None:
+        self.geometry.center_y = float(value)
+
+    @property
+    def radius_x(self) -> float:
+        return self.geometry.radius_x
+
+    @radius_x.setter
+    def radius_x(self, value: float) -> None:
+        self.geometry.radius_x = max(0.0, float(value))
+
+    @property
+    def radius_y(self) -> float:
+        return self.geometry.radius_y
+
+    @radius_y.setter
+    def radius_y(self, value: float) -> None:
+        self.geometry.radius_y = max(0.0, float(value))
+
+    # Backwards-compatible property accessors for fill
+    @property
+    def fill_color(self) -> str:
+        fill = self.fill
+        return fill.color if fill else "#ffffff"
+
+    @fill_color.setter
+    def fill_color(self, value: str) -> None:
+        fill = self.fill
+        if fill:
+            fill.color = value
+
+    @property
+    def fill_opacity(self) -> float:
+        fill = self.fill
+        return fill.opacity if fill else 0.0
+
+    @fill_opacity.setter
+    def fill_opacity(self, value: float) -> None:
+        fill = self.fill
+        if fill:
+            fill.opacity = max(0.0, min(1.0, float(value)))
+
+    # Backwards-compatible property accessors for stroke
+    @property
+    def stroke_color(self) -> str:
+        stroke = self.stroke
+        return stroke.color if stroke else "#ffffff"
+
+    @stroke_color.setter
+    def stroke_color(self, value: str) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.color = value
+
+    @property
+    def stroke_width(self) -> float:
+        stroke = self.stroke
+        return stroke.width if stroke else 1.0
+
+    @stroke_width.setter
+    def stroke_width(self, value: float) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.width = max(0.0, min(100.0, float(value)))
+
+    @property
+    def stroke_opacity(self) -> float:
+        stroke = self.stroke
+        return stroke.opacity if stroke else 1.0
+
+    @stroke_opacity.setter
+    def stroke_opacity(self, value: float) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.opacity = max(0.0, min(1.0, float(value)))
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "EllipseItem":
-        """Create EllipseItem from QML data dictionary"""
-        # Extract and validate radii (must be non-negative)
+        """Create EllipseItem from QML data dictionary.
+
+        Supports both legacy flat format and new nested format.
+        """
+        # Check for new nested format
+        if "geometry" in data:
+            geometry = EllipseGeometry.from_dict(data["geometry"])
+            appearances = [Appearance.from_dict(a) for a in data.get("appearances", [])]
+            transform = (
+                Transform.from_dict(data["transform"]) if "transform" in data else None
+            )
+            return EllipseItem(
+                center_x=geometry.center_x,
+                center_y=geometry.center_y,
+                radius_x=geometry.radius_x,
+                radius_y=geometry.radius_y,
+                geometry=geometry,
+                appearances=appearances if appearances else None,
+                transform=transform,
+                name=data.get("name", ""),
+                parent_id=data.get("parentId"),
+                visible=data.get("visible", True),
+                locked=data.get("locked", False),
+            )
+
+        # Legacy flat format
         radius_x = max(0.0, float(data.get("radiusX", 0)))
         radius_y = max(0.0, float(data.get("radiusY", 0)))
-
-        # Extract stroke width (0 = no stroke, clamped to reasonable range)
         stroke_width = max(0.0, min(100.0, float(data.get("strokeWidth", 1))))
-
-        # Extract and validate stroke opacity (must be in range 0.0-1.0)
         stroke_opacity = max(0.0, min(1.0, float(data.get("strokeOpacity", 1.0))))
-
-        # Extract and validate fill opacity (must be in range 0.0-1.0)
         fill_opacity = max(0.0, min(1.0, float(data.get("fillOpacity", 0.0))))
 
         return EllipseItem(
@@ -287,8 +540,8 @@ class EllipseItem(CanvasItem):
         )
 
 
-class PathItem(CanvasItem):
-    """Polyline/path canvas item rendered as stroke with optional fill."""
+class PathItem(ShapeItem):
+    """Polyline/path canvas item with geometry + appearances architecture."""
 
     def __init__(
         self,
@@ -303,80 +556,143 @@ class PathItem(CanvasItem):
         parent_id: Optional[str] = None,
         visible: bool = True,
         locked: bool = False,
+        # New architecture parameters (optional)
+        geometry: Optional[PolylineGeometry] = None,
+        appearances: Optional[List[Appearance]] = None,
+        transform: Optional[Transform] = None,
     ) -> None:
-        if len(points) < 2:
-            raise ValueError("PathItem requires at least two points")
-        self.name = name
-        self.parent_id = parent_id
-        self.visible = bool(visible)
-        self.locked = bool(locked)
+        # Create geometry from parameters if not provided
+        if geometry is None:
+            if len(points) < 2:
+                raise ValueError("PathItem requires at least two points")
+            geometry = PolylineGeometry(points=points, closed=bool(closed))
 
-        # Normalize points to float tuples
-        normalized: List[Dict[str, float]] = []
-        for p in points:
-            normalized.append({"x": float(p.get("x", 0)), "y": float(p.get("y", 0))})
-        self.points = normalized
-        self.closed = bool(closed)
+        # Create appearances from parameters if not provided
+        if appearances is None:
+            appearances = [
+                Fill(
+                    color=fill_color,
+                    opacity=max(0.0, min(1.0, float(fill_opacity))),
+                ),
+                Stroke(
+                    color=stroke_color,
+                    width=max(0.0, min(100.0, float(stroke_width))),
+                    opacity=max(0.0, min(1.0, float(stroke_opacity))),
+                ),
+            ]
 
-        # Validate stroke values (0 = no stroke)
-        self.stroke_width = max(0.0, min(100.0, stroke_width))
-        self.stroke_color = stroke_color
-        self.stroke_opacity = max(0.0, min(1.0, stroke_opacity))
+        super().__init__(
+            geometry=geometry,
+            appearances=appearances,
+            transform=transform,
+            name=name,
+            parent_id=parent_id,
+            visible=visible,
+            locked=locked,
+        )
 
-        # Optional fill (defaults to stroke-only)
-        self.fill_color = fill_color
-        self.fill_opacity = max(0.0, min(1.0, fill_opacity))
+    # Backwards-compatible property accessors for geometry
+    @property
+    def points(self) -> List[Dict[str, float]]:
+        return self.geometry.points
 
-    def paint(
-        self,
-        painter: QPainter,
-        zoom_level: float,
-        offset_x: float = CANVAS_OFFSET_X,
-        offset_y: float = CANVAS_OFFSET_Y,
-    ) -> None:
-        """Render the polyline/path."""
-        # Set up pen for stroke (NoPen if stroke_width is 0)
-        if self.stroke_width > 0:
-            stroke_px = self.stroke_width * zoom_level
-            clamped_px = max(0.3, min(6.0, stroke_px))
-            scaled_stroke_width = clamped_px / max(zoom_level, 0.0001)
+    @points.setter
+    def points(self, value: List[Dict[str, float]]) -> None:
+        self.geometry.points = [
+            {"x": float(p.get("x", 0)), "y": float(p.get("y", 0))} for p in value
+        ]
 
-            stroke_qcolor = QColor(self.stroke_color)
-            stroke_qcolor.setAlphaF(self.stroke_opacity)
-            pen = QPen(stroke_qcolor)
-            pen.setWidthF(scaled_stroke_width)
-            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            painter.setPen(pen)
-        else:
-            painter.setPen(Qt.PenStyle.NoPen)
+    @property
+    def closed(self) -> bool:
+        return self.geometry.closed
 
-        fill_qcolor = QColor(self.fill_color)
-        fill_qcolor.setAlphaF(self.fill_opacity)
-        painter.setBrush(QBrush(fill_qcolor))
+    @closed.setter
+    def closed(self, value: bool) -> None:
+        self.geometry.closed = bool(value)
 
-        # Build path
-        if not self.points:
-            return
-        first = self.points[0]
-        path = QPainterPath(QPointF(first["x"] + offset_x, first["y"] + offset_y))
-        for p in self.points[1:]:
-            path.lineTo(p["x"] + offset_x, p["y"] + offset_y)
-        if self.closed:
-            path.closeSubpath()
-        painter.drawPath(path)
+    # Backwards-compatible property accessors for fill
+    @property
+    def fill_color(self) -> str:
+        fill = self.fill
+        return fill.color if fill else "#ffffff"
 
-    def get_bounds(self) -> QRectF:
-        """Return bounding rectangle of all points in canvas coordinates."""
-        if not self.points:
-            return QRectF()
-        xs = [p["x"] for p in self.points]
-        ys = [p["y"] for p in self.points]
-        return QRectF(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
+    @fill_color.setter
+    def fill_color(self, value: str) -> None:
+        fill = self.fill
+        if fill:
+            fill.color = value
+
+    @property
+    def fill_opacity(self) -> float:
+        fill = self.fill
+        return fill.opacity if fill else 0.0
+
+    @fill_opacity.setter
+    def fill_opacity(self, value: float) -> None:
+        fill = self.fill
+        if fill:
+            fill.opacity = max(0.0, min(1.0, float(value)))
+
+    # Backwards-compatible property accessors for stroke
+    @property
+    def stroke_color(self) -> str:
+        stroke = self.stroke
+        return stroke.color if stroke else "#ffffff"
+
+    @stroke_color.setter
+    def stroke_color(self, value: str) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.color = value
+
+    @property
+    def stroke_width(self) -> float:
+        stroke = self.stroke
+        return stroke.width if stroke else 1.0
+
+    @stroke_width.setter
+    def stroke_width(self, value: float) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.width = max(0.0, min(100.0, float(value)))
+
+    @property
+    def stroke_opacity(self) -> float:
+        stroke = self.stroke
+        return stroke.opacity if stroke else 1.0
+
+    @stroke_opacity.setter
+    def stroke_opacity(self, value: float) -> None:
+        stroke = self.stroke
+        if stroke:
+            stroke.opacity = max(0.0, min(1.0, float(value)))
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "PathItem":
-        """Create PathItem from QML data dictionary."""
+        """Create PathItem from QML data dictionary.
+
+        Supports both legacy flat format and new nested format.
+        """
+        # Check for new nested format
+        if "geometry" in data:
+            geometry = PolylineGeometry.from_dict(data["geometry"])
+            appearances = [Appearance.from_dict(a) for a in data.get("appearances", [])]
+            transform = (
+                Transform.from_dict(data["transform"]) if "transform" in data else None
+            )
+            return PathItem(
+                points=geometry.points,
+                closed=geometry.closed,
+                geometry=geometry,
+                appearances=appearances if appearances else None,
+                transform=transform,
+                name=data.get("name", ""),
+                parent_id=data.get("parentId"),
+                visible=data.get("visible", True),
+                locked=data.get("locked", False),
+            )
+
+        # Legacy flat format
         points = data.get("points") or []
         if not isinstance(points, list):
             raise ValueError("Path points must be a list")

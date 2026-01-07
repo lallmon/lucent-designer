@@ -1149,3 +1149,133 @@ class TestGetBounds:
         group = GroupItem(name="Test Group")
         bounds = group.get_bounds()
         assert bounds.isEmpty() or bounds == QRectF()
+
+
+class TestRectangleItemNewArchitecture:
+    """Tests for RectangleItem with new geometry+appearances architecture."""
+
+    def test_has_geometry_property(self):
+        """RectangleItem should have a geometry property."""
+        rect = RectangleItem(x=10, y=20, width=100, height=50)
+        assert hasattr(rect, "geometry")
+        assert rect.geometry is not None
+
+    def test_geometry_matches_dimensions(self):
+        """RectangleItem geometry should match constructor dimensions."""
+        rect = RectangleItem(x=10, y=20, width=100, height=50)
+        assert rect.geometry.x == 10
+        assert rect.geometry.y == 20
+        assert rect.geometry.width == 100
+        assert rect.geometry.height == 50
+
+    def test_has_appearances_property(self):
+        """RectangleItem should have an appearances list."""
+        rect = RectangleItem(x=0, y=0, width=10, height=10)
+        assert hasattr(rect, "appearances")
+        assert isinstance(rect.appearances, list)
+        assert len(rect.appearances) >= 2  # At least fill and stroke
+
+    def test_fill_property_accessor(self):
+        """RectangleItem should have fill property accessor."""
+        rect = RectangleItem(
+            x=0, y=0, width=10, height=10, fill_color="#ff0000", fill_opacity=0.5
+        )
+        assert rect.fill is not None
+        assert rect.fill.color == "#ff0000"
+        assert rect.fill.opacity == 0.5
+
+    def test_stroke_property_accessor(self):
+        """RectangleItem should have stroke property accessor."""
+        rect = RectangleItem(
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            stroke_color="#00ff00",
+            stroke_width=3.0,
+            stroke_opacity=0.8,
+        )
+        assert rect.stroke is not None
+        assert rect.stroke.color == "#00ff00"
+        assert rect.stroke.width == 3.0
+        assert rect.stroke.opacity == 0.8
+
+    def test_has_transform_property(self):
+        """RectangleItem should have a transform property."""
+        rect = RectangleItem(x=0, y=0, width=10, height=10)
+        assert hasattr(rect, "transform")
+        assert rect.transform is not None
+        assert rect.transform.is_identity()
+
+    def test_get_bounds_uses_geometry(self):
+        """RectangleItem.get_bounds() should use geometry bounds."""
+        rect = RectangleItem(x=10, y=20, width=100, height=50)
+        bounds = rect.get_bounds()
+        assert bounds == QRectF(10, 20, 100, 50)
+
+    def test_paint_smoke_test(self, qtbot):
+        """Smoke test: paint with new architecture does not crash."""
+        img = QImage(QSize(100, 100), QImage.Format_ARGB32)
+        img.fill(0)
+        painter = QPainter(img)
+        rect = RectangleItem(
+            x=10,
+            y=10,
+            width=50,
+            height=30,
+            fill_color="#ff0000",
+            fill_opacity=0.5,
+            stroke_color="#00ff00",
+            stroke_width=2.0,
+        )
+        rect.paint(painter, zoom_level=1.0)
+        painter.end()
+
+    def test_backwards_compatible_properties(self):
+        """RectangleItem should maintain backwards-compatible properties."""
+        rect = RectangleItem(
+            x=10,
+            y=20,
+            width=100,
+            height=50,
+            stroke_width=3,
+            stroke_color="#ff0000",
+            fill_color="#00ff00",
+            fill_opacity=0.5,
+            stroke_opacity=0.8,
+        )
+        # Old-style property access should still work
+        assert rect.x == 10
+        assert rect.y == 20
+        assert rect.width == 100
+        assert rect.height == 50
+        assert rect.stroke_width == 3
+        assert rect.stroke_color == "#ff0000"
+        assert rect.fill_color == "#00ff00"
+        assert rect.fill_opacity == 0.5
+        assert rect.stroke_opacity == 0.8
+
+    def test_from_dict_legacy_format(self):
+        """RectangleItem.from_dict should handle legacy flat format."""
+        data = {
+            "type": "rectangle",
+            "x": 10,
+            "y": 20,
+            "width": 100,
+            "height": 50,
+            "strokeWidth": 3,
+            "strokeColor": "#ff0000",
+            "strokeOpacity": 0.8,
+            "fillColor": "#00ff00",
+            "fillOpacity": 0.5,
+        }
+        rect = RectangleItem.from_dict(data)
+        assert rect.x == 10
+        assert rect.y == 20
+        assert rect.width == 100
+        assert rect.height == 50
+        assert rect.fill.color == "#00ff00"
+        assert rect.fill.opacity == 0.5
+        assert rect.stroke.color == "#ff0000"
+        assert rect.stroke.width == 3
+        assert rect.stroke.opacity == 0.8

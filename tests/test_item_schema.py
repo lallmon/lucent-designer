@@ -47,7 +47,7 @@ def test_validate_path_clamps_and_defaults():
     }
     out = validate_path(data)
     assert out["points"] == [{"x": 1.0, "y": 2.0}, {"x": -3.0, "y": 4.0}]
-    assert out["strokeWidth"] == 0.1
+    assert out["strokeWidth"] == 0.0  # Minimum is 0 (no stroke)
     assert out["strokeOpacity"] == 1.0
     assert out["fillOpacity"] == 0.8
     assert out["closed"] is True
@@ -78,7 +78,7 @@ def test_validate_rectangle_clamps_and_defaults():
     out = validate_rectangle(data)
     assert out["width"] == 0.0
     assert out["height"] == 10
-    assert out["strokeWidth"] == 0.1
+    assert out["strokeWidth"] == 0.01  # Values >= 0 pass through (0 = no stroke)
     assert out["strokeOpacity"] == 1.0
     assert out["fillOpacity"] == 0.0
     assert out["strokeColor"] == "#abc"

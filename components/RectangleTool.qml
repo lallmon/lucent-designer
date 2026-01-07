@@ -137,15 +137,27 @@ Item {
                 var style = helper.extractStyle(settings);
                 itemCompleted({
                     type: "rectangle",
-                    x: currentRect.x,
-                    y: currentRect.y,
-                    width: currentRect.width,
-                    height: currentRect.height,
-                    strokeWidth: style.strokeWidth,
-                    strokeColor: style.strokeColor,
-                    strokeOpacity: style.strokeOpacity,
-                    fillColor: style.fillColor,
-                    fillOpacity: style.fillOpacity
+                    geometry: {
+                        x: currentRect.x,
+                        y: currentRect.y,
+                        width: currentRect.width,
+                        height: currentRect.height
+                    },
+                    appearances: [
+                        {
+                            type: "fill",
+                            color: style.fillColor,
+                            opacity: style.fillOpacity,
+                            visible: true
+                        },
+                        {
+                            type: "stroke",
+                            color: style.strokeColor,
+                            width: style.strokeWidth,
+                            opacity: style.strokeOpacity,
+                            visible: true
+                        }
+                    ]
                 });
             }
 
