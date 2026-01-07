@@ -65,6 +65,56 @@ Item {
     readonly property int labelSize: 10
     readonly property color labelColor: themePalette.text
 
+    // Computed canvas position: geometry origin point + translation
+    readonly property real displayedX: {
+        if (!currentBounds)
+            return 0;
+        var t = currentTransform;
+        var originX = t ? (t.originX || 0) : 0;
+        var translateX = t ? (t.translateX || 0) : 0;
+        return currentBounds.x + currentBounds.width * originX + translateX;
+    }
+
+    readonly property real displayedY: {
+        if (!currentBounds)
+            return 0;
+        var t = currentTransform;
+        var originY = t ? (t.originY || 0) : 0;
+        var translateY = t ? (t.translateY || 0) : 0;
+        return currentBounds.y + currentBounds.height * originY + translateY;
+    }
+
+    // Update translation to achieve a desired canvas position for the origin point
+    function updatePosition(axis, newValue) {
+        var idx = Lucent.SelectionManager.selectedItemIndex;
+        if (idx < 0 || !canvasModel || !currentBounds)
+            return;
+
+        var t = currentTransform || {};
+        var originX = t.originX || 0;
+        var originY = t.originY || 0;
+
+        var newTransform = {
+            translateX: t.translateX || 0,
+            translateY: t.translateY || 0,
+            rotate: t.rotate || 0,
+            scaleX: t.scaleX || 1,
+            scaleY: t.scaleY || 1,
+            originX: originX,
+            originY: originY
+        };
+
+        if (axis === "x") {
+            // newValue = geometry.x + geometry.width * originX + translateX
+            // So: translateX = newValue - geometry.x - geometry.width * originX
+            newTransform.translateX = newValue - currentBounds.x - currentBounds.width * originX;
+        } else if (axis === "y") {
+            newTransform.translateY = newValue - currentBounds.y - currentBounds.height * originY;
+        }
+
+        canvasModel.setItemTransform(idx, newTransform);
+    }
+
     function updateBounds(property, value) {
         var idx = Lucent.SelectionManager.selectedItemIndex;
         if (idx < 0 || !canvasModel || !currentBounds)
@@ -264,10 +314,10 @@ Item {
                 SpinBox {
                     from: -100000
                     to: 100000
-                    value: root.currentBounds ? Math.round(root.currentBounds.x) : 0
+                    value: Math.round(root.displayedX)
                     editable: true
                     Layout.fillWidth: true
-                    onValueModified: root.updateBounds("x", value)
+                    onValueModified: root.updatePosition("x", value)
                 }
 
                 Label {
@@ -300,10 +350,10 @@ Item {
                 SpinBox {
                     from: -100000
                     to: 100000
-                    value: root.currentBounds ? Math.round(root.currentBounds.y) : 0
+                    value: Math.round(root.displayedY)
                     editable: true
                     Layout.fillWidth: true
-                    onValueModified: root.updateBounds("y", value)
+                    onValueModified: root.updatePosition("y", value)
                 }
 
                 Label {
