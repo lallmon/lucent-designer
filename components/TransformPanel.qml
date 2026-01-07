@@ -106,35 +106,41 @@ Item {
         canvasModel.setItemTransform(idx, newTransform);
     }
 
-    function setOrigin(ox, oy) {
-        console.log("setOrigin called with:", ox, oy);
+    function setOrigin(newOx, newOy) {
         var idx = Lucent.SelectionManager.selectedItemIndex;
-        console.log("selectedItemIndex:", idx);
-        if (idx < 0 || !canvasModel) {
-            console.log("No selection, returning early");
+        if (idx < 0 || !canvasModel)
             return;
-        }
 
-        var newTransform = currentTransform ? {
-            translateX: currentTransform.translateX || 0,
-            translateY: currentTransform.translateY || 0,
-            rotate: currentTransform.rotate || 0,
-            scaleX: currentTransform.scaleX || 1,
-            scaleY: currentTransform.scaleY || 1,
-            originX: ox,
-            originY: oy
-        } : {
-            translateX: 0,
-            translateY: 0,
-            rotate: 0,
-            scaleX: 1,
-            scaleY: 1,
-            originX: ox,
-            originY: oy
+        var bounds = canvasModel.getGeometryBounds(idx);
+        if (!bounds)
+            return;
+
+        var oldOx = currentTransform ? (currentTransform.originX || 0) : 0;
+        var oldOy = currentTransform ? (currentTransform.originY || 0) : 0;
+        var rotation = currentTransform ? (currentTransform.rotate || 0) : 0;
+        var oldTx = currentTransform ? (currentTransform.translateX || 0) : 0;
+        var oldTy = currentTransform ? (currentTransform.translateY || 0) : 0;
+
+        // Adjust translation to keep shape visually in place when origin changes
+        var dx = (oldOx - newOx) * bounds.width;
+        var dy = (oldOy - newOy) * bounds.height;
+        var radians = rotation * Math.PI / 180;
+        var cos = Math.cos(radians);
+        var sin = Math.sin(radians);
+        var adjustX = dx - (dx * cos - dy * sin);
+        var adjustY = dy - (dx * sin + dy * cos);
+
+        var newTransform = {
+            translateX: oldTx + adjustX,
+            translateY: oldTy + adjustY,
+            rotate: rotation,
+            scaleX: currentTransform ? (currentTransform.scaleX || 1) : 1,
+            scaleY: currentTransform ? (currentTransform.scaleY || 1) : 1,
+            originX: newOx,
+            originY: newOy
         };
-        console.log("Calling setItemTransform");
+
         canvasModel.setItemTransform(idx, newTransform);
-        console.log("setItemTransform called, refreshing transform");
         refreshTransform();
     }
 
@@ -361,10 +367,7 @@ Item {
                         }
                         ButtonGroup.group: originGroup
 
-                        onClicked: {
-                            console.log("Origin button clicked:", modelData.ox, modelData.oy);
-                            root.setOrigin(modelData.ox, modelData.oy);
-                        }
+                        onClicked: root.setOrigin(modelData.ox, modelData.oy)
 
                         background: Rectangle {
                             color: parent.checked ? root.themePalette.highlight : root.themePalette.button
