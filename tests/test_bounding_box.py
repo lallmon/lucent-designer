@@ -40,11 +40,41 @@ class MockPolylineGeometry:
         self.points = points
 
 
+class MockQRectF:
+    """Mock QRectF for tests."""
+
+    def __init__(self, x, y, width, height):
+        self._x = x
+        self._y = y
+        self._width = width
+        self._height = height
+
+    def x(self):
+        return self._x
+
+    def y(self):
+        return self._y
+
+    def width(self):
+        return self._width
+
+    def height(self):
+        return self._height
+
+
 class MockRectangleItem:
     """Mock rectangle item."""
 
     def __init__(self, geometry):
         self.geometry = geometry
+
+    def get_bounds(self):
+        return MockQRectF(
+            self.geometry.x,
+            self.geometry.y,
+            self.geometry.width,
+            self.geometry.height,
+        )
 
 
 class MockEllipseItem:
@@ -53,12 +83,27 @@ class MockEllipseItem:
     def __init__(self, geometry):
         self.geometry = geometry
 
+    def get_bounds(self):
+        return MockQRectF(
+            self.geometry.center_x - self.geometry.radius_x,
+            self.geometry.center_y - self.geometry.radius_y,
+            self.geometry.radius_x * 2,
+            self.geometry.radius_y * 2,
+        )
+
 
 class MockPathItem:
     """Mock path item."""
 
     def __init__(self, geometry):
         self.geometry = geometry
+
+    def get_bounds(self):
+        if not self.geometry.points:
+            return None
+        xs = [p["x"] for p in self.geometry.points]
+        ys = [p["y"] for p in self.geometry.points]
+        return MockQRectF(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
 
 
 class MockTextGeometry:
@@ -77,6 +122,14 @@ class MockTextItem:
     def __init__(self, x, y, width, height, font_size):
         self.geometry = MockTextGeometry(x, y, width, height)
         self.font_size = font_size
+
+    def get_bounds(self):
+        return MockQRectF(
+            self.geometry.x,
+            self.geometry.y,
+            self.geometry.width,
+            self.geometry.height,
+        )
 
 
 class MockContainerItem:

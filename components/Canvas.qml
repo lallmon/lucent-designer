@@ -32,6 +32,12 @@ Item {
     // Current cursor shape (for dynamic cursor changes)
     property int currentCursorShape: Qt.OpenHandCursor
 
+    // Selection transform (updated reactively via signal)
+    property var _selectionTransform: null
+
+    // Selection geometry bounds (untransformed, from model)
+    property var _selectionGeometryBounds: null
+
     // Canvas content (no transforms - handled by parent Viewport)
     Item {
         id: shapesLayer
@@ -58,8 +64,8 @@ Item {
         // Selection indicator overlay
         SelectionOverlay {
             id: selectionOverlay
-            selectedItem: Lucent.SelectionManager.selectedItem
-            boundsOverride: root.selectionBounds()
+            geometryBounds: root._selectionGeometryBounds
+            itemTransform: root._selectionTransform
             zoomLevel: root.zoomLevel
         }
 
@@ -208,7 +214,8 @@ Item {
         Lucent.SelectionManager.selectedIndices = [newIndex];
         Lucent.SelectionManager.selectedItemIndex = newIndex;
         Lucent.SelectionManager.selectedItem = canvasModel.getItemData(newIndex);
-        refreshSelectionOverlayBounds();
+        refreshSelectionTransform();
+        refreshSelectionGeometryBounds();
     }
 
     // Set the drawing mode
@@ -248,34 +255,26 @@ Item {
     function selectItemAt(canvasX, canvasY, multiSelect) {
         var hitIndex = hitTest(canvasX, canvasY);
         updateSelection(hitIndex, multiSelect === true);
-        refreshSelectionOverlayBounds();
     }
 
-    function selectionBounds() {
-        var indices = Lucent.SelectionManager.selectedIndices;
-        if (!indices || indices.length === 0)
+    function selectionTransform() {
+        var idx = Lucent.SelectionManager.selectedItemIndex;
+        if (idx < 0 || !canvasModel)
             return null;
-        var bounds = null;
-        for (var i = 0; i < indices.length; i++) {
-            var b = canvasModel.getBoundingBox(indices[i]);
-            if (!b)
-                continue;
-            if (!bounds) {
-                bounds = b;
-            } else {
-                var minX = Math.min(bounds.x, b.x);
-                var minY = Math.min(bounds.y, b.y);
-                var maxX = Math.max(bounds.x + bounds.width, b.x + b.width);
-                var maxY = Math.max(bounds.y + bounds.height, b.y + b.height);
-                bounds = {
-                    x: minX,
-                    y: minY,
-                    width: maxX - minX,
-                    height: maxY - minY
-                };
-            }
+        return canvasModel.getItemTransform(idx);
+    }
+
+    function refreshSelectionTransform() {
+        _selectionTransform = selectionTransform();
+    }
+
+    function refreshSelectionGeometryBounds() {
+        var idx = Lucent.SelectionManager.selectedItemIndex;
+        if (idx >= 0 && canvasModel) {
+            _selectionGeometryBounds = canvasModel.getGeometryBounds(idx);
+        } else {
+            _selectionGeometryBounds = null;
         }
-        return bounds;
     }
 
     function updateSelection(hitIndex, multiSelect) {
@@ -385,23 +384,33 @@ Item {
                 });
             }
         }
-        refreshSelectionOverlayBounds();
-    }
-
-    function refreshSelectionOverlayBounds() {
-        selectionOverlay.boundsOverride = selectionBounds();
+        refreshSelectionGeometryBounds();
     }
 
     Connections {
         target: Lucent.SelectionManager
         function onSelectedItemChanged() {
-            refreshSelectionOverlayBounds();
+            refreshSelectionTransform();
+            refreshSelectionGeometryBounds();
         }
         function onSelectedItemIndexChanged() {
-            refreshSelectionOverlayBounds();
+            refreshSelectionTransform();
+            refreshSelectionGeometryBounds();
         }
         function onSelectedIndicesChanged() {
-            refreshSelectionOverlayBounds();
+            refreshSelectionTransform();
+            refreshSelectionGeometryBounds();
+        }
+    }
+
+    Connections {
+        target: canvasModel
+        function onItemTransformChanged(index) {
+            // Update overlay if the changed item is currently selected
+            if (index === Lucent.SelectionManager.selectedItemIndex) {
+                refreshSelectionTransform();
+                refreshSelectionGeometryBounds();
+            }
         }
     }
 
@@ -429,7 +438,7 @@ Item {
         if (!newIndices || newIndices.length === 0)
             return;
         Lucent.SelectionManager.setSelection(newIndices);
-        refreshSelectionOverlayBounds();
+        refreshSelectionGeometryBounds();
     }
 
     // Cancel the current drawing tool operation

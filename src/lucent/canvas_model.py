@@ -79,6 +79,7 @@ class CanvasModel(QAbstractListModel):
     itemsReordered = Signal()
     undoStackChanged = Signal()
     redoStackChanged = Signal()
+    itemTransformChanged = Signal(int)  # Emitted when item transform is updated
 
     def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
@@ -790,6 +791,7 @@ class CanvasModel(QAbstractListModel):
         current_data = self._itemToDict(item)
         current_data["transform"] = transform
         self.updateItem(index, current_data)
+        self.itemTransformChanged.emit(index)
 
     @Slot(result="QVariant")  # type: ignore[arg-type]
     def getItemsForHitTest(self) -> List[Dict[str, Any]]:
@@ -813,6 +815,36 @@ class CanvasModel(QAbstractListModel):
             return union_bounds([b for b in bounds_list if b is not None])
 
         return get_item_bounds(item, get_descendant_bounds)
+
+    @Slot(int, result="QVariant")  # type: ignore[arg-type]
+    def getGeometryBounds(self, index: int) -> Optional[Dict[str, float]]:
+        """Return untransformed geometry bounds for an item.
+
+        Unlike getBoundingBox which returns transformed bounds, this returns
+        the raw geometry bounds ignoring any transforms. Useful for UI overlays
+        that need to apply transforms separately.
+
+        Args:
+            index: Index of the item.
+
+        Returns:
+            Dictionary with x, y, width, height or None if not applicable.
+        """
+        if not (0 <= index < len(self._items)):
+            return None
+        item = self._items[index]
+
+        # Only shape items have geometry
+        if not hasattr(item, "geometry"):
+            return None
+
+        bounds = item.geometry.get_bounds()
+        return {
+            "x": bounds.x(),
+            "y": bounds.y(),
+            "width": bounds.width(),
+            "height": bounds.height(),
+        }
 
     @Slot(int, dict, result=bool)
     def setBoundingBox(self, index: int, bbox: Dict[str, float]) -> bool:

@@ -29,13 +29,35 @@ Item {
         return canvasModel.getBoundingBox(idx);
     }
 
-    // Current transform from the model
-    readonly property var currentTransform: {
+    // Current transform - updated reactively via signal
+    property var currentTransform: null
+
+    function refreshTransform() {
         var idx = Lucent.SelectionManager.selectedItemIndex;
-        if (idx < 0 || !canvasModel)
-            return null;
-        return canvasModel.getItemTransform(idx);
+        if (idx >= 0 && canvasModel) {
+            currentTransform = canvasModel.getItemTransform(idx);
+        } else {
+            currentTransform = null;
+        }
     }
+
+    Connections {
+        target: canvasModel
+        function onItemTransformChanged(index) {
+            if (index === Lucent.SelectionManager.selectedItemIndex) {
+                root.refreshTransform();
+            }
+        }
+    }
+
+    Connections {
+        target: Lucent.SelectionManager
+        function onSelectedItemIndexChanged() {
+            root.refreshTransform();
+        }
+    }
+
+    Component.onCompleted: refreshTransform()
 
     // Controls are enabled only when an editable item is selected and not locked
     readonly property bool controlsEnabled: hasEditableBounds && !isLocked
@@ -165,20 +187,49 @@ Item {
                 onValueModified: root.updateBounds("height", value)
             }
 
-            // Row 3: Rotation
+            // Row 3: Rotation with text input and slider
             Label {
                 text: qsTr("R:")
                 font.pixelSize: root.labelSize
                 color: root.labelColor
             }
-            SpinBox {
-                from: -360
-                to: 360
-                value: root.currentTransform ? Math.round(root.currentTransform.rotate) : 0
-                editable: true
+            TextField {
+                id: rotationField
+                text: root.currentTransform ? Math.round(root.currentTransform.rotate).toString() : "0"
+                horizontalAlignment: TextInput.AlignHCenter
+                Layout.preferredWidth: 45
+                validator: IntValidator {
+                    bottom: -360
+                    top: 360
+                }
+
+                onEditingFinished: {
+                    var val = parseInt(text) || 0;
+                    val = Math.max(-360, Math.min(360, val));
+                    root.updateTransform("rotate", val);
+                }
+            }
+            Slider {
+                id: rotationSlider
+                from: -180
+                to: 180
+                value: root.currentTransform ? root.currentTransform.rotate : 0
                 Layout.fillWidth: true
-                Layout.columnSpan: 3
-                onValueModified: root.updateTransform("rotate", value)
+                Layout.columnSpan: 2
+
+                onMoved: root.updateTransform("rotate", value)
+
+                // Circular handle to match other sliders
+                handle: Rectangle {
+                    x: rotationSlider.leftPadding + rotationSlider.visualPosition * (rotationSlider.availableWidth - width)
+                    y: rotationSlider.topPadding + rotationSlider.availableHeight / 2 - height / 2
+                    width: Lucent.Styles.height.xs
+                    height: Lucent.Styles.height.xs
+                    radius: Lucent.Styles.rad.lg
+                    color: rotationSlider.pressed ? root.themePalette.highlight : root.themePalette.button
+                    border.color: root.themePalette.mid
+                    border.width: 1
+                }
             }
         }
 

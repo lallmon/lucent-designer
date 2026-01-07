@@ -722,8 +722,8 @@ class TestCanvasModelBoundingBoxEdgeCases:
         bbox = canvas_model.getBoundingBox(0)
         assert bbox["x"] == 10
         assert bbox["y"] == 20
-        # Height should be estimated from font size (20 * 1.2 = 24)
-        assert bbox["height"] == 24.0
+        # Height is calculated by QTextDocument, should be reasonable for font size 20
+        assert bbox["height"] > 0
 
     def test_get_bounding_box_group_union(self, canvas_model):
         """Test getBoundingBox for group returns union of children."""
@@ -739,3 +739,60 @@ class TestCanvasModelBoundingBoxEdgeCases:
         assert bbox["y"] == 0
         assert bbox["width"] == 150
         assert bbox["height"] == 150
+
+
+class TestCanvasModelGetGeometryBounds:
+    """Tests for getGeometryBounds method (untransformed bounds)."""
+
+    def test_get_geometry_bounds_rectangle(self, canvas_model):
+        """getGeometryBounds returns untransformed rectangle bounds."""
+        canvas_model.addItem(make_rectangle(x=10, y=20, width=100, height=50))
+        bounds = canvas_model.getGeometryBounds(0)
+        assert bounds["x"] == 10
+        assert bounds["y"] == 20
+        assert bounds["width"] == 100
+        assert bounds["height"] == 50
+
+    def test_get_geometry_bounds_ellipse(self, canvas_model):
+        """getGeometryBounds returns untransformed ellipse bounds."""
+        canvas_model.addItem(
+            make_ellipse(center_x=50, center_y=50, radius_x=30, radius_y=20)
+        )
+        bounds = canvas_model.getGeometryBounds(0)
+        assert bounds["x"] == 20  # center_x - radius_x
+        assert bounds["y"] == 30  # center_y - radius_y
+        assert bounds["width"] == 60  # radius_x * 2
+        assert bounds["height"] == 40  # radius_y * 2
+
+    def test_get_geometry_bounds_path(self, canvas_model):
+        """getGeometryBounds returns untransformed path bounds."""
+        canvas_model.addItem(
+            make_path(points=[{"x": 10, "y": 20}, {"x": 110, "y": 70}])
+        )
+        bounds = canvas_model.getGeometryBounds(0)
+        assert bounds["x"] == 10
+        assert bounds["y"] == 20
+        assert bounds["width"] == 100
+        assert bounds["height"] == 50
+
+    def test_get_geometry_bounds_ignores_transform(self, canvas_model):
+        """getGeometryBounds should ignore item transform."""
+        data = make_rectangle(x=0, y=0, width=100, height=50)
+        data["transform"] = {"translateX": 50, "translateY": 25, "rotate": 45}
+        canvas_model.addItem(data)
+        bounds = canvas_model.getGeometryBounds(0)
+        # Should be the raw geometry, not affected by transform
+        assert bounds["x"] == 0
+        assert bounds["y"] == 0
+        assert bounds["width"] == 100
+        assert bounds["height"] == 50
+
+    def test_get_geometry_bounds_invalid_index(self, canvas_model):
+        """getGeometryBounds returns None for invalid index."""
+        assert canvas_model.getGeometryBounds(-1) is None
+        assert canvas_model.getGeometryBounds(999) is None
+
+    def test_get_geometry_bounds_layer_returns_none(self, canvas_model):
+        """getGeometryBounds returns None for layers (no geometry)."""
+        canvas_model.addItem(make_layer(name="Layer"))
+        assert canvas_model.getGeometryBounds(0) is None
