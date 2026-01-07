@@ -25,6 +25,7 @@ class DocumentManager(QObject):
     filePathChanged = Signal()
     documentTitleChanged = Signal()
     viewportChanged = Signal()
+    documentDPIChanged = Signal()
 
     def __init__(
         self, canvas_model: "CanvasModel", parent: Optional[QObject] = None
@@ -39,6 +40,9 @@ class DocumentManager(QObject):
         self._viewport_zoom = 1.0
         self._viewport_offset_x = 0.0
         self._viewport_offset_y = 0.0
+
+        # Document DPI (72 is standard screen DPI, used for points-to-pixels at 1:1)
+        self._document_dpi = 72
 
         # Don't track changes until app is fully initialized
         # Call startTracking() from QML after Component.onCompleted
@@ -118,6 +122,22 @@ class DocumentManager(QObject):
 
     documentTitle = Property(str, _get_document_title, notify=documentTitleChanged)
 
+    def _get_document_dpi(self) -> int:
+        return self._document_dpi
+
+    documentDPI = Property(int, _get_document_dpi, notify=documentDPIChanged)
+
+    @Slot(int)
+    def setDocumentDPI(self, dpi: int) -> None:
+        """Set document DPI for export scaling.
+
+        Args:
+            dpi: Target DPI (e.g., 72 for screen, 300 for print)
+        """
+        if self._document_dpi != dpi:
+            self._document_dpi = dpi
+            self.documentDPIChanged.emit()
+
     @Slot(result=bool)
     def hasUnsavedChanges(self) -> bool:
         """Check if document has unsaved changes."""
@@ -138,7 +158,7 @@ class DocumentManager(QObject):
     def newDocument(self) -> bool:
         """Create a new empty document.
 
-        Clears the canvas, resets file path and dirty flag.
+        Clears the canvas, resets file path, dirty flag, and DPI to defaults.
 
         Returns:
             True always (operation cannot fail)
@@ -150,6 +170,7 @@ class DocumentManager(QObject):
         self._connect_model_signals()
         self._set_file_path("")
         self._set_dirty(False)
+        self.setDocumentDPI(72)
 
         return True
 
@@ -183,6 +204,10 @@ class DocumentManager(QObject):
         self._viewport_offset_x = viewport.get("offsetX", 0.0)
         self._viewport_offset_y = viewport.get("offsetY", 0.0)
         self.viewportChanged.emit()
+
+        # Load document DPI (defaults to 72 if not present in file)
+        meta = data.get("meta", {})
+        self.setDocumentDPI(meta.get("documentDPI", 72))
 
         self._connect_model_signals()
 
@@ -226,7 +251,7 @@ class DocumentManager(QObject):
                 "offsetY": self._viewport_offset_y,
             }
 
-            meta = {"name": Path(local_path).stem}
+            meta = {"name": Path(local_path).stem, "documentDPI": self._document_dpi}
 
             save_document(path=local_path, items=items, viewport=viewport, meta=meta)
 
@@ -264,12 +289,12 @@ class DocumentManager(QObject):
             "offsetY": self._viewport_offset_y,
         }
 
-    @Slot(str, str, float, float, str, result=bool)
+    @Slot(str, str, int, float, str, result=bool)
     def exportLayer(
         self,
         layer_id: str,
         path: str,
-        scale: float,
+        target_dpi: int,
         padding: float,
         background: str,
     ) -> bool:
@@ -278,7 +303,7 @@ class DocumentManager(QObject):
         Args:
             layer_id: ID of the layer to export
             path: Output file path (format determined by extension)
-            scale: Scale factor (for PNG)
+            target_dpi: Target DPI for export (e.g., 72, 144, 300)
             padding: Padding in canvas units
             background: Background color (empty for transparent)
 
@@ -299,7 +324,8 @@ class DocumentManager(QObject):
             return False
 
         options = ExportOptions(
-            scale=scale,
+            document_dpi=self._document_dpi,
+            target_dpi=target_dpi,
             padding=padding,
             background=background if background else None,
         )

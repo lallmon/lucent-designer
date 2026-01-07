@@ -56,7 +56,7 @@ RowLayout {
         minimum: 0.1
         maximum: 100.0
         decimals: 1
-        suffix: qsTr("px")
+        suffix: qsTr("pt")
         onCommitted: newValue => root.updateProperty("strokeWidth", newValue)
     }
 

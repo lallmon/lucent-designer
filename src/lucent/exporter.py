@@ -20,9 +20,15 @@ SVG_NS = "http://www.w3.org/2000/svg"
 class ExportOptions:
     """Configuration options for export operations."""
 
-    scale: float = 1.0
+    document_dpi: int = 72
+    target_dpi: int = 72
     padding: float = 0.0
     background: Optional[str] = None
+
+    @property
+    def scale(self) -> float:
+        """Compute scale factor from DPI ratio."""
+        return self.target_dpi / self.document_dpi
 
 
 def compute_bounds(items: List["CanvasItem"], padding: float = 0.0) -> QRectF:

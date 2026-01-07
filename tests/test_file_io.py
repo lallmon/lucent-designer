@@ -234,6 +234,54 @@ class TestLoadDocument:
         assert result["meta"]["name"] == "Test"
 
 
+class TestDocumentDPI:
+    """Tests for documentDPI field in file format."""
+
+    def test_save_includes_document_dpi(self, tmp_path: Path) -> None:
+        """Saved file includes documentDPI in meta."""
+        file_path = tmp_path / "with_dpi.lucent"
+
+        save_document(
+            path=file_path,
+            items=[],
+            viewport={"zoomLevel": 1.0, "offsetX": 0, "offsetY": 0},
+            meta={"name": "Test", "documentDPI": 144},
+        )
+
+        data = json.loads(file_path.read_text())
+        assert data["meta"]["documentDPI"] == 144
+
+    def test_load_returns_document_dpi(self, tmp_path: Path) -> None:
+        """load_document returns documentDPI from meta."""
+        file_path = tmp_path / "with_dpi.lucent"
+        data = {
+            "version": LUCENT_VERSION,
+            "meta": {"name": "Test", "documentDPI": 300},
+            "viewport": {"zoomLevel": 1.0, "offsetX": 0, "offsetY": 0},
+            "items": [],
+        }
+        file_path.write_text(json.dumps(data))
+
+        result = load_document(file_path)
+
+        assert result["meta"]["documentDPI"] == 300
+
+    def test_load_defaults_dpi_to_72_if_missing(self, tmp_path: Path) -> None:
+        """load_document returns 72 DPI when documentDPI is missing."""
+        file_path = tmp_path / "no_dpi.lucent"
+        data = {
+            "version": LUCENT_VERSION,
+            "meta": {"name": "Test"},
+            "viewport": {"zoomLevel": 1.0, "offsetX": 0, "offsetY": 0},
+            "items": [],
+        }
+        file_path.write_text(json.dumps(data))
+
+        result = load_document(file_path)
+
+        assert result["meta"]["documentDPI"] == 72
+
+
 class TestRoundTrip:
     """Tests for save/load round-trip integrity."""
 

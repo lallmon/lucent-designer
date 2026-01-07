@@ -430,6 +430,84 @@ class TestViewportState:
         assert data["viewport"]["offsetY"] == 150
 
 
+class TestDocumentDPI:
+    """Tests for documentDPI property."""
+
+    def test_default_dpi_is_72(self, doc_manager: DocumentManager) -> None:
+        """Fresh DocumentManager has documentDPI=72."""
+        assert doc_manager.documentDPI == 72
+
+    def test_set_document_dpi(self, doc_manager: DocumentManager) -> None:
+        """setDocumentDPI updates the property."""
+        doc_manager.setDocumentDPI(300)
+        assert doc_manager.documentDPI == 300
+
+    def test_document_dpi_saved_to_file(
+        self, doc_manager: DocumentManager, tmp_path: Path
+    ) -> None:
+        """documentDPI is included in saved file."""
+        doc_manager.setDocumentDPI(144)
+
+        file_path = tmp_path / "dpi_test.lucent"
+        doc_manager.saveDocumentAs(str(file_path))
+
+        data = json.loads(file_path.read_text())
+        assert data["meta"]["documentDPI"] == 144
+
+    def test_document_dpi_loaded_from_file(
+        self, doc_manager: DocumentManager, tmp_path: Path
+    ) -> None:
+        """documentDPI is restored when opening file."""
+        file_path = tmp_path / "dpi_load.lucent"
+        data = {
+            "version": LUCENT_VERSION,
+            "meta": {"name": "Test", "documentDPI": 300},
+            "viewport": {"zoomLevel": 1.0, "offsetX": 0, "offsetY": 0},
+            "items": [],
+        }
+        file_path.write_text(json.dumps(data))
+
+        doc_manager.openDocument(str(file_path))
+
+        assert doc_manager.documentDPI == 300
+
+    def test_document_dpi_defaults_on_load_if_missing(
+        self, doc_manager: DocumentManager, tmp_path: Path
+    ) -> None:
+        """documentDPI defaults to 72 when file has no DPI field."""
+        # First set a non-default DPI
+        doc_manager.setDocumentDPI(300)
+
+        # Load a file without DPI
+        file_path = tmp_path / "no_dpi.lucent"
+        data = {
+            "version": LUCENT_VERSION,
+            "meta": {"name": "Test"},
+            "viewport": {"zoomLevel": 1.0, "offsetX": 0, "offsetY": 0},
+            "items": [],
+        }
+        file_path.write_text(json.dumps(data))
+
+        doc_manager.openDocument(str(file_path))
+
+        assert doc_manager.documentDPI == 72
+
+    def test_new_document_resets_dpi_to_72(self, doc_manager: DocumentManager) -> None:
+        """newDocument() resets documentDPI to 72."""
+        doc_manager.setDocumentDPI(300)
+
+        doc_manager.newDocument()
+
+        assert doc_manager.documentDPI == 72
+
+    def test_document_dpi_changed_signal(
+        self, doc_manager: DocumentManager, qtbot
+    ) -> None:
+        """documentDPIChanged signal is emitted on change."""
+        with qtbot.waitSignal(doc_manager.documentDPIChanged, timeout=100):
+            doc_manager.setDocumentDPI(150)
+
+
 class TestExportLayer:
     """Tests for layer export functionality."""
 
@@ -452,7 +530,7 @@ class TestExportLayer:
         )
 
         output_path = tmp_path / "export.png"
-        result = doc_manager.exportLayer(layer_id, str(output_path), 1.0, 0.0, "")
+        result = doc_manager.exportLayer(layer_id, str(output_path), 72, 0.0, "")
 
         assert result is True
         assert output_path.exists()
@@ -475,16 +553,16 @@ class TestExportLayer:
         )
 
         output_path = tmp_path / "export.svg"
-        result = doc_manager.exportLayer(layer_id, str(output_path), 1.0, 0.0, "")
+        result = doc_manager.exportLayer(layer_id, str(output_path), 72, 0.0, "")
 
         assert result is True
         assert output_path.exists()
         assert "<svg" in output_path.read_text()
 
-    def test_export_layer_with_scale(
+    def test_export_layer_with_target_dpi(
         self, doc_manager: DocumentManager, tmp_path: Path, canvas_model: CanvasModel
     ) -> None:
-        """exportLayer() applies scale to PNG output."""
+        """exportLayer() applies DPI scaling to PNG output."""
         from PySide6.QtGui import QImage
 
         canvas_model.addItem({"type": "layer", "name": "Test Layer"})
@@ -501,7 +579,8 @@ class TestExportLayer:
         )
 
         output_path = tmp_path / "export.png"
-        doc_manager.exportLayer(layer_id, str(output_path), 2.0, 0.0, "")
+        # 144 DPI target with 72 DPI document = 2x scale
+        doc_manager.exportLayer(layer_id, str(output_path), 144, 0.0, "")
 
         img = QImage(str(output_path))
         assert img.width() == 200
@@ -515,7 +594,7 @@ class TestExportLayer:
         layer_id = canvas_model.getItems()[0].id
 
         output_path = tmp_path / "export.png"
-        result = doc_manager.exportLayer(layer_id, str(output_path), 1.0, 0.0, "")
+        result = doc_manager.exportLayer(layer_id, str(output_path), 72, 0.0, "")
 
         assert result is False
 
@@ -525,7 +604,7 @@ class TestExportLayer:
         """exportLayer() returns False for nonexistent layer ID."""
         output_path = tmp_path / "export.png"
         result = doc_manager.exportLayer(
-            "nonexistent-id", str(output_path), 1.0, 0.0, ""
+            "nonexistent-id", str(output_path), 72, 0.0, ""
         )
 
         assert result is False

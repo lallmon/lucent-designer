@@ -21,16 +21,30 @@ class TestExportOptions:
     def test_default_values(self):
         """ExportOptions has sensible defaults."""
         opts = ExportOptions()
-        assert opts.scale == 1.0
+        assert opts.document_dpi == 72
+        assert opts.target_dpi == 72
         assert opts.padding == 0.0
         assert opts.background is None
 
     def test_custom_values(self):
         """ExportOptions accepts custom values."""
-        opts = ExportOptions(scale=2.0, padding=10.0, background="#ffffff")
-        assert opts.scale == 2.0
+        opts = ExportOptions(
+            document_dpi=72, target_dpi=300, padding=10.0, background="#ffffff"
+        )
+        assert opts.document_dpi == 72
+        assert opts.target_dpi == 300
         assert opts.padding == 10.0
         assert opts.background == "#ffffff"
+
+    def test_scale_property_computes_ratio(self):
+        """scale property returns target_dpi / document_dpi."""
+        opts = ExportOptions(document_dpi=72, target_dpi=144)
+        assert opts.scale == 2.0
+
+    def test_scale_property_for_print_dpi(self):
+        """scale property correctly computes for 300 DPI print."""
+        opts = ExportOptions(document_dpi=72, target_dpi=300)
+        assert abs(opts.scale - 300 / 72) < 0.001
 
 
 class TestComputeBounds:
@@ -95,13 +109,16 @@ class TestExportPng:
         assert img.width() == 100
         assert img.height() == 50
 
-    def test_export_with_scale(self, tmp_path, qtbot):
-        """export_png scales output by scale factor."""
+    def test_export_with_target_dpi(self, tmp_path, qtbot):
+        """export_png scales output based on target DPI."""
         items = [RectangleItem(x=0, y=0, width=100, height=50)]
         bounds = QRectF(0, 0, 100, 50)
         output_path = tmp_path / "test.png"
 
-        export_png(items, bounds, output_path, ExportOptions(scale=2.0))
+        # 144 DPI target with 72 DPI document = 2x scale
+        export_png(
+            items, bounds, output_path, ExportOptions(document_dpi=72, target_dpi=144)
+        )
 
         img = QImage(str(output_path))
         assert img.width() == 200

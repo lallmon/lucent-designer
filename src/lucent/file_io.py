@@ -94,10 +94,15 @@ def load_document(path: Union[str, Path]) -> Dict[str, Any]:
     if file_version > LUCENT_VERSION:
         raise FileVersionError(file_version, LUCENT_VERSION)
 
+    meta = data.get("meta", {"name": "Untitled"})
+    # Default documentDPI to 72 if not present
+    if "documentDPI" not in meta:
+        meta["documentDPI"] = 72
+
     return {
         "items": data.get("items", []),
         "viewport": data.get(
             "viewport", {"zoomLevel": 1.0, "offsetX": 0, "offsetY": 0}
         ),
-        "meta": data.get("meta", {"name": "Untitled"}),
+        "meta": meta,
     }

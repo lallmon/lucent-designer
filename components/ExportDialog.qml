@@ -13,18 +13,30 @@ Dialog {
     property string layerId: ""
     property string layerName: "Layer"
 
+    // Document DPI is always 72 (points = pixels at 1:1)
+    readonly property int documentDPI: 72
+
+    // Get selected DPI value from combo box
+    readonly property int selectedDPI: {
+        if (dpiCombo.currentIndex >= 0 && dpiCombo.model.count > 0)
+            return dpiCombo.model.get(dpiCombo.currentIndex).value;
+        return 72;
+    }
+
     readonly property real computedWidth: {
         if (!canvasModel || !layerId)
             return 0;
         var bounds = canvasModel.getLayerBounds(layerId);
-        return (bounds.width + paddingInput.value * 2) * scaleCombo.currentValue;
+        var scale = selectedDPI / documentDPI;
+        return (bounds.width + paddingInput.value * 2) * scale;
     }
 
     readonly property real computedHeight: {
         if (!canvasModel || !layerId)
             return 0;
         var bounds = canvasModel.getLayerBounds(layerId);
-        return (bounds.height + paddingInput.value * 2) * scaleCombo.currentValue;
+        var scale = selectedDPI / documentDPI;
+        return (bounds.height + paddingInput.value * 2) * scale;
     }
 
     width: 360
@@ -39,7 +51,10 @@ Dialog {
         onAccepted: {
             if (documentManager) {
                 var bg = transparentCheck.checked ? "" : bgColorPicker.color.toString();
-                documentManager.exportLayer(root.layerId, file, scaleCombo.currentValue, paddingInput.value, bg);
+                var filePath = saveDialog.file.toString();
+                console.log("Exporting to:", filePath, "DPI:", root.selectedDPI);
+                var result = documentManager.exportLayer(root.layerId, filePath, root.selectedDPI, paddingInput.value, bg);
+                console.log("Export result:", result);
             }
             root.close();
         }
@@ -71,28 +86,29 @@ Dialog {
             }
 
             Label {
-                text: qsTr("Scale:")
+                text: qsTr("Resolution:")
                 visible: formatCombo.currentIndex === 0
             }
             ComboBox {
-                id: scaleCombo
+                id: dpiCombo
                 visible: formatCombo.currentIndex === 0
                 model: ListModel {
                     ListElement {
-                        text: "1x"
-                        value: 1.0
+                        text: "72 DPI (Screen)"
+                        value: 72
                     }
                     ListElement {
-                        text: "2x"
-                        value: 2.0
+                        text: "144 DPI (Retina)"
+                        value: 144
                     }
                     ListElement {
-                        text: "3x"
-                        value: 3.0
+                        text: "300 DPI (Print)"
+                        value: 300
                     }
                 }
                 textRole: "text"
                 valueRole: "value"
+                currentIndex: 0
                 Layout.fillWidth: true
             }
 
