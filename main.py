@@ -35,6 +35,12 @@ if __name__ == "__main__":
     # Use QApplication (not QGuiApplication) to support Qt.labs.platform native dialogs
     app = QApplication(sys.argv)
 
+    # Use fusion style on Windows to match Linux
+    if sys.platform == "win32":
+        from PySide6.QtQuickControls2 import QQuickStyle
+
+        QQuickStyle.setStyle("Fusion")
+
     class AppInfo(QObject):
         rendererBackendChanged = Signal()
         appVersionChanged = Signal()
