@@ -1,4 +1,5 @@
 import QtQuick
+import "." as Lucent
 
 // Renders a bounding box for the currently selected item in canvas coordinates.
 Rectangle {
@@ -7,8 +8,8 @@ Rectangle {
     property var selectedItem
     property var boundsOverride
     property real zoomLevel: 1.0
-    property real selectionPadding: 8
-    property color accentColor: "lightblue"
+    property real selectionPadding: 0
+    property color accentColor: Lucent.Themed.selector
 
     readonly property bool _hasBounds: boundsOverride !== null && boundsOverride !== undefined
     readonly property var _geom: selectedItem ? selectedItem.geometry : null
@@ -73,5 +74,5 @@ Rectangle {
 
     color: "transparent"
     border.color: accentColor
-    border.width: (zoomLevel > 0 ? 2 / zoomLevel : 0)
+    border.width: (zoomLevel > 0 ? 1 / zoomLevel : 0)
 }

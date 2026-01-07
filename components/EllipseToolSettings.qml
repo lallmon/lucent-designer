@@ -12,9 +12,9 @@ RowLayout {
 
     // Internal defaults for creation mode
     property real _defaultStrokeWidth: 0
-    property color _defaultStrokeColor: Lucent.Themed.palette.text
+    property color _defaultStrokeColor: Lucent.Themed.defaultStroke
     property real _defaultStrokeOpacity: 1.0
-    property color _defaultFillColor: Lucent.Themed.palette.text
+    property color _defaultFillColor: Lucent.Themed.defaultFill
     property real _defaultFillOpacity: 1.0
 
     // Helper to get fill appearance from selectedItem

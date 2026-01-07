@@ -58,11 +58,9 @@ Item {
         // Selection indicator overlay
         SelectionOverlay {
             id: selectionOverlay
-            selectionPadding: 8  // Padding around selected object in canvas units
             selectedItem: Lucent.SelectionManager.selectedItem
             boundsOverride: root.selectionBounds()
             zoomLevel: root.zoomLevel
-            accentColor: Lucent.Themed.palette.highlight
         }
 
         // Select tool for object selection (panning handled by Viewport)

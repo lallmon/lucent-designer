@@ -35,7 +35,7 @@ Item {
     // Background color
     Rectangle {
         anchors.fill: parent
-        color: themePalette.window
+        color: Lucent.Themed.gridBackground
     }
 
     // GPU grid overlay: crisp, infinite-feel, tied to current viewport
@@ -64,8 +64,8 @@ Item {
         property real zoomLevel: root.zoomLevel
         property real offsetX: root.offsetX
         property real offsetY: root.offsetY
-        property color majorColor: palette.mid
-        property color minorColor: palette.mid
+        property color majorColor: Lucent.Themed.gridMajor
+        property color minorColor: Lucent.Themed.gridMinor
         property var viewportSize: Qt.vector2d(width, height)
 
         vertexShader: Qt.resolvedUrl("shaders/grid.vert.qsb")
