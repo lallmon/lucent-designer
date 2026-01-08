@@ -578,19 +578,31 @@ Item {
                 // Compute the expected text value from current transform
                 readonly property string expectedText: root.currentTransform ? Math.round(root.currentTransform.rotate).toString() : "0"
 
+                // Flag to prevent double-firing of editingFinished
+                property bool isCommitting: false
+
                 // Initialize text
                 Component.onCompleted: text = expectedText
 
-                // Always update text when expectedText changes (handles undo/redo)
-                // This is safe because expectedText only changes when the model changes,
-                // not when the user is actively typing (model updates on editingFinished)
-                onExpectedTextChanged: text = expectedText
+                // Update text when expectedText changes (handles undo/redo)
+                // Skip if we're in the middle of committing to prevent double onEditingFinished
+                onExpectedTextChanged: {
+                    if (!isCommitting) {
+                        text = expectedText;
+                    }
+                }
 
                 onEditingFinished: {
+                    if (isCommitting)
+                        return;
+                    isCommitting = true;
+
                     var val = parseInt(text) || 0;
                     val = Math.max(-360, Math.min(360, val));
                     root.updateTransform("rotate", val);
                     root.focusCanvasRequested();
+
+                    isCommitting = false;
                 }
             }
             Label {
