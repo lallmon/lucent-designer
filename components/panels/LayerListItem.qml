@@ -398,6 +398,12 @@ Item {
                             onTriggered: appController.openExportDialog(delegateRoot.itemId, delegateRoot.name || "Layer")
                         }
 
+                        Action {
+                            text: qsTr("Ungroup")
+                            enabled: delegateRoot.itemType === "group"
+                            onTriggered: canvasModel.ungroup(delegateRoot.index)
+                        }
+
                         MenuSeparator {}
 
                         Action {
