@@ -566,11 +566,15 @@ class CanvasModel(QAbstractListModel):
                 and item_index == parent_index + 1
             ):
                 target_index = item_index
+            elif insert_index >= 0:
+                # Explicit insert position - use as final position (post-removal)
+                # Clamp to valid range within parent's children
+                target_index = max(0, min(insert_index, parent_index))
             else:
-                target_index = insert_index if insert_index >= 0 else parent_index
-                target_index = max(0, min(target_index, parent_index))
-            if item_index < target_index:
-                target_index -= 1
+                # Default: place at parent's position (top of children in display)
+                target_index = parent_index
+                if item_index < target_index:
+                    target_index -= 1
         else:
             target_index = insert_index if insert_index >= 0 else item_index
 

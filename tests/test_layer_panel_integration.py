@@ -176,6 +176,40 @@ class TestLayerPanelModelBehaviors:
         assert rect_data is not None, "Rectangle not found after reparent"
         assert rect_data["parentId"] == layer_id
 
+    def test_reparent_item_with_position_inserts_correctly(self, model):
+        """Reparenting with explicit position places item at correct index.
+
+        This tests the fix for dropping items between existing children:
+        when dropping between Square1 and Square2, the item should end up
+        between them, not at the bottom of the container.
+        """
+        # Setup: Square3 (top-level), Square1, Square2 (children of Layer)
+        model.addItem({"type": "rectangle", "name": "Square3"})
+        model.addItem({"type": "rectangle", "name": "Square1"})
+        model.addItem({"type": "rectangle", "name": "Square2"})
+        model.addLayer()
+
+        layer_data = model.getItemData(3)
+        layer_id = layer_data["id"]
+
+        # Reparent Square1 and Square2 to Layer
+        model.reparentItem(1, layer_id)
+        model.reparentItem(1, layer_id)
+
+        # Model: [Square3@0, Square1@1, Square2@2, Layer@3]
+        assert model.getItemData(0)["name"] == "Square3"
+        assert model.getItemData(1)["name"] == "Square1"
+        assert model.getItemData(2)["name"] == "Square2"
+
+        # Reparent Square3 to position 1 (between Square1 and Square2)
+        model.reparentItem(0, layer_id, 1)
+
+        # Expected: [Square1@0, Square3@1, Square2@2, Layer@3]
+        assert model.getItemData(0)["name"] == "Square1"
+        assert model.getItemData(1)["name"] == "Square3"
+        assert model.getItemData(2)["name"] == "Square2"
+        assert model.getItemData(1)["parentId"] == layer_id
+
     def test_remove_item_decreases_count(self, model):
         """LayerPanel delete calls canvasModel.removeItem(index)."""
         model.addLayer()
