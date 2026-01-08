@@ -26,17 +26,53 @@ Item {
 
     readonly property SystemPalette themePalette: Lucent.Themed.palette
 
-    // Model index is the source-of-truth for data operations.
-    property int modelIndex: index
     // Visual order is reversed so top of the list is highest Z.
-    property int displayIndex: repeater.count - 1 - modelIndex
-    property bool isSelected: Lucent.SelectionManager.selectedIndices && Lucent.SelectionManager.selectedIndices.indexOf(modelIndex) !== -1
-    property bool isBeingDragged: panel.draggedIndex === modelIndex
+    readonly property int displayIndex: repeater.count - 1 - index
+    readonly property bool isSelected: Lucent.SelectionManager.selectedIndices && Lucent.SelectionManager.selectedIndices.indexOf(index) !== -1
+    readonly property bool isBeingDragged: panel.draggedIndex === index
     property real dragOffsetY: 0
-    property bool hasParent: !!parentId
-    property bool isLayer: itemType === "layer"
-    property bool isGroup: itemType === "group"
-    property bool isContainer: isLayer || isGroup
+    readonly property bool hasParent: !!parentId
+    readonly property bool isContainer: itemType === "layer" || itemType === "group"
+
+    // Computed colors and icons based on state
+    readonly property color itemTextColor: isSelected ? themePalette.highlightedText : themePalette.text
+    readonly property string typeIcon: {
+        switch (itemType) {
+        case "layer":
+            return "stack";
+        case "group":
+            return "folder-simple";
+        case "rectangle":
+            return "rectangle";
+        case "ellipse":
+            return "circle";
+        case "path":
+            return "pen-nib";
+        case "text":
+            return "text-t";
+        default:
+            return "shapes";
+        }
+    }
+
+    // Reset all drag-related state
+    function resetDragState() {
+        dragOffsetY = 0;
+        panel.draggedIndex = -1;
+        panel.draggedItemType = "";
+        panel.dropTargetContainerId = "";
+        panel.draggedItemParentId = null;
+        panel.dropTargetParentId = null;
+        panel.dropInsertIndex = -1;
+    }
+
+    // Delete this item with proper selection update
+    function deleteItem() {
+        Lucent.SelectionManager.selectedIndices = [index];
+        Lucent.SelectionManager.selectedItemIndex = index;
+        Lucent.SelectionManager.selectedItem = canvasModel.getItemData(index);
+        canvasModel.removeItem(index);
+    }
 
     anchors.left: parent ? parent.left : undefined
     anchors.right: parent ? parent.right : undefined
@@ -48,7 +84,7 @@ Item {
     }
     z: isBeingDragged ? 100 : 0
 
-    property bool isDropTarget: delegateRoot.isContainer && panel.draggedIndex >= 0 && panel.draggedItemType !== "layer" && panel.dropTargetContainerId === delegateRoot.itemId
+    readonly property bool isDropTarget: isContainer && panel.draggedIndex >= 0 && panel.draggedItemType !== "layer" && panel.dropTargetContainerId === itemId
 
     Rectangle {
         id: background
@@ -82,23 +118,9 @@ Item {
 
                 Lucent.PhIcon {
                     anchors.centerIn: parent
-                    name: {
-                        if (delegateRoot.itemType === "layer")
-                            return "stack";
-                        if (delegateRoot.itemType === "group")
-                            return "folder-simple";
-                        if (delegateRoot.itemType === "rectangle")
-                            return "rectangle";
-                        if (delegateRoot.itemType === "ellipse")
-                            return "circle";
-                        if (delegateRoot.itemType === "path")
-                            return "pen-nib";
-                        if (delegateRoot.itemType === "text")
-                            return "text-t";
-                        return "shapes";
-                    }
+                    name: delegateRoot.typeIcon
                     size: 18
-                    color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
+                    color: delegateRoot.itemTextColor
                 }
 
                 DragHandler {
@@ -110,7 +132,7 @@ Item {
                     onActiveChanged: {
                         try {
                             if (active) {
-                                panel.draggedIndex = delegateRoot.modelIndex;
+                                panel.draggedIndex = delegateRoot.index;
                                 panel.draggedItemType = delegateRoot.itemType;
                                 panel.draggedItemParentId = delegateRoot.parentId;
                                 container.dragStartContentY = flickable.contentY;
@@ -122,13 +144,7 @@ Item {
                                 if (panel.draggedIndex >= 0) {
                                     // Guard against empty model or stale indices after a reset
                                     if (repeater.count <= 0) {
-                                        delegateRoot.dragOffsetY = 0;
-                                        panel.draggedIndex = -1;
-                                        panel.draggedItemType = "";
-                                        panel.dropTargetContainerId = "";
-                                        panel.draggedItemParentId = null;
-                                        panel.dropTargetParentId = null;
-                                        panel.dropInsertIndex = -1;
+                                        delegateRoot.resetDragState();
                                         return;
                                     }
                                     // Calculate target model index for potential reordering
@@ -139,13 +155,7 @@ Item {
                                     targetDisplayIndex = Math.max(0, Math.min(rowCount - 1, targetDisplayIndex));
                                     let targetModelIndex = panel.modelIndexForDisplay(targetDisplayIndex);
                                     if (targetModelIndex < 0 || targetModelIndex >= rowCount) {
-                                        delegateRoot.dragOffsetY = 0;
-                                        panel.draggedIndex = -1;
-                                        panel.draggedItemType = "";
-                                        panel.dropTargetContainerId = "";
-                                        panel.draggedItemParentId = null;
-                                        panel.dropTargetParentId = null;
-                                        panel.dropInsertIndex = -1;
+                                        delegateRoot.resetDragState();
                                         return;
                                     }
 
@@ -159,19 +169,17 @@ Item {
                                             }
                                         } else {
                                             // Different container - reparent to that container
-                                            let insertModelIndex = targetModelIndex;
-                                            canvasModel.reparentItem(panel.draggedIndex, panel.dropTargetContainerId, insertModelIndex);
+                                            canvasModel.reparentItem(panel.draggedIndex, panel.dropTargetContainerId, targetModelIndex);
                                         }
                                     } else if (panel.dropTargetParentId && panel.draggedItemType !== "layer") {
                                         // Dropping onto a gap between children of a layer
                                         const isSameParent = panel.draggedItemParentId === panel.dropTargetParentId;
-                                        let insertModelIndex = targetModelIndex;
                                         if (isSameParent) {
-                                            if (insertModelIndex !== panel.draggedIndex) {
-                                                canvasModel.moveItem(panel.draggedIndex, insertModelIndex);
+                                            if (targetModelIndex !== panel.draggedIndex) {
+                                                canvasModel.moveItem(panel.draggedIndex, targetModelIndex);
                                             }
                                         } else {
-                                            canvasModel.reparentItem(panel.draggedIndex, panel.dropTargetParentId, insertModelIndex);
+                                            canvasModel.reparentItem(panel.draggedIndex, panel.dropTargetParentId, targetModelIndex);
                                         }
                                     } else if (panel.draggedItemParentId && panel.dropTargetParentId === panel.draggedItemParentId) {
                                         // Dropping onto a sibling (same parent) - just reorder, keep parent
@@ -188,29 +196,11 @@ Item {
                                         }
                                     }
                                 }
-                                delegateRoot.dragOffsetY = 0;
-                                panel.draggedIndex = -1;
-                                panel.draggedItemType = "";
-                                panel.dropTargetContainerId = "";
-                                panel.draggedItemParentId = null;
-                                panel.dropTargetParentId = null;
-                                panel.dropInsertIndex = -1;
+                                delegateRoot.resetDragState();
                             }
                         } catch (e) {
                             console.warn("LayerListItem drag error:", e);
-                            // Reset state - guard against delegate destruction during model reset
-                            if (typeof delegateRoot !== 'undefined' && delegateRoot) {
-                                delegateRoot.dragOffsetY = 0;
-                            }
-                            if (typeof panel !== 'undefined' && panel) {
-                                panel.draggedIndex = -1;
-                                panel.draggedItemType = "";
-                                panel.dropTargetContainerId = "";
-                                panel.dropTargetContainerId = "";
-                                panel.draggedItemParentId = null;
-                                panel.dropTargetParentId = null;
-                                panel.dropInsertIndex = -1;
-                            }
+                            delegateRoot.resetDragState();
                         }
                     }
 
@@ -309,7 +299,7 @@ Item {
                     draftName = nameField.text;
                     isEditing = false;
                     if (draftName !== delegateRoot.name) {
-                        canvasModel.renameItem(delegateRoot.modelIndex, draftName);
+                        canvasModel.renameItem(delegateRoot.index, draftName);
                     }
                     // Return focus to the list so global shortcuts (undo/redo) work
                     nameField.focus = false;
@@ -338,14 +328,14 @@ Item {
                     preventStealing: true
                     onClicked: function (mouse) {
                         if (mouse.button === Qt.RightButton) {
-                            panel.setSelectionFromDelegate(delegateRoot.modelIndex, false);
+                            panel.setSelectionFromDelegate(delegateRoot.index, false);
                             itemContextMenu.popup();
                         } else {
-                            panel.setSelectionFromDelegate(delegateRoot.modelIndex, mouse.modifiers & Qt.ControlModifier);
+                            panel.setSelectionFromDelegate(delegateRoot.index, mouse.modifiers & Qt.ControlModifier);
                         }
                     }
                     onDoubleClicked: function (mouse) {
-                        panel.setSelectionFromDelegate(delegateRoot.modelIndex, mouse.modifiers & Qt.ControlModifier);
+                        panel.setSelectionFromDelegate(delegateRoot.index, mouse.modifiers & Qt.ControlModifier);
                         nameEditor.startEditing();
                     }
 
@@ -367,12 +357,7 @@ Item {
 
                         Action {
                             text: qsTr("Delete")
-                            onTriggered: {
-                                Lucent.SelectionManager.selectedIndices = [delegateRoot.modelIndex];
-                                Lucent.SelectionManager.selectedItemIndex = delegateRoot.modelIndex;
-                                Lucent.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.modelIndex);
-                                canvasModel.removeItem(delegateRoot.modelIndex);
-                            }
+                            onTriggered: delegateRoot.deleteItem()
                         }
                     }
                 }
@@ -382,7 +367,7 @@ Item {
                     visible: !nameEditor.isEditing
                     text: delegateRoot.name
                     font.pixelSize: 11
-                    color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
+                    color: delegateRoot.itemTextColor
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                     Layout.minimumWidth: 40
@@ -393,7 +378,7 @@ Item {
                     visible: nameEditor.isEditing
                     text: nameEditor.draftName
                     font.pixelSize: 11
-                    color: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
+                    color: delegateRoot.itemTextColor
                     horizontalAlignment: Text.AlignLeft
                     verticalAlignment: TextInput.AlignVCenter
                     padding: 0
@@ -431,31 +416,26 @@ Item {
 
             Lucent.IconButton {
                 iconName: delegateRoot.modelVisible ? "eye" : "eye-closed"
-                iconBaseColor: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
+                iconBaseColor: delegateRoot.itemTextColor
                 size: 28
                 iconSize: 16
-                onClicked: canvasModel.toggleVisibility(delegateRoot.modelIndex)
+                onClicked: canvasModel.toggleVisibility(delegateRoot.index)
             }
 
             Lucent.IconButton {
                 iconName: delegateRoot.modelLocked ? "lock" : "lock-open"
-                iconBaseColor: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
+                iconBaseColor: delegateRoot.itemTextColor
                 size: 28
                 iconSize: 16
-                onClicked: canvasModel.toggleLocked(delegateRoot.modelIndex)
+                onClicked: canvasModel.toggleLocked(delegateRoot.index)
             }
 
             Lucent.IconButton {
                 iconName: "trash"
-                iconBaseColor: delegateRoot.isSelected ? themePalette.highlightedText : themePalette.text
+                iconBaseColor: delegateRoot.itemTextColor
                 size: 28
                 iconSize: 16
-                onClicked: {
-                    Lucent.SelectionManager.selectedIndices = [delegateRoot.modelIndex];
-                    Lucent.SelectionManager.selectedItemIndex = delegateRoot.modelIndex;
-                    Lucent.SelectionManager.selectedItem = canvasModel.getItemData(delegateRoot.modelIndex);
-                    canvasModel.removeItem(delegateRoot.modelIndex);
-                }
+                onClicked: delegateRoot.deleteItem()
             }
         }
     }
