@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import "." as Lucent
+import ".." as Lucent
 
 // Panel displaying unified transform properties (X, Y, Width, Height) for selected items
 Item {

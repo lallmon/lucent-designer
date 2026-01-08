@@ -127,7 +127,6 @@ class TestFill:
         fill.render(painter, path, zoom_level=1.0, offset_x=0, offset_y=0)
         painter.end()
 
-        # Image should still be white
         center_pixel = img.pixelColor(35, 35)
         assert center_pixel == QColor(0xFFFFFFFF)
 
@@ -139,16 +138,13 @@ class TestFill:
 
         fill = Fill(color="#ff0000", opacity=1.0, visible=True)
         path = QPainterPath()
-        path.addRect(0, 0, 20, 20)  # Path at origin
+        path.addRect(0, 0, 20, 20)
 
         fill.render(painter, path, zoom_level=1.0, offset_x=40, offset_y=40)
         painter.end()
 
-        # Pixel at offset location should be red
         offset_pixel = img.pixelColor(50, 50)
         assert offset_pixel.red() == 255
-
-        # Original location should still be white
         origin_pixel = img.pixelColor(10, 10)
         assert origin_pixel == QColor(0xFFFFFFFF)
 
@@ -271,7 +267,6 @@ class TestStroke:
         stroke.render(painter, path, zoom_level=1.0, offset_x=0, offset_y=0)
         painter.end()
 
-        # Edge should still be white (no stroke painted)
         edge_pixel = img.pixelColor(20, 40)
         assert edge_pixel == QColor(0xFFFFFFFF)
 
@@ -288,7 +283,6 @@ class TestStroke:
         stroke.render(painter, path, zoom_level=1.0, offset_x=0, offset_y=0)
         painter.end()
 
-        # Edge should still be white
         edge_pixel = img.pixelColor(20, 40)
         assert edge_pixel == QColor(0xFFFFFFFF)
 
@@ -300,12 +294,11 @@ class TestStroke:
 
         stroke = Stroke(color="#0000ff", width=5.0, opacity=1.0, visible=True)
         path = QPainterPath()
-        path.addRect(0, 0, 20, 20)  # Path at origin
+        path.addRect(0, 0, 20, 20)
 
         stroke.render(painter, path, zoom_level=1.0, offset_x=40, offset_y=40)
         painter.end()
 
-        # Original location should still be white
         origin_pixel = img.pixelColor(5, 5)
         assert origin_pixel == QColor(0xFFFFFFFF)
 

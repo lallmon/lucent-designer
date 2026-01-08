@@ -1,5 +1,6 @@
 """Unit tests for canvas_items module."""
 
+import pytest
 from PySide6.QtGui import QPainter
 from lucent.canvas_items import (
     CanvasItem,
@@ -145,29 +146,21 @@ class TestRectangleItem:
         )
         assert rect.name == "My Rectangle"
 
-    def test_parent_id_property(self):
-        """Test parent_id property."""
+    @pytest.mark.parametrize(
+        "kwargs, attr, expected",
+        [
+            ({"name": "My Rectangle"}, "name", "My Rectangle"),
+            ({"parent_id": "layer-123"}, "parent_id", "layer-123"),
+            ({"locked": True}, "locked", True),
+            ({"visible": False}, "visible", False),
+        ],
+    )
+    def test_common_properties(self, kwargs, attr, expected):
         geometry = RectGeometry(x=0, y=0, width=10, height=10)
         rect = RectangleItem(
-            geometry=geometry, appearances=default_appearances(), parent_id="layer-123"
+            geometry=geometry, appearances=default_appearances(), **kwargs
         )
-        assert rect.parent_id == "layer-123"
-
-    def test_locked_property(self):
-        """Test locked property."""
-        geometry = RectGeometry(x=0, y=0, width=10, height=10)
-        rect = RectangleItem(
-            geometry=geometry, appearances=default_appearances(), locked=True
-        )
-        assert rect.locked is True
-
-    def test_visible_property(self):
-        """Test visible property."""
-        geometry = RectGeometry(x=0, y=0, width=10, height=10)
-        rect = RectangleItem(
-            geometry=geometry, appearances=default_appearances(), visible=False
-        )
-        assert rect.visible is False
+        assert getattr(rect, attr) == expected
 
 
 class TestEllipseItem:
@@ -356,7 +349,7 @@ class TestCanvasPainting:
         rect = RectangleItem(
             geometry=geometry, appearances=default_appearances(), visible=False
         )
-        rect.paint(painter, zoom_level=1.0)  # Should not crash
+        rect.paint(painter, zoom_level=1.0)
         painter.end()
 
 
@@ -486,29 +479,25 @@ class TestTextItem:
         assert text.text_color == "#ff0000"
         assert text.text_opacity == 0.8
 
-    def test_font_size_minimum_clamped(self):
-        """Test that font size below 8 is clamped to 8."""
+    @pytest.mark.parametrize(
+        "font_size, expected",
+        [(2, 8), (500, 200)],
+    )
+    def test_font_size_clamped(self, font_size, expected):
+        """Font size is clamped to valid range."""
         geometry = TextGeometry(x=0, y=0, width=100, height=0)
-        text = TextItem(geometry=geometry, text="Small", font_size=2)
-        assert text.font_size == 8
+        text = TextItem(geometry=geometry, text="Size", font_size=font_size)
+        assert text.font_size == expected
 
-    def test_font_size_maximum_clamped(self):
-        """Test that font size above 200 is clamped to 200."""
+    @pytest.mark.parametrize(
+        "opacity, expected",
+        [(-0.5, 0.0), (1.5, 1.0)],
+    )
+    def test_text_opacity_clamped(self, opacity, expected):
+        """Text opacity is clamped to valid range."""
         geometry = TextGeometry(x=0, y=0, width=100, height=0)
-        text = TextItem(geometry=geometry, text="Large", font_size=500)
-        assert text.font_size == 200
-
-    def test_text_opacity_minimum_clamped(self):
-        """Test that text opacity below 0 is clamped to 0."""
-        geometry = TextGeometry(x=0, y=0, width=100, height=0)
-        text = TextItem(geometry=geometry, text="Faded", text_opacity=-0.5)
-        assert text.text_opacity == 0.0
-
-    def test_text_opacity_maximum_clamped(self):
-        """Test that text opacity above 1 is clamped to 1."""
-        geometry = TextGeometry(x=0, y=0, width=100, height=0)
-        text = TextItem(geometry=geometry, text="Solid", text_opacity=1.5)
-        assert text.text_opacity == 1.0
+        text = TextItem(geometry=geometry, text="Opacity", text_opacity=opacity)
+        assert text.text_opacity == expected
 
     def test_from_dict_basic(self):
         """Test creating text item from dictionary with basic data."""

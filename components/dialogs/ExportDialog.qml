@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Qt.labs.platform as Platform
-import "." as Lucent
+import ".." as Lucent
 
 Dialog {
     id: root

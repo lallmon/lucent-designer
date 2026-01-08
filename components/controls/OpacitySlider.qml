@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import "." as Lucent
+import ".." as Lucent
 
 Slider {
     id: root

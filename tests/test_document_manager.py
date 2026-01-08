@@ -192,7 +192,6 @@ class TestOpenDocument:
         self, doc_manager: DocumentManager, canvas_model: CanvasModel, tmp_path: Path
     ) -> None:
         """openDocument() loads items from file."""
-        # Create a test file
         file_path = tmp_path / "test.lucent"
         data = {
             "version": LUCENT_VERSION,
@@ -247,11 +246,9 @@ class TestOpenDocument:
         self, doc_manager: DocumentManager, canvas_model: CanvasModel, tmp_path: Path
     ) -> None:
         """openDocument() clears dirty flag."""
-        # Make dirty first
         canvas_model.addItem(make_rectangle())
         assert doc_manager.dirty is True
 
-        # Create and open a file
         file_path = tmp_path / "test.lucent"
         data = {"version": LUCENT_VERSION, "items": []}
         with open(file_path, "w") as f:
@@ -281,7 +278,6 @@ class TestDocumentTitle:
 
         doc_manager.saveDocumentAs(str(file_path))
 
-        # Document title is the stem (without extension)
         assert doc_manager.documentTitle == "mydesign"
 
     def test_title_changes_after_save_as(

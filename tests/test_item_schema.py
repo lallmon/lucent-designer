@@ -78,16 +78,16 @@ def test_validate_path_clamps_appearances():
             "closed": True,
         },
         "appearances": [
-            {"type": "fill", "color": "#abcdef", "opacity": 2.0},  # Over max
+            {"type": "fill", "color": "#abcdef", "opacity": 2.0},
             {"type": "stroke", "color": "#123456", "width": -1, "opacity": 5.0},
         ],
     }
     out = validate_path(data)
     fill = next(a for a in out["appearances"] if a["type"] == "fill")
     stroke = next(a for a in out["appearances"] if a["type"] == "stroke")
-    assert fill["opacity"] == 1.0  # Clamped
-    assert stroke["width"] == 0.0  # Clamped to min
-    assert stroke["opacity"] == 1.0  # Clamped
+    assert fill["opacity"] == 1.0
+    assert stroke["width"] == 0.0
+    assert stroke["opacity"] == 1.0
 
 
 def test_validate_path_requires_two_points():
@@ -202,9 +202,9 @@ def test_validate_text_clamps_and_defaults():
         "geometry": {"x": 10, "y": 20, "width": 100, "height": 0},
         "text": "Hello",
         "fontFamily": "Monospace",
-        "fontSize": 5,  # Below minimum
+        "fontSize": 5,
         "textColor": "#ff0000",
-        "textOpacity": 2.0,  # Above maximum
+        "textOpacity": 2.0,
         "name": "MyText",
         "parentId": "layer-1",
     }
@@ -213,9 +213,9 @@ def test_validate_text_clamps_and_defaults():
     assert out["geometry"]["y"] == 20
     assert out["text"] == "Hello"
     assert out["fontFamily"] == "Monospace"
-    assert out["fontSize"] == 8  # Clamped to minimum
+    assert out["fontSize"] == 8
     assert out["textColor"] == "#ff0000"
-    assert out["textOpacity"] == 1.0  # Clamped to maximum
+    assert out["textOpacity"] == 1.0
     assert out["name"] == "MyText"
     assert out["parentId"] == "layer-1"
 
@@ -434,14 +434,36 @@ def test_item_to_dict_rejects_unknown():
 class TestLockedSerialization:
     """Tests for locked property validation and serialization."""
 
-    def test_validate_rectangle_includes_locked(self):
-        """validate_rectangle should include locked in output."""
-        data = {
-            "type": "rectangle",
-            "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
-            "locked": True,
-        }
-        out = validate_rectangle(data)
+    @pytest.mark.parametrize(
+        "validator,data",
+        [
+            (
+                validate_rectangle,
+                {
+                    "type": "rectangle",
+                    "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
+                    "locked": True,
+                },
+            ),
+            (
+                validate_ellipse,
+                {
+                    "type": "ellipse",
+                    "geometry": {
+                        "centerX": 0,
+                        "centerY": 0,
+                        "radiusX": 10,
+                        "radiusY": 10,
+                    },
+                    "locked": True,
+                },
+            ),
+            (validate_layer, {"type": "layer", "name": "Test", "locked": True}),
+            (validate_text, {"type": "text", "text": "Hello", "locked": True}),
+        ],
+    )
+    def test_validate_includes_locked(self, validator, data):
+        out = validator(data)
         assert out["locked"] is True
 
     def test_validate_rectangle_locked_defaults_false(self):
@@ -453,78 +475,37 @@ class TestLockedSerialization:
         out = validate_rectangle(data)
         assert out["locked"] is False
 
-    def test_validate_ellipse_includes_locked(self):
-        """validate_ellipse should include locked in output."""
-        data = {
-            "type": "ellipse",
-            "geometry": {"centerX": 0, "centerY": 0, "radiusX": 10, "radiusY": 10},
-            "locked": True,
-        }
-        out = validate_ellipse(data)
-        assert out["locked"] is True
-
-    def test_validate_layer_includes_locked(self):
-        """validate_layer should include locked in output."""
-        data = {"type": "layer", "name": "Test", "locked": True}
-        out = validate_layer(data)
-        assert out["locked"] is True
-
-    def test_parse_item_rectangle_preserves_locked(self):
-        """parse_item should create RectangleItem with locked property."""
-        rect = parse_item(
-            {
-                "type": "rectangle",
-                "geometry": {"x": 0, "y": 0, "width": 10, "height": 10},
-                "locked": True,
-            }
-        )
-        assert rect.locked is True
-
-    def test_item_to_dict_rectangle_includes_locked(self):
-        """item_to_dict should include locked for RectangleItem."""
-        geometry = RectGeometry(x=0, y=0, width=10, height=10)
-        rect = RectangleItem(
-            geometry=geometry,
-            appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
-            locked=True,
-        )
-        out = item_to_dict(rect)
-        assert out["locked"] is True
-
-    def test_item_to_dict_ellipse_includes_locked(self):
-        """item_to_dict should include locked for EllipseItem."""
-        geometry = EllipseGeometry(center_x=0, center_y=0, radius_x=10, radius_y=10)
-        ell = EllipseItem(
-            geometry=geometry,
-            appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
-            locked=True,
-        )
-        out = item_to_dict(ell)
-        assert out["locked"] is True
-
-    def test_item_to_dict_layer_includes_locked(self):
-        """item_to_dict should include locked for LayerItem."""
-        layer = LayerItem(name="Test", locked=True)
-        out = item_to_dict(layer)
-        assert out["locked"] is True
-
-    def test_validate_text_includes_locked(self):
-        """validate_text should include locked in output."""
-        data = {"type": "text", "text": "Hello", "locked": True}
-        out = validate_text(data)
-        assert out["locked"] is True
-
     def test_validate_text_includes_visible(self):
         """validate_text should include visible in output."""
         data = {"type": "text", "text": "Hello", "visible": False}
         out = validate_text(data)
         assert out["visible"] is False
 
-    def test_item_to_dict_text_includes_locked(self):
-        """item_to_dict should include locked for TextItem."""
-        geometry = TextGeometry(x=0, y=0, width=100, height=0)
-        text = TextItem(geometry=geometry, text="Hello", locked=True)
-        out = item_to_dict(text)
+    @pytest.mark.parametrize(
+        "item",
+        [
+            RectangleItem(
+                geometry=RectGeometry(x=0, y=0, width=10, height=10),
+                appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
+                locked=True,
+            ),
+            EllipseItem(
+                geometry=EllipseGeometry(
+                    center_x=0, center_y=0, radius_x=10, radius_y=10
+                ),
+                appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
+                locked=True,
+            ),
+            LayerItem(name="Test", locked=True),
+            TextItem(
+                geometry=TextGeometry(x=0, y=0, width=100, height=0),
+                text="Hello",
+                locked=True,
+            ),
+        ],
+    )
+    def test_item_to_dict_includes_locked(self, item):
+        out = item_to_dict(item)
         assert out["locked"] is True
 
     def test_item_to_dict_text_includes_visible(self):

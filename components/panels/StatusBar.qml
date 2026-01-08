@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import ".." as Lucent
 
 ToolBar {
     id: root
@@ -16,7 +17,7 @@ ToolBar {
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
             spacing: 6
-            PhIcon {
+            Lucent.PhIcon {
                 name: "crosshair-simple"
                 size: 16
                 color: "white"
@@ -32,7 +33,7 @@ ToolBar {
         RowLayout {
             Layout.rightMargin: 10
             spacing: 6
-            PhIcon {
+            Lucent.PhIcon {
                 name: "magnifying-glass"
                 size: 16
                 color: "white"

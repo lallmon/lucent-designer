@@ -1,66 +1,34 @@
 """Unit tests for canvas_renderer module."""
 
 import pytest
-from lucent.canvas_renderer import CanvasRenderer
-from lucent.canvas_model import CanvasModel
 from PySide6.QtGui import QImage, QPainter
 from PySide6.QtCore import QSize
+
+from test_helpers import make_rectangle, make_ellipse
 
 
 class TestCanvasRendererZOrder:
     """Tests for z-order (render order) in CanvasRenderer."""
 
-    @pytest.fixture
-    def canvas_model(self, qtbot):
-        """Create a fresh CanvasModel for each test."""
-        model = CanvasModel()
-        qtbot.addWidget  # Register for cleanup
-        return model
-
-    @pytest.fixture
-    def canvas_renderer(self, qtbot, canvas_model):
-        """Create a CanvasRenderer with a model."""
-        renderer = CanvasRenderer()
-        renderer.setModel(canvas_model)
-        return renderer
+    @pytest.fixture(autouse=True)
+    def _attach_model(self, canvas_renderer, canvas_model):
+        canvas_renderer.setModel(canvas_model)
+        return canvas_renderer
 
     def test_render_order_matches_model_order(self, canvas_renderer, canvas_model):
         """Render order follows model order (higher index paints on top)."""
         canvas_model.addItem(
-            {
-                "type": "rectangle",
-                "x": 0,
-                "y": 0,
-                "width": 10,
-                "height": 10,
-                "name": "First",
-            }
+            make_rectangle(x=0, y=0, width=10, height=10, name="First")
         )
         canvas_model.addItem(
-            {
-                "type": "rectangle",
-                "x": 5,
-                "y": 5,
-                "width": 10,
-                "height": 10,
-                "name": "Second",
-            }
+            make_rectangle(x=5, y=5, width=10, height=10, name="Second")
         )
         canvas_model.addItem(
-            {
-                "type": "rectangle",
-                "x": 10,
-                "y": 10,
-                "width": 10,
-                "height": 10,
-                "name": "Third",
-            }
+            make_rectangle(x=10, y=10, width=10, height=10, name="Third")
         )
 
-        # Model order: [First (0), Second (1), Third (2)]
         render_order = canvas_renderer._get_render_order()
 
-        # Render order matches model order (painting later items on top)
         assert len(render_order) == 3
         assert render_order[0].name == "First"
         assert render_order[1].name == "Second"
@@ -70,31 +38,17 @@ class TestCanvasRendererZOrder:
         """Layers should be skipped in render order (they're organizational only)."""
         canvas_model.addLayer()
         canvas_model.addItem(
-            {
-                "type": "rectangle",
-                "x": 0,
-                "y": 0,
-                "width": 10,
-                "height": 10,
-                "name": "Rect1",
-            }
+            make_rectangle(x=0, y=0, width=10, height=10, name="Rect1")
         )
         canvas_model.addLayer()
         canvas_model.addItem(
-            {
-                "type": "ellipse",
-                "centerX": 5,
-                "centerY": 5,
-                "radiusX": 5,
-                "radiusY": 5,
-                "name": "Ellipse1",
-            }
+            make_ellipse(
+                center_x=5, center_y=5, radius_x=5, radius_y=5, name="Ellipse1"
+            )
         )
 
-        # Model: [Layer1, Rect1, Layer2, Ellipse1]
         render_order = canvas_renderer._get_render_order()
 
-        # Should only contain shapes, not layers, in reversed order
         assert len(render_order) == 2
         assert render_order[0].name == "Rect1"
         assert render_order[1].name == "Ellipse1"
@@ -103,40 +57,22 @@ class TestCanvasRendererZOrder:
         """Parented items render in model order."""
         canvas_model.addLayer()
         layer = canvas_model.getItems()[0]
-        canvas_model.addItem(
-            {
-                "type": "rectangle",
-                "x": 0,
-                "y": 0,
-                "width": 10,
-                "height": 10,
-                "name": "Child1",
-            }
-        )
-        canvas_model.setParent(1, layer.id)
-        canvas_model.addItem(
-            {
-                "type": "rectangle",
-                "x": 10,
-                "y": 0,
-                "width": 10,
-                "height": 10,
-                "name": "Child2",
-            }
-        )
-        canvas_model.setParent(2, layer.id)
+        child1 = make_rectangle(x=0, y=0, width=10, height=10, name="Child1")
+        child1["parentId"] = layer.id
+        canvas_model.addItem(child1)
 
-        # Model: [Layer, Child1, Child2]
+        child2 = make_rectangle(x=10, y=0, width=10, height=10, name="Child2")
+        child2["parentId"] = layer.id
+        canvas_model.addItem(child2)
+
         render_order = canvas_renderer._get_render_order()
 
-        # Model order preserved
         assert len(render_order) == 2
         assert render_order[0].name == "Child1"
         assert render_order[1].name == "Child2"
 
     def test_render_order_after_layer_move(self, canvas_renderer, canvas_model):
         """After moving a layer, render order should reflect new model order."""
-        # Create two layers with children
         canvas_model.addLayer()
         layer1 = canvas_model.getItems()[0]
         canvas_model.addItem(
@@ -165,17 +101,12 @@ class TestCanvasRendererZOrder:
         )
         canvas_model.setParent(3, layer2.id)
 
-        # Model: [Layer1, L1Child, Layer2, L2Child]
-        # Initially: L1Child on top, L2Child behind
         render_order = canvas_renderer._get_render_order()
         assert render_order[0].name == "L1Child"
         assert render_order[1].name == "L2Child"
 
-        # Move Layer2 to top (index 2 -> 0)
         canvas_model.moveItem(2, 0)
 
-        # New model: [Layer2, L2Child, Layer1, L1Child]
-        # Now: L2Child on top, L1Child behind
         render_order = canvas_renderer._get_render_order()
         assert render_order[0].name == "L2Child"
         assert render_order[1].name == "L1Child"
@@ -193,7 +124,7 @@ class TestCanvasRendererZOrder:
         image = QImage(QSize(5, 5), QImage.Format_ARGB32)
         image.fill(0)
         painter = QPainter(image)
-        canvas_renderer.paint(painter)  # should not raise
+        canvas_renderer.paint(painter)
         painter.end()
 
     def test_paint_invokes_item_paint(self, canvas_renderer, canvas_model):

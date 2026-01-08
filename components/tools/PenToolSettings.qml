@@ -1,21 +1,21 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import "." as Lucent
+import ".." as Lucent
 
 RowLayout {
     id: root
 
-    // Edit mode: when true, we're editing a selected item instead of setting defaults
+    // Edit mode: when true, we're editing a selected path instead of setting defaults
     property bool editMode: false
     property var selectedItem: null
 
     // Internal defaults for creation mode
-    property real _defaultStrokeWidth: 0
+    property real _defaultStrokeWidth: 1
     property color _defaultStrokeColor: Lucent.Themed.defaultStroke
     property real _defaultStrokeOpacity: 1.0
     property color _defaultFillColor: Lucent.Themed.defaultFill
-    property real _defaultFillOpacity: 1.0
+    property real _defaultFillOpacity: 0.0
 
     // Helper to get fill appearance from selectedItem
     function _getFill() {
@@ -198,7 +198,7 @@ RowLayout {
     }
 
     Label {
-        text: qsTr("Opacity:")
+        text: qsTr("Fill Opacity:")
         font.pixelSize: 11
         Layout.alignment: Qt.AlignVCenter
     }

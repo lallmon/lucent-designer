@@ -8,7 +8,6 @@ def test_add_points_and_preview_segment():
     state.add_point(0, 0)
     state.add_point(10, 0)
 
-    # Preview should reference last point to cursor
     preview = state.preview_to(12, 4)
     assert preview == ((10.0, 0.0), (12.0, 4.0))
     assert state.points == [(0.0, 0.0), (10.0, 0.0)]

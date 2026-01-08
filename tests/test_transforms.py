@@ -65,7 +65,6 @@ class TestTransform:
         transform = Transform(translate_x=10, translate_y=20)
         qtransform = transform.to_qtransform()
 
-        # Transform a point
         point = QPointF(0, 0)
         result = qtransform.map(point)
         assert abs(result.x() - 10) < 0.001
@@ -76,7 +75,6 @@ class TestTransform:
         transform = Transform(rotate=90)
         qtransform = transform.to_qtransform()
 
-        # Transform a point - 90 degree rotation
         point = QPointF(1, 0)
         result = qtransform.map(point)
         assert abs(result.x()) < 0.001
@@ -87,7 +85,6 @@ class TestTransform:
         transform = Transform(scale_x=2, scale_y=3)
         qtransform = transform.to_qtransform()
 
-        # Transform a point
         point = QPointF(5, 10)
         result = qtransform.map(point)
         assert abs(result.x() - 10) < 0.001
@@ -95,14 +92,11 @@ class TestTransform:
 
     def test_to_qtransform_combined(self):
         """Test to_qtransform with combined transforms."""
-        # Translation + scale
         transform = Transform(translate_x=10, scale_x=2)
         qtransform = transform.to_qtransform()
 
-        # Point at origin should be translated then scaled
         point = QPointF(0, 0)
         result = qtransform.map(point)
-        # Translation happens first, then scale
         assert abs(result.x() - 10) < 0.001
 
     def test_to_dict(self):
@@ -220,10 +214,8 @@ class TestTransform:
     def test_to_qtransform_centered_rotation_keeps_center(self):
         """90 degree rotation around center should keep center stationary."""
         transform = Transform(rotate=90)
-        # Center of a 100x100 rectangle at origin is (50, 50)
         qtransform = transform.to_qtransform_centered(50, 50)
 
-        # The center point should stay at (50, 50)
         center = QPointF(50, 50)
         result = qtransform.map(center)
         assert abs(result.x() - 50) < 0.001
@@ -232,10 +224,8 @@ class TestTransform:
     def test_to_qtransform_centered_rotation_moves_corners(self):
         """90 degree rotation should move corners appropriately."""
         transform = Transform(rotate=90)
-        # Center at (50, 50)
         qtransform = transform.to_qtransform_centered(50, 50)
 
-        # Top-left (0, 0) should rotate to bottom-left (0, 100) relative to center
         top_left = QPointF(0, 0)
         result = qtransform.map(top_left)
         assert abs(result.x() - 100) < 0.001
@@ -246,7 +236,6 @@ class TestTransform:
         transform = Transform(scale_x=2, scale_y=2)
         qtransform = transform.to_qtransform_centered(50, 50)
 
-        # Center should stay at (50, 50)
         center = QPointF(50, 50)
         result = qtransform.map(center)
         assert abs(result.x() - 50) < 0.001
@@ -268,7 +257,6 @@ class TestTransform:
         transform = Transform(translate_x=10, translate_y=20, rotate=0)
         qtransform = transform.to_qtransform_centered(50, 50)
 
-        # Point at origin should be translated by (10, 20)
         origin = QPointF(0, 0)
         result = qtransform.map(origin)
         assert abs(result.x() - 10) < 0.001
@@ -313,17 +301,14 @@ class TestTransformOrigin:
 
     def test_rotation_around_topleft_origin(self):
         """Rotation around top-left moves the shape."""
-        # Rect from (0,0) to (100, 50), rotate around top-left (0,0)
         transform = Transform(rotate=90)
         qtransform = transform.to_qtransform_centered(0, 0)
 
-        # Top-left stays at origin
         top_left = QPointF(0, 0)
         result = qtransform.map(top_left)
         assert abs(result.x()) < 0.001
         assert abs(result.y()) < 0.001
 
-        # Bottom-right (100, 50) rotates 90 degrees around origin
         bottom_right = QPointF(100, 50)
         result = qtransform.map(bottom_right)
         assert abs(result.x() + 50) < 0.001  # y becomes -x
@@ -331,19 +316,15 @@ class TestTransformOrigin:
 
     def test_rotation_around_bottomright_origin(self):
         """Rotation around bottom-right corner."""
-        # For a rect (0,0,100,50), bottom-right is (100, 50)
         transform = Transform(rotate=180)
         qtransform = transform.to_qtransform_centered(100, 50)
 
-        # Bottom-right stays at (100, 50)
         bottom_right = QPointF(100, 50)
         result = qtransform.map(bottom_right)
         assert abs(result.x() - 100) < 0.001
         assert abs(result.y() - 50) < 0.001
 
-        # Top-left (0, 0) rotates 180 degrees around (100, 50)
-        # Distance from pivot: (-100, -50), rotated 180: (100, 50)
-        # Final position: (100 + 100, 50 + 50) = (200, 100)
+        # Rotating top-left around (100, 50) should land at (200, 100)
         top_left = QPointF(0, 0)
         result = qtransform.map(top_left)
         assert abs(result.x() - 200) < 0.001

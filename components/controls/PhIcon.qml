@@ -1,6 +1,6 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
-import "." as Lucent
+import ".." as Lucent
 
 Item {
     id: root
@@ -18,7 +18,7 @@ Item {
     width: size
     height: size
 
-    readonly property url resolvedSource: name === "" ? "" : Qt.resolvedUrl("../assets/phosphor/" + weight + "/" + name + ".svg")
+    readonly property url resolvedSource: name === "" ? "" : Qt.resolvedUrl("../../assets/phosphor/" + weight + "/" + name + ".svg")
 
     Image {
         id: image

@@ -11,7 +11,6 @@ class TestFontProvider:
         provider = FontProvider()
         fonts = provider.get_fonts()
         assert isinstance(fonts, list)
-        # Should have at least some fonts on any system
         assert len(fonts) > 0
 
     def test_fonts_are_sorted(self, qtbot):
@@ -45,7 +44,6 @@ class TestFontProvider:
         fonts = provider.get_fonts()
         if len(fonts) > 0:
             first_font = fonts[0]
-            # Try with different case
             assert provider.indexOf(first_font.upper()) == 0
             assert provider.indexOf(first_font.lower()) == 0
 
@@ -54,14 +52,12 @@ class TestFontProvider:
         provider = FontProvider()
         default = provider.defaultFont()
         assert isinstance(default, str)
-        # Default should be in the fonts list (if list is not empty)
         if provider.get_fonts():
             assert default in provider.get_fonts()
 
     def test_fonts_property_accessible(self, qtbot):
         """fonts property should be accessible."""
         provider = FontProvider()
-        # Access via property
         fonts = provider.fonts
         assert isinstance(fonts, list)
         assert len(fonts) == provider.fontCount()

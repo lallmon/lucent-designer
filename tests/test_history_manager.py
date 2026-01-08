@@ -79,15 +79,12 @@ def test_transaction_groups_commands_into_single_undo():
     history.end_transaction()
 
     assert history.can_undo is True
-    # Two executes happened
     assert state == ["do:a", "do:b"]
 
-    # Single undo should undo both in reverse
     history.undo()
     assert state == ["do:a", "do:b", "undo:b", "undo:a"]
     assert history.can_redo is True
 
-    # Redo should replay both
     history.redo()
     assert state == ["do:a", "do:b", "undo:b", "undo:a", "do:a", "do:b"]
 
@@ -103,11 +100,10 @@ def test_begin_transaction_while_active_is_ignored():
     history = HistoryManager()
     state = []
     history.begin_transaction("Txn")
-    history.begin_transaction("Txn2")  # should be ignored
+    history.begin_transaction("Txn2")
     history.execute(DummyCommand(state, "a"))
     history.end_transaction()
     assert history.can_undo is True
-    # Undo should still work
     history.undo()
     assert state == ["do:a", "undo:a"]
 
@@ -120,7 +116,7 @@ def test_history_exposes_stacks_via_properties():
 
 def test_end_transaction_without_begin_is_noop():
     history = HistoryManager()
-    history.end_transaction()  # should not throw
+    history.end_transaction()
     assert history.can_undo is False
 
 

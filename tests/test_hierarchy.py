@@ -87,10 +87,10 @@ class TestGetDirectChildrenIndices:
         items = [
             MockItem(item_id="layer-1", is_container=True),
             MockItem(item_id="group-1", parent_id="layer-1", is_container=True),
-            MockItem(parent_id="group-1"),  # Grandchild
+            MockItem(parent_id="group-1"),
         ]
         result = get_direct_children_indices(items, "layer-1")
-        assert result == [1]  # Only direct child
+        assert result == [1]
 
 
 class TestGetDescendantIndices:
@@ -114,8 +114,8 @@ class TestGetDescendantIndices:
         items = [
             MockItem(item_id="layer-1", is_container=True),
             MockItem(item_id="group-1", parent_id="layer-1", is_container=True),
-            MockItem(parent_id="group-1"),  # Grandchild
-            MockItem(parent_id="layer-1"),  # Direct child
+            MockItem(parent_id="group-1"),
+            MockItem(parent_id="layer-1"),
         ]
         result = get_descendant_indices(items, "layer-1", is_container)
         assert set(result) == {1, 2, 3}

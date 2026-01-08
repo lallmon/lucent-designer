@@ -1,5 +1,5 @@
 import QtQuick
-import "." as Lucent
+import ".." as Lucent
 
 // Pen drawing tool component
 Item {

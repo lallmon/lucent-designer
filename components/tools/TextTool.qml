@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import "." as Lucent
+import ".." as Lucent
 
 // Text tool component for creating text boxes on the canvas
 Item {

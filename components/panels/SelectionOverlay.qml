@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
-import "." as Lucent
+import ".." as Lucent
 
 // Renders a bounding box for the currently selected item in canvas coordinates.
 // The overlay transforms with the shape (translate, rotate, scale around origin).

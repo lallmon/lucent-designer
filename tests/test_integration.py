@@ -117,20 +117,17 @@ class TestFullIntegration:
         """Test complete workflow: add item, update it, remove it."""
         canvas_renderer.setModel(canvas_model)
 
-        # Add item
         with qtbot.waitSignal(canvas_model.itemAdded, timeout=1000):
             canvas_model.addItem(make_rectangle(x=10, y=20, width=100, height=50))
 
         assert canvas_model.count() == 1
 
-        # Update item
         with qtbot.waitSignal(canvas_model.itemModified, timeout=1000):
             canvas_model.updateItem(0, make_rectangle(x=50, y=75, width=100, height=50))
 
         items = canvas_model.getItems()
         assert items[0].geometry.x == 50
 
-        # Remove item
         with qtbot.waitSignal(canvas_model.itemRemoved, timeout=1000):
             canvas_model.removeItem(0)
 
@@ -140,7 +137,6 @@ class TestFullIntegration:
         """Test workflow with multiple items."""
         canvas_renderer.setModel(canvas_model)
 
-        # Add multiple items
         canvas_model.addItem(make_rectangle(x=0, y=0, width=50, height=50))
         canvas_model.addItem(
             make_ellipse(center_x=100, center_y=100, radius_x=30, radius_y=30)
@@ -149,19 +145,16 @@ class TestFullIntegration:
 
         assert canvas_model.count() == 3
 
-        # Update middle item
         with qtbot.waitSignal(canvas_model.itemModified, timeout=1000):
             canvas_model.updateItem(
                 1, make_ellipse(center_x=150, center_y=150, radius_x=30, radius_y=30)
             )
 
-        # Remove first item
         with qtbot.waitSignal(canvas_model.itemRemoved, timeout=1000):
             canvas_model.removeItem(0)
 
         assert canvas_model.count() == 2
 
-        # Clear all
         with qtbot.waitSignal(canvas_model.itemsCleared, timeout=1000):
             canvas_model.clear()
 
@@ -173,7 +166,6 @@ class TestFullIntegration:
         """Test that renderer handles rapid model changes without crashing."""
         canvas_renderer.setModel(canvas_model)
 
-        # Rapidly add items
         for i in range(10):
             canvas_model.addItem(
                 make_rectangle(x=i * 10, y=i * 10, width=20, height=20)
@@ -181,19 +173,16 @@ class TestFullIntegration:
 
         assert canvas_model.count() == 10
 
-        # Rapidly update items
         for i in range(10):
             canvas_model.updateItem(
                 i, make_rectangle(x=i * 20, y=i * 10, width=20, height=20)
             )
 
-        # Rapidly remove items
         for i in range(5):
             canvas_model.removeItem(0)
 
         assert canvas_model.count() == 5
 
-        # Clear all
         canvas_model.clear()
         assert canvas_model.count() == 0
 
@@ -201,13 +190,11 @@ class TestFullIntegration:
         """Test changing zoom level with items present."""
         canvas_renderer.setModel(canvas_model)
 
-        # Add items
         canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=100))
         canvas_model.addItem(
             make_ellipse(center_x=150, center_y=150, radius_x=50, radius_y=50)
         )
 
-        # Change zoom levels
         zoom_levels = [0.5, 1.0, 2.0, 0.75, 1.5]
         for zoom in zoom_levels:
             with qtbot.waitSignal(canvas_renderer.zoomLevelChanged, timeout=1000):
@@ -215,5 +202,4 @@ class TestFullIntegration:
 
             assert canvas_renderer.zoomLevel == zoom
 
-        # Items should still be there
         assert canvas_model.count() == 2

@@ -57,7 +57,6 @@ class TestRectGeometry:
         rect = RectGeometry(x=10, y=20, width=100, height=50)
         path = rect.to_painter_path()
         assert isinstance(path, QPainterPath)
-        # Path bounding rect should match geometry bounds
         assert path.boundingRect() == QRectF(10, 20, 100, 50)
 
     def test_to_painter_path_zero_size(self):
@@ -146,7 +145,6 @@ class TestEllipseGeometry:
         ellipse = EllipseGeometry(center_x=50, center_y=50, radius_x=30, radius_y=20)
         path = ellipse.to_painter_path()
         assert isinstance(path, QPainterPath)
-        # Path bounding rect should match geometry bounds
         bounds = path.boundingRect()
         assert abs(bounds.x() - 20) < 0.01
         assert abs(bounds.y() - 30) < 0.01
@@ -252,7 +250,6 @@ class TestPolylineGeometry:
         polyline = PolylineGeometry(points=points, closed=False)
         path = polyline.to_painter_path()
         assert isinstance(path, QPainterPath)
-        # Open path should not be closed
         assert path.elementCount() == 3  # moveTo + 2 lineTo
 
     def test_to_painter_path_closed(self):
@@ -261,7 +258,6 @@ class TestPolylineGeometry:
         polyline = PolylineGeometry(points=points, closed=True)
         path = polyline.to_painter_path()
         assert isinstance(path, QPainterPath)
-        # Closed path should have closeSubpath element
         assert path.elementCount() == 4  # moveTo + 2 lineTo + close
 
     def test_to_dict(self):

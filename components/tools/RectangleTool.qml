@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import "." as Lucent
+import ".." as Lucent
 
 // Rectangle drawing tool component
 Item {

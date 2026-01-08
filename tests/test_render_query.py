@@ -59,7 +59,7 @@ class TestGetRenderItems:
         ]
 
         def is_visible(idx):
-            return idx != 1  # Middle item is invisible
+            return idx != 1
 
         result = get_render_items(items, is_container, is_renderable, is_visible)
         assert len(result) == 2
@@ -106,7 +106,7 @@ class TestGetHitTestItems:
         ]
 
         def is_visible(idx):
-            return idx != 1  # Middle item is invisible
+            return idx != 1
 
         def item_to_dict(item):
             return {"type": item.type}

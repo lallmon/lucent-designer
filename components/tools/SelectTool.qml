@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import "." as Lucent
+import ".." as Lucent
 
 // Select tool component - handles panning and object selection
 Item {

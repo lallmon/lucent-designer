@@ -48,11 +48,10 @@ from lucent.hierarchy import (
     is_effectively_visible,
     is_effectively_locked,
 )
-from lucent.bounding_box import (
-    union_bounds,
-    get_item_bounds,
-    translate_path_to_bounds,
-    bbox_to_ellipse_geometry,
+from lucent.model_geometry import (
+    apply_bounding_box,
+    compute_bounding_box,
+    compute_geometry_bounds,
 )
 from lucent.render_query import get_render_items, get_hit_test_items
 
@@ -804,17 +803,7 @@ class CanvasModel(QAbstractListModel):
     @Slot(int, result="QVariant")  # type: ignore[arg-type]
     def getBoundingBox(self, index: int) -> Optional[Dict[str, float]]:
         """Return axis-aligned bounding box for an item (or its descendants)."""
-        if not (0 <= index < len(self._items)):
-            return None
-        item = self._items[index]
-
-        def get_descendant_bounds(container_id: str) -> Optional[Dict[str, float]]:
-            """Get union of bounds for all descendants of a container."""
-            descendants = self._get_descendant_indices(container_id)
-            bounds_list = [self.getBoundingBox(idx) for idx in descendants]
-            return union_bounds([b for b in bounds_list if b is not None])
-
-        return get_item_bounds(item, get_descendant_bounds)
+        return compute_bounding_box(self._items, index, self._get_descendant_indices)
 
     @Slot(int, result="QVariant")  # type: ignore[arg-type]
     def getGeometryBounds(self, index: int) -> Optional[Dict[str, float]]:
@@ -832,19 +821,7 @@ class CanvasModel(QAbstractListModel):
         """
         if not (0 <= index < len(self._items)):
             return None
-        item = self._items[index]
-
-        # Only shape items have geometry
-        if not hasattr(item, "geometry"):
-            return None
-
-        bounds = item.geometry.get_bounds()
-        return {
-            "x": bounds.x(),
-            "y": bounds.y(),
-            "width": bounds.width(),
-            "height": bounds.height(),
-        }
+        return compute_geometry_bounds(self._items[index])
 
     @Slot(int, dict, result=bool)
     def setBoundingBox(self, index: int, bbox: Dict[str, float]) -> bool:
@@ -864,55 +841,11 @@ class CanvasModel(QAbstractListModel):
         """
         if not (0 <= index < len(self._items)):
             return False
-
-        item = self._items[index]
-        new_x = float(bbox.get("x", 0))
-        new_y = float(bbox.get("y", 0))
-        new_width = float(bbox.get("width", 0))
-        new_height = float(bbox.get("height", 0))
-
-        # Get current item data as base
-        current_data = self._itemToDict(item)
-
-        if isinstance(item, RectangleItem):
-            current_data["geometry"]["x"] = new_x
-            current_data["geometry"]["y"] = new_y
-            current_data["geometry"]["width"] = new_width
-            current_data["geometry"]["height"] = new_height
-            self.updateItem(index, current_data)
-            return True
-
-        if isinstance(item, EllipseItem):
-            ellipse_geom = bbox_to_ellipse_geometry(bbox)
-            current_data["geometry"]["centerX"] = ellipse_geom["centerX"]
-            current_data["geometry"]["centerY"] = ellipse_geom["centerY"]
-            current_data["geometry"]["radiusX"] = ellipse_geom["radiusX"]
-            current_data["geometry"]["radiusY"] = ellipse_geom["radiusY"]
-            self.updateItem(index, current_data)
-            return True
-
-        if isinstance(item, PathItem):
-            points = item.geometry.points
-            if not points:
-                return False
-            new_points = translate_path_to_bounds(points, new_x, new_y)
-            current_data["geometry"]["points"] = new_points
-            self.updateItem(index, current_data)
-            return True
-
-        if isinstance(item, TextItem):
-            current_data["geometry"]["x"] = new_x
-            current_data["geometry"]["y"] = new_y
-            current_data["geometry"]["width"] = new_width
-            current_data["geometry"]["height"] = new_height
-            self.updateItem(index, current_data)
-            return True
-
-        # Layers and groups are non-renderable containers
-        if isinstance(item, (LayerItem, GroupItem)):
+        updated = apply_bounding_box(self._items[index], bbox, self._itemToDict)
+        if updated is None:
             return False
-
-        return False
+        self.updateItem(index, updated)
+        return True
 
     def getRenderItems(self) -> List[CanvasItem]:
         """Return items in model order (bottom to top) skipping layers.
