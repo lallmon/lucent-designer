@@ -168,6 +168,13 @@ Item {
                                         return;
                                     }
 
+                                    // Adjust target for removal-insertion semantics when moving down in display
+                                    // (from higher model index to lower). The removal doesn't shift items
+                                    // below, so we need to insert one position higher.
+                                    if (panel.draggedIndex > targetModelIndex) {
+                                        targetModelIndex = Math.min(targetModelIndex + 1, rowCount - 1);
+                                    }
+
                                     // Determine the action based on drag context
                                     let didMove = false;
                                     if (panel.dropTargetContainerId !== "" && panel.draggedItemType !== "layer") {

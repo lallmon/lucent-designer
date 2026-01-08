@@ -78,20 +78,45 @@ class TestLayerPanelModelBehaviors:
         assert data is not None
         assert data["name"] == "My Custom Layer"
 
-    def test_move_item_reorders(self, model):
-        """LayerPanel drag-drop calls canvasModel.moveItem(from, to)."""
+    def test_move_item_up_in_model(self, model):
+        """Moving item to higher index (drag up in display, down in model)."""
+        # Model order: [A@0, B@1, C@2, D@3]
+        # Display order (reversed): [D, C, B, A] from top to bottom
         model.addItem({"type": "rectangle", "name": "A"})
         model.addItem({"type": "rectangle", "name": "B"})
         model.addItem({"type": "rectangle", "name": "C"})
+        model.addItem({"type": "rectangle", "name": "D"})
 
+        # Move A from index 0 to index 2 (dragging A up in display)
         model.moveItem(0, 2)
 
-        data_0 = model.getItemData(0)
-        data_2 = model.getItemData(2)
-        assert data_0 is not None
-        assert data_2 is not None
-        assert data_0["name"] == "B"
-        assert data_2["name"] == "A"
+        # Expected model: [B@0, C@1, A@2, D@3]
+        assert model.getItemData(0)["name"] == "B"
+        assert model.getItemData(1)["name"] == "C"
+        assert model.getItemData(2)["name"] == "A"
+        assert model.getItemData(3)["name"] == "D"
+
+    def test_move_item_down_in_model(self, model):
+        """Moving item to lower index (drag down in display, up in model).
+
+        This tests the off-by-one fix: when dragging from higher model index
+        to lower, the target must be adjusted for removal-insertion semantics.
+        """
+        # Model order: [A@0, B@1, C@2, D@3]
+        # Display order (reversed): [D, C, B, A] from top to bottom
+        model.addItem({"type": "rectangle", "name": "A"})
+        model.addItem({"type": "rectangle", "name": "B"})
+        model.addItem({"type": "rectangle", "name": "C"})
+        model.addItem({"type": "rectangle", "name": "D"})
+
+        # Move D from index 3 to index 1 (dragging D down in display)
+        model.moveItem(3, 1)
+
+        # Expected model: [A@0, D@1, B@2, C@3]
+        assert model.getItemData(0)["name"] == "A"
+        assert model.getItemData(1)["name"] == "D"
+        assert model.getItemData(2)["name"] == "B"
+        assert model.getItemData(3)["name"] == "C"
 
     def test_group_items_creates_group(self, model):
         """LayerPanel group button calls canvasModel.groupItems(indices)."""
