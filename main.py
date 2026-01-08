@@ -12,7 +12,7 @@ from pathlib import Path
 
 from typing import Optional, cast
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QOpenGLContext
+from PySide6.QtGui import QOpenGLContext, QFont
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtCore import Qt, QObject, Property, Signal
 from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
@@ -40,6 +40,13 @@ if __name__ == "__main__":
         from PySide6.QtQuickControls2 import QQuickStyle
 
         QQuickStyle.setStyle("Fusion")
+
+    # Set global font with fallbacks to stay close to platform defaults
+    app_font = QFont()
+    app_font.setFamilies(
+        ["Cantarell", "Segoe UI", "Tahoma", "Ubuntu", "Roboto", "sans-serif"]
+    )
+    app.setFont(app_font)
 
     class AppInfo(QObject):
         rendererBackendChanged = Signal()
