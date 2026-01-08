@@ -44,7 +44,6 @@ Item {
             }
 
             RowLayout {
-                spacing: 4
 
                 Rectangle {
                     id: addLayerButton

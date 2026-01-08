@@ -15,10 +15,8 @@ Pane {
         anchors.fill: parent
         spacing: 0
 
-        // Transform section - fixed height based on content
         Pane {
             Layout.fillWidth: true
-            padding: 12
 
             TransformPanel {
                 id: transformPanel
@@ -34,12 +32,10 @@ Pane {
             color: themePalette.mid
         }
 
-        // Layers section
         Pane {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: 150
-            padding: 12
 
             LayerPanel {
                 anchors.fill: parent
