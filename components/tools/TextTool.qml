@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Shapes
 import ".." as Lucent
 
 // Text tool component for creating text boxes on the canvas
@@ -40,7 +41,7 @@ Item {
     property bool isSelectingText: false
     property int selectionAnchor: 0
 
-    Rectangle {
+    Item {
         id: textEditContainer
         visible: tool.isEditing
 
@@ -49,10 +50,37 @@ Item {
         width: tool.boxWidth
         height: Math.max(tool.boxHeight, textEdit.contentHeight + tool.textPadding * 2)
 
-        color: "transparent"
-        border.color: Lucent.Themed.selector
-        border.width: 1 / tool.zoomLevel
-        radius: 0
+        // Use Shape for better thin line rendering at all zoom levels
+        Shape {
+            anchors.fill: parent
+
+            ShapePath {
+                strokeColor: Lucent.Themed.selector
+                strokeWidth: tool.zoomLevel > 0 ? 1 / tool.zoomLevel : 1
+                fillColor: "transparent"
+                joinStyle: ShapePath.MiterJoin
+                capStyle: ShapePath.FlatCap
+
+                startX: 0
+                startY: 0
+                PathLine {
+                    x: textEditContainer.width
+                    y: 0
+                }
+                PathLine {
+                    x: textEditContainer.width
+                    y: textEditContainer.height
+                }
+                PathLine {
+                    x: 0
+                    y: textEditContainer.height
+                }
+                PathLine {
+                    x: 0
+                    y: 0
+                }
+            }
+        }
 
         TextEdit {
             id: textEdit

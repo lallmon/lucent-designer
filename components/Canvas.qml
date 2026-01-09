@@ -353,12 +353,12 @@ Item {
             } else if (data.type === "text") {
                 if (data.parentId && containerIds[data.parentId])
                     continue;
+                var textGeom = Object.assign({}, data.geometry);
+                textGeom.x = textGeom.x + canvasDx;
+                textGeom.y = textGeom.y + canvasDy;
                 canvasModel.updateItem(idx, {
                     type: data.type,
-                    x: data.x + canvasDx,
-                    y: data.y + canvasDy,
-                    width: data.width,
-                    height: data.height,
+                    geometry: textGeom,
                     text: data.text,
                     fontFamily: data.fontFamily,
                     fontSize: data.fontSize,
