@@ -21,6 +21,7 @@ RowLayout {
     spacing: 6
 
     Label {
+        visible: root.labelText !== ""
         text: root.labelText
         font.pixelSize: 11
         Layout.alignment: Qt.AlignVCenter

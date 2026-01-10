@@ -12,15 +12,22 @@ Button {
     property string dialogTitle: qsTr("Choose Color")
 
     signal colorPicked(color newColor)
+    signal opacityPicked(real newOpacity)
     signal colorPreview(color previewColor)
+    signal opacityPreview(real previewOpacity)
 
     readonly property SystemPalette themePalette: Lucent.Themed.palette
+    readonly property real buttonHeight: 16
 
-    Layout.preferredWidth: 16
-    Layout.preferredHeight: 16
+    Layout.preferredWidth: buttonHeight * 2
+    Layout.preferredHeight: buttonHeight
     Layout.alignment: Qt.AlignVCenter
 
-    onClicked: colorDialog.open()
+    onClicked: {
+        // Set initial color with alpha only when opening (not as binding to avoid loops)
+        colorDialog.selectedColor = Qt.rgba(root.color.r, root.color.g, root.color.b, root.colorOpacity);
+        colorDialog.open();
+    }
 
     background: Rectangle {
         border.color: root.themePalette.mid
@@ -67,23 +74,26 @@ Button {
     ColorDialog {
         id: colorDialog
         title: root.dialogTitle
-        selectedColor: root.color
+        options: ColorDialog.ShowAlphaChannel | ColorDialog.DontUseNativeDialog
         modality: Qt.NonModal
 
-        // Live preview while picking
+        // Live preview while picking (color and opacity)
         onSelectedColorChanged: {
             if (visible) {
                 root.colorPreview(selectedColor);
+                root.opacityPreview(selectedColor.a);
             }
         }
 
         onAccepted: {
             root.colorPicked(selectedColor);
+            root.opacityPicked(selectedColor.a);
         }
 
         onRejected: {
-            // Restore original color on cancel
+            // Restore original color and opacity on cancel
             root.colorPreview(root.color);
+            root.opacityPreview(root.colorOpacity);
         }
     }
 }
