@@ -181,6 +181,110 @@ class TestApplyScaleResize:
         assert transform["originX"] == 0.0
         assert transform["originY"] == 0.0
 
+    def test_apply_scale_resize_layer_no_op(self, canvas_model):
+        """applyScaleResize on layer (no transform attr) should do nothing."""
+        canvas_model.addItem(make_layer(name="Test Layer"))
+        # Should not raise
+        canvas_model.applyScaleResize(0, 2.0, 2.0, 0.0, 0.0)
+
+
+class TestEnsureOriginCentered:
+    """Tests for ensureOriginCentered method - move origin to center."""
+
+    def test_ensure_origin_centered_from_corner(self, canvas_model):
+        """ensureOriginCentered should move origin from corner to center."""
+        rect_data = make_rectangle(x=0, y=0, width=100, height=100)
+        rect_data["transform"] = {
+            "originX": 0.0,
+            "originY": 0.0,
+        }
+        canvas_model.addItem(rect_data)
+
+        canvas_model.ensureOriginCentered(0)
+
+        transform = canvas_model.getItemTransform(0)
+        assert transform["originX"] == 0.5
+        assert transform["originY"] == 0.5
+
+    def test_ensure_origin_centered_already_centered_no_op(self, canvas_model):
+        """ensureOriginCentered should do nothing if already centered."""
+        rect_data = make_rectangle(x=0, y=0, width=100, height=100)
+        rect_data["transform"] = {
+            "originX": 0.5,
+            "originY": 0.5,
+            "translateX": 10,
+        }
+        canvas_model.addItem(rect_data)
+
+        original_tx = canvas_model.getItemTransform(0)["translateX"]
+
+        canvas_model.ensureOriginCentered(0)
+
+        # Should not change translation
+        transform = canvas_model.getItemTransform(0)
+        assert transform["translateX"] == original_tx
+
+    def test_ensure_origin_centered_preserves_visual_position(self, canvas_model):
+        """ensureOriginCentered adjusts translation to maintain visual position."""
+        rect_data = make_rectangle(x=0, y=0, width=100, height=100)
+        rect_data["transform"] = {
+            "originX": 0.0,  # Top-left corner
+            "originY": 0.0,
+            "rotate": 45,
+            "translateX": 0,
+            "translateY": 0,
+        }
+        canvas_model.addItem(rect_data)
+
+        # Get bounds before centering origin
+        bounds_before = canvas_model.getBoundingBox(0)
+
+        canvas_model.ensureOriginCentered(0)
+
+        # Get bounds after centering origin
+        bounds_after = canvas_model.getBoundingBox(0)
+
+        # Visual position should be the same (within floating point tolerance)
+        assert abs(bounds_before["x"] - bounds_after["x"]) < 0.01
+        assert abs(bounds_before["y"] - bounds_after["y"]) < 0.01
+
+    def test_ensure_origin_centered_invalid_index(self, canvas_model):
+        """ensureOriginCentered should handle invalid index gracefully."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+        # Should not raise
+        canvas_model.ensureOriginCentered(-1)
+        canvas_model.ensureOriginCentered(999)
+
+    def test_ensure_origin_centered_layer_no_op(self, canvas_model):
+        """ensureOriginCentered on layer should do nothing."""
+        canvas_model.addItem(make_layer(name="Test Layer"))
+        # Should not raise
+        canvas_model.ensureOriginCentered(0)
+
+    def test_ensure_origin_centered_with_scale(self, canvas_model):
+        """ensureOriginCentered should work correctly with existing scale."""
+        rect_data = make_rectangle(x=0, y=0, width=100, height=100)
+        rect_data["transform"] = {
+            "originX": 1.0,  # Bottom-right
+            "originY": 1.0,
+            "scaleX": 2.0,
+            "scaleY": 2.0,
+        }
+        canvas_model.addItem(rect_data)
+
+        bounds_before = canvas_model.getBoundingBox(0)
+
+        canvas_model.ensureOriginCentered(0)
+
+        bounds_after = canvas_model.getBoundingBox(0)
+        transform = canvas_model.getItemTransform(0)
+
+        assert transform["originX"] == 0.5
+        assert transform["originY"] == 0.5
+        # Visual position should be preserved
+        assert abs(bounds_before["x"] - bounds_after["x"]) < 0.01
+        assert abs(bounds_before["y"] - bounds_after["y"]) < 0.01
+
 
 class TestBakeTransform:
     """Tests for bakeTransform method - apply transform to geometry."""
