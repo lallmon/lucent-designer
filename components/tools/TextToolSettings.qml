@@ -96,7 +96,13 @@ RowLayout {
         }
     }
 
-    ToolSeparator {}
+    ToolSeparator {
+        contentItem: Rectangle {
+            implicitWidth: 1
+            implicitHeight: 16
+            color: Lucent.Themed.palette.mid
+        }
+    }
 
     Label {
         text: qsTr("Size:")
@@ -185,7 +191,13 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter
     }
 
-    ToolSeparator {}
+    ToolSeparator {
+        contentItem: Rectangle {
+            implicitWidth: 1
+            implicitHeight: 16
+            color: Lucent.Themed.palette.mid
+        }
+    }
 
     Label {
         text: qsTr("Color:")
@@ -198,28 +210,8 @@ RowLayout {
         colorOpacity: root.textOpacity
         dialogTitle: qsTr("Choose Text Color")
         onColorPreview: previewColor => root.updateProperty("textColor", previewColor.toString())
+        onOpacityPreview: previewOpacity => root.updateProperty("textOpacity", previewOpacity)
         onColorPicked: newColor => root.updateProperty("textColor", newColor.toString())
-    }
-
-    Label {
-        text: qsTr("Opacity:")
-        font.pixelSize: 11
-        Layout.alignment: Qt.AlignVCenter
-    }
-
-    Lucent.OpacitySlider {
-        opacityValue: root.textOpacity
-        onValueUpdated: newOpacity => root.updateProperty("textOpacity", newOpacity)
-    }
-
-    Lucent.LabeledNumericField {
-        labelText: ""
-        value: Math.round(root.textOpacity * 100)
-        minimum: 0
-        maximum: 100
-        decimals: 0
-        fieldWidth: 35
-        suffix: qsTr("%")
-        onCommitted: newValue => root.updateProperty("textOpacity", newValue / 100.0)
+        onOpacityPicked: newOpacity => root.updateProperty("textOpacity", newOpacity)
     }
 }
