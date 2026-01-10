@@ -780,6 +780,28 @@ class CanvasModel(QAbstractListModel):
         self.updateItem(index, current_data)
         self.itemTransformChanged.emit(index)
 
+    @Slot(int, str, float)
+    def updateTransformProperty(self, index: int, prop: str, value: float) -> None:
+        """Update a single transform property, preserving others.
+
+        Args:
+            index: Index of the item.
+            prop: Property name (translateX, translateY, rotate, scaleX, scaleY).
+            value: New value for the property.
+        """
+        current = self.getItemTransform(index) or {}
+        new_transform = {
+            "translateX": current.get("translateX", 0),
+            "translateY": current.get("translateY", 0),
+            "rotate": current.get("rotate", 0),
+            "scaleX": current.get("scaleX", 1),
+            "scaleY": current.get("scaleY", 1),
+            "originX": current.get("originX", 0),
+            "originY": current.get("originY", 0),
+        }
+        new_transform[prop] = value
+        self.setItemTransform(index, new_transform)
+
     @Slot(result="QVariant")  # type: ignore[arg-type]
     def getItemsForHitTest(self) -> List[Dict[str, Any]]:
         return get_hit_test_items(

@@ -166,28 +166,9 @@ Item {
 
     function updateTransform(property, value) {
         var idx = Lucent.SelectionManager.selectedItemIndex;
-        if (idx < 0 || !canvasModel)
-            return;
-
-        var newTransform = currentTransform ? {
-            translateX: currentTransform.translateX || 0,
-            translateY: currentTransform.translateY || 0,
-            rotate: currentTransform.rotate || 0,
-            scaleX: currentTransform.scaleX || 1,
-            scaleY: currentTransform.scaleY || 1,
-            originX: currentTransform.originX || 0,
-            originY: currentTransform.originY || 0
-        } : {
-            translateX: 0,
-            translateY: 0,
-            rotate: 0,
-            scaleX: 1,
-            scaleY: 1,
-            originX: 0,
-            originY: 0
-        };
-        newTransform[property] = value;
-        canvasModel.setItemTransform(idx, newTransform);
+        if (idx >= 0 && canvasModel) {
+            canvasModel.updateTransformProperty(idx, property, value);
+        }
     }
 
     function setOrigin(newOx, newOy) {

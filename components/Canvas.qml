@@ -98,20 +98,9 @@ Item {
 
             onRotateRequested: function (angle) {
                 var idx = Lucent.SelectionManager.selectedItemIndex;
-                if (idx < 0 || !canvasModel)
-                    return;
-
-                var currentTransform = canvasModel.getItemTransform(idx) || {};
-                var newTransform = {
-                    translateX: currentTransform.translateX || 0,
-                    translateY: currentTransform.translateY || 0,
-                    rotate: angle,
-                    scaleX: currentTransform.scaleX || 1,
-                    scaleY: currentTransform.scaleY || 1,
-                    originX: 0.5,
-                    originY: 0.5
-                };
-                canvasModel.setItemTransform(idx, newTransform);
+                if (idx >= 0 && canvasModel) {
+                    canvasModel.updateTransformProperty(idx, "rotate", angle);
+                }
             }
         }
 

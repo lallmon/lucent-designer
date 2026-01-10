@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
-import ".." as Lucent
+import "." as Lucent
 
 Shape {
     id: selectionOverlay

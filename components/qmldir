@@ -10,7 +10,7 @@ LayerPanel 1.0 panels/LayerPanel.qml
 LayerListItem 1.0 panels/LayerListItem.qml
 RightPanel 1.0 panels/RightPanel.qml
 TransformPanel 1.0 panels/TransformPanel.qml
-SelectionOverlay 1.0 panels/SelectionOverlay.qml
+SelectionOverlay 1.0 SelectionOverlay.qml
 ToolPalette 1.0 tools/ToolPalette.qml
 ToolSettings 1.0 tools/ToolSettings.qml
 RectangleTool 1.0 tools/RectangleTool.qml

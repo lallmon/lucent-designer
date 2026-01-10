@@ -63,3 +63,41 @@ class TestCanvasModelTransforms:
     def test_set_item_transform_layer_no_op(self, canvas_model):
         canvas_model.addItem(make_layer(name="Test Layer"))
         canvas_model.setItemTransform(0, {"rotate": 45})
+
+    def test_update_transform_property_preserves_others(self, canvas_model):
+        """updateTransformProperty should only change the specified property."""
+        rect_data = make_rectangle(x=0, y=0, width=100, height=50)
+        rect_data["transform"] = {
+            "translateX": 10,
+            "translateY": 20,
+            "rotate": 45,
+            "scaleX": 1.5,
+            "scaleY": 2.0,
+            "originX": 0.5,
+            "originY": 0.5,
+        }
+        canvas_model.addItem(rect_data)
+
+        canvas_model.updateTransformProperty(0, "rotate", 90)
+
+        transform = canvas_model.getItemTransform(0)
+        assert transform["rotate"] == 90
+        assert transform["translateX"] == 10
+        assert transform["translateY"] == 20
+        assert transform["scaleX"] == 1.5
+        assert transform["scaleY"] == 2.0
+        assert transform["originX"] == 0.5
+        assert transform["originY"] == 0.5
+
+    def test_update_transform_property_with_defaults(self, canvas_model):
+        """updateTransformProperty should use defaults for missing properties."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+
+        canvas_model.updateTransformProperty(0, "rotate", 45)
+
+        transform = canvas_model.getItemTransform(0)
+        assert transform["rotate"] == 45
+        assert transform["translateX"] == 0
+        assert transform["translateY"] == 0
+        assert transform["scaleX"] == 1
+        assert transform["scaleY"] == 1
