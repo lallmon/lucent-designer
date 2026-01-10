@@ -66,6 +66,8 @@ Item {
             geometryBounds: root._selectionGeometryBounds
             itemTransform: root._selectionTransform
             zoomLevel: root.zoomLevel
+            cursorX: root.cursorX
+            cursorY: root.cursorY
 
             onResizeRequested: function (newBounds) {
                 var idx = Lucent.SelectionManager.selectedItemIndex;

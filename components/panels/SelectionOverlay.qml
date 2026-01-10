@@ -11,6 +11,10 @@ Shape {
     property real selectionPadding: 0
     property color accentColor: Lucent.Themed.selector
 
+    // Cursor position in canvas coordinates (passed from Canvas)
+    property real cursorX: 0
+    property real cursorY: 0
+
     signal resizeRequested(var newBounds)
 
     readonly property real _geomX: geometryBounds ? geometryBounds.x : 0
@@ -134,6 +138,8 @@ Shape {
             color: selectionOverlay.accentColor
 
             property var startBounds: null
+            property real startCursorX: 0
+            property real startCursorY: 0
 
             DragHandler {
                 id: dragHandler
@@ -148,6 +154,8 @@ Shape {
                             width: selectionOverlay._geomWidth,
                             height: selectionOverlay._geomHeight
                         };
+                        handle.startCursorX = selectionOverlay.cursorX;
+                        handle.startCursorY = selectionOverlay.cursorY;
                     }
                 }
 
@@ -155,9 +163,9 @@ Shape {
                     if (!active || !handle.startBounds)
                         return;
 
-                    // Use raw translation for geometry changes (no scale compensation needed - DragHandler already accounts for transforms)
-                    var dx = translation.x;
-                    var dy = translation.y;
+                    // Use cursor delta in canvas coordinates for 1:1 movement
+                    var dx = selectionOverlay.cursorX - handle.startCursorX;
+                    var dy = selectionOverlay.cursorY - handle.startCursorY;
                     var b = handle.startBounds;
                     var t = handle.modelData.type;
                     var newBounds = {
