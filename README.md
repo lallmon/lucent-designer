@@ -1,7 +1,7 @@
 # Lucent Designer
 
-[![Tests](https://github.com/lallmon/lucent/actions/workflows/test.yml/badge.svg)](https://github.com/lallmon/lucent/actions)
-[![codecov](https://codecov.io/gh/lallmon/lucent/branch/main/graph/badge.svg)](https://codecov.io/gh/lallmon/lucent)
+[![Tests](https://github.com/lallmon/lucent-designer/actions/workflows/test.yml/badge.svg)](https://github.com/lallmon/lucent-designer/actions)
+[![codecov](https://codecov.io/gh/lallmon/lucent-designer/branch/main/graph/badge.svg)](https://codecov.io/gh/lallmon/lucent-designer)
 
 ## What
 A modern, open source hybrid vector/raster digital design application, built with QT for all 3 major platforms.

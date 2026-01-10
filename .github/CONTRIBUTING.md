@@ -1,7 +1,16 @@
-## Contributing
+## Contributing to Lucent Designer
+
+## Dual-License Model
+This project uses a dual-license model:
+- **Community:** GPLv3 (free, open source)
+- **Commercial:** Proprietary license (paid)
+
+## For Contributors
+All contributions require signing our CLA (Contributor License Agreement).
+
 There's plenty to do but the end goal is pretty clear for me, so if you want to help out, I appreciate any contributions.
 
-What I'd love are people who wish Affinity Designer had a native Linux app, to play with the software and contribute bug reports, feature requests, and Documentation.
+What I'd love are people who wish there were modern design applications on Linux, to play with the software and contribute bug reports, feature requests, and Documentation.
 
 - What tools are missing from the software?
 - What UX can be improved?
@@ -45,7 +54,7 @@ Reasoning: This allows us to have conversations about the app and it's functiona
 
 Prerequisites: Python 3.10
 
-- Clone the Repo: `git clone git@github.com:lallmon/lucent.git`
+- Clone the Repo: `git clone git@github.com:lallmon/lucent-designer.git`
 - Create/activate the project venv: `python -m venv .venv && source .venv/bin/activate`
 - Install deps: `pip install -r requirements.txt -r requirements-dev.txt`
 - Install the app package: `pip install -e .`
