@@ -73,6 +73,22 @@ Item {
             cursorY: root.cursorY
             shiftPressed: !!(root.currentModifiers & Qt.ShiftModifier)
 
+            onIsResizingChanged: {
+                if (isResizing) {
+                    canvasModel.beginTransaction();
+                } else {
+                    canvasModel.endTransaction();
+                }
+            }
+
+            onIsRotatingChanged: {
+                if (isRotating) {
+                    canvasModel.beginTransaction();
+                } else {
+                    canvasModel.endTransaction();
+                }
+            }
+
             onResizeRequested: function (newBounds) {
                 var idx = Lucent.SelectionManager.selectedItemIndex;
                 if (idx >= 0 && canvasModel) {
