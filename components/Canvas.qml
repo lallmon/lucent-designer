@@ -145,11 +145,24 @@ Item {
             active: root.drawingMode === ""
             hitTestCallback: root.hitTest
             viewportToCanvasCallback: root.viewportToCanvas
+            canvasToViewportCallback: root.canvasToViewport
             getBoundsCallback: function (idx) {
                 return canvasModel.getBoundingBox(idx);
             }
+            // Overlay geometry for manual rotation handle hit testing
+            overlayGeometry: root._selectionGeometryBounds && selectionOverlay.itemTransform ? {
+                centerX: root._selectionGeometryBounds.x + root._selectionGeometryBounds.width / 2 + (selectionOverlay.itemTransform.translateX || 0),
+                centerY: root._selectionGeometryBounds.y + root._selectionGeometryBounds.height / 2 + (selectionOverlay.itemTransform.translateY || 0),
+                rotation: selectionOverlay.itemTransform.rotate || 0,
+                armLength: 30 / root.zoomLevel,
+                handleSize: 8 / root.zoomLevel,
+                halfHeight: (root._selectionGeometryBounds.height * (selectionOverlay.itemTransform.scaleY || 1)) / 2,
+                zoomLevel: root.zoomLevel
+            } : null
             // Don't drag object when overlay resize/rotate handles are being used
-            overlayActive: selectionOverlay.isResizing || selectionOverlay.isRotating
+            overlayActive: selectionOverlay.isResizing || selectionOverlay.isRotating || selectionOverlay.isHandlePressed
+            // Prevent object drag initiation when hovering over overlay handles
+            isHoveringHandle: selectionOverlay.isHoveringHandle
 
             onPanDelta: (dx, dy) => {
                 root.panRequested(dx, dy);
@@ -227,6 +240,20 @@ Item {
         return {
             x: canvasX,
             y: canvasY
+        };
+    }
+
+    // Convert canvas coordinates to viewport coordinates
+    function canvasToViewport(canvasX, canvasY) {
+        var centerX = root.width / 2;
+        var centerY = root.height / 2;
+
+        var viewportX = canvasX * root.zoomLevel + centerX + root.offsetX;
+        var viewportY = canvasY * root.zoomLevel + centerY + root.offsetY;
+
+        return {
+            x: viewportX,
+            y: viewportY
         };
     }
 

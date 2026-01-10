@@ -57,6 +57,8 @@ Shape {
     readonly property real handleSize: 8 / zoomLevel
     readonly property real rotationArmLength: 30 / zoomLevel
     property bool isResizing: false
+    property bool isHandlePressed: false  // True immediately on handle press (before drag starts)
+    property bool isHoveringHandle: false  // True when cursor is over any handle (checked before press)
 
     ShapePath {
         strokeColor: selectionOverlay.accentColor
@@ -99,6 +101,70 @@ Shape {
         }
     }
 
+    // Invisible hit area for the rotation arm stem (prevents accidental shape dragging)
+    Rectangle {
+        id: rotationStemHitArea
+        x: selectionOverlay.width / 2 - selectionOverlay.handleSize / 2
+        y: -selectionOverlay.rotationArmLength
+        width: selectionOverlay.handleSize
+        height: selectionOverlay.rotationArmLength
+        color: "transparent"
+
+        property bool containsMouse: false
+
+        // Detect hover before press to prevent SelectTool from initiating drag
+        HoverHandler {
+            onHoveredChanged: {
+                rotationStemHitArea.containsMouse = hovered;
+                if (hovered) {
+                    selectionOverlay.isHoveringHandle = true;
+                } else if (!rotationGrip.containsMouse) {
+                    // Only clear if not hovering the grip either
+                    selectionOverlay.isHoveringHandle = false;
+                }
+            }
+        }
+
+        // Capture press immediately to prevent SelectTool from dragging the shape
+        TapHandler {
+            gesturePolicy: TapHandler.DragWithinBounds
+            onPressedChanged: {
+                if (pressed) {
+                    selectionOverlay.isHandlePressed = true;
+                }
+            }
+        }
+
+        DragHandler {
+            target: null
+            onActiveChanged: {
+                selectionOverlay.isRotating = active;
+                if (active) {
+                    rotationGrip.startAngle = selectionOverlay._rotation;
+                    rotationGrip.initialAngleCaptured = false;
+                } else {
+                    selectionOverlay.isHandlePressed = false;
+                }
+            }
+            onTranslationChanged: {
+                if (!active)
+                    return;
+                if (!rotationGrip.initialAngleCaptured) {
+                    rotationGrip.initialCursorAngle = rotationGrip.calculateCursorAngle();
+                    rotationGrip.initialAngleCaptured = true;
+                    return;
+                }
+                var currentCursorAngle = rotationGrip.calculateCursorAngle();
+                var deltaAngle = currentCursorAngle - rotationGrip.initialCursorAngle;
+                var newAngle = rotationGrip.startAngle + deltaAngle;
+                if (selectionOverlay.shiftPressed) {
+                    newAngle = Math.round(newAngle / 15) * 15;
+                }
+                selectionOverlay.rotateRequested(newAngle);
+            }
+        }
+    }
+
     // Rotation grip at end of arm
     Rectangle {
         id: rotationGrip
@@ -111,6 +177,8 @@ Shape {
 
         property real startAngle: 0
         property real initialCursorAngle: 0
+        property bool initialAngleCaptured: false
+        property bool containsMouse: false
 
         // Helper to calculate angle from center to cursor
         function calculateCursorAngle() {
@@ -123,6 +191,45 @@ Shape {
             return Math.atan2(dx, -dy) * 180 / Math.PI;
         }
 
+        // Detect hover before press to prevent SelectTool from initiating drag
+        HoverHandler {
+            onHoveredChanged: {
+                // #region agent log
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "http://127.0.0.1:7243/ingest/72fbc74d-dfe2-4303-96ca-b309ef45018d", true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.send(JSON.stringify({
+                    location: "SelectionOverlay.qml:rotationGrip.HoverHandler",
+                    message: "Hover changed",
+                    data: {
+                        hovered: hovered,
+                        stemContainsMouse: rotationStemHitArea.containsMouse,
+                        rotation: selectionOverlay._rotation
+                    },
+                    timestamp: Date.now(),
+                    sessionId: "debug-session",
+                    hypothesisId: "A"
+                }));
+                // #endregion
+                rotationGrip.containsMouse = hovered;
+                if (hovered) {
+                    selectionOverlay.isHoveringHandle = true;
+                } else if (!rotationStemHitArea.containsMouse) {
+                    selectionOverlay.isHoveringHandle = false;
+                }
+            }
+        }
+
+        // Capture press immediately to prevent SelectTool from dragging the shape
+        TapHandler {
+            gesturePolicy: TapHandler.DragWithinBounds
+            onPressedChanged: {
+                if (pressed) {
+                    selectionOverlay.isHandlePressed = true;
+                }
+            }
+        }
+
         DragHandler {
             id: rotationDragHandler
             target: null
@@ -130,9 +237,12 @@ Shape {
             onActiveChanged: {
                 selectionOverlay.isRotating = active;
                 if (active) {
-                    // Store starting rotation and cursor angle for delta calculation
+                    // Store starting rotation; delay cursor angle capture until first translation
+                    // to avoid race condition with ensureOriginCentered changing translation
                     rotationGrip.startAngle = selectionOverlay._rotation;
-                    rotationGrip.initialCursorAngle = rotationGrip.calculateCursorAngle();
+                    rotationGrip.initialAngleCaptured = false;
+                } else {
+                    selectionOverlay.isHandlePressed = false;
                 }
             }
 
@@ -140,10 +250,12 @@ Shape {
                 if (!active)
                     return;
 
-                // Ignore micro-movements (prevents jump on initial press)
-                var moveDist = Math.sqrt(translation.x * translation.x + translation.y * translation.y);
-                if (moveDist < 2)
-                    return;
+                // Capture initial angle on first translation event (after origin centering is complete)
+                if (!rotationGrip.initialAngleCaptured) {
+                    rotationGrip.initialCursorAngle = rotationGrip.calculateCursorAngle();
+                    rotationGrip.initialAngleCaptured = true;
+                    return;  // Don't rotate on the first event
+                }
 
                 // Calculate current cursor angle and compute delta from initial
                 var currentCursorAngle = rotationGrip.calculateCursorAngle();
@@ -241,6 +353,23 @@ Shape {
                 return 0.5;  // center (edge handles)
             }
 
+            // Detect hover before press to prevent SelectTool from initiating drag
+            HoverHandler {
+                onHoveredChanged: {
+                    selectionOverlay.isHoveringHandle = hovered;
+                }
+            }
+
+            // Capture press immediately to prevent SelectTool from dragging the shape
+            TapHandler {
+                gesturePolicy: TapHandler.DragWithinBounds
+                onPressedChanged: {
+                    if (pressed) {
+                        selectionOverlay.isHandlePressed = true;
+                    }
+                }
+            }
+
             DragHandler {
                 id: dragHandler
                 target: null
@@ -261,6 +390,8 @@ Shape {
                         };
                         handle.startCursorX = selectionOverlay.cursorX;
                         handle.startCursorY = selectionOverlay.cursorY;
+                    } else {
+                        selectionOverlay.isHandlePressed = false;
                     }
                 }
 

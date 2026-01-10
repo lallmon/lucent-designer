@@ -912,6 +912,33 @@ class CanvasModel(QAbstractListModel):
         center_x = 0.5
         center_y = 0.5
 
+        # #region agent log
+        import json
+        import time
+
+        with open("/home/lka/Git/lucent/.cursor/debug.log", "a") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "location": "canvas_model.py:ensureOriginCentered",
+                        "message": "Called",
+                        "data": {
+                            "index": index,
+                            "old_origin_x": old_origin_x,
+                            "old_origin_y": old_origin_y,
+                            "will_return_early": abs(old_origin_x - center_x) < 0.001
+                            and abs(old_origin_y - center_y) < 0.001,
+                            "current_transform": current,
+                        },
+                        "timestamp": int(time.time() * 1000),
+                        "sessionId": "debug-session",
+                        "hypothesisId": "B",
+                    }
+                )
+                + "\n"
+            )
+        # #endregion
+
         # If origin is already at center, nothing to do
         if (
             abs(old_origin_x - center_x) < 0.001
