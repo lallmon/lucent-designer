@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Font provider for exposing system fonts to QML."""
 
 from typing import List, Optional

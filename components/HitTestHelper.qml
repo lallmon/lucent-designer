@@ -1,3 +1,6 @@
+// Copyright (C) 2026 The Culture List, Inc.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import QtQuick
 
 // Stateless helper for canvas hit-testing and selection updates.

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Tests for tree-based layout/flattening of canvas items."""
 
 from test_helpers import make_layer_with_children, make_rectangle, make_ellipse

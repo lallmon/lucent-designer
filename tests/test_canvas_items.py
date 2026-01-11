@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Unit tests for canvas_items module."""
 
 import pytest

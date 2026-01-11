@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """CanvasModel transform getters/setters."""
 
 from test_helpers import make_rectangle, make_ellipse, make_path, make_layer

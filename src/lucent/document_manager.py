@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Document manager for Lucent - handles file operations and document state."""
 
 from __future__ import annotations

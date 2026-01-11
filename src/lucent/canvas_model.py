@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Canvas model for Lucent - manages canvas items with undo/redo support."""
 
 from typing import List, Optional, Dict, Any, Union

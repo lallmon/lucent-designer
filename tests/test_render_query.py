@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Unit tests for render_query module - pure logic for render/hit-test queries."""
 
 from lucent.render_query import get_render_items, get_hit_test_items

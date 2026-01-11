@@ -1,6 +1,14 @@
 repos:
   - repo: local
     hooks:
+      - id: add-headers
+        name: add-headers (SPDX license)
+        entry: ./scripts/add_headers.sh
+        language: script
+        pass_filenames: true
+        files: "\\.(py|qml|frag|vert|geom|comp|tesc|tese)$"
+  - repo: local
+    hooks:
       - id: qmlformat
         name: qmlformat (PySide6)
         entry: pyside6-qmlformat

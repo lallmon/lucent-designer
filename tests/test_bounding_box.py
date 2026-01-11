@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Unit tests for bounding_box module - pure math for bounds calculations."""
 
 from lucent.bounding_box import (

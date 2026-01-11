@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Undo/redo orchestration independent of the Qt model."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Integration tests for CanvasRenderer and Python-Qt bridge."""
 
 from PySide6.QtCore import QObject

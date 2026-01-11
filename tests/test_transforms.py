@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Unit tests for transforms module."""
 
 from PySide6.QtCore import QRectF, QPointF

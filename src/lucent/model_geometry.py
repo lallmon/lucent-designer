@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Geometry helpers for CanvasModel.
 
 This module keeps CanvasModel thinner by providing pure helpers for geometry,

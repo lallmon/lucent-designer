@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Tests for file_io module - save/load functionality for .lucent files.
 
 Written first following TDD Red/Green methodology.

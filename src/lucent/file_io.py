@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """File I/O for .lucent document format.
 
 Handles saving and loading Lucent documents to/from JSON files.

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 The Culture List, Inc.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Render-related tests for CanvasModel."""
 
 from lucent.canvas_items import RectangleItem, PathItem
