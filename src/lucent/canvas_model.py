@@ -764,9 +764,26 @@ class CanvasModel(QAbstractListModel):
             return None
         return item.transform.to_dict()
 
+    @staticmethod
+    def _normalizeRotation(degrees: float) -> float:
+        """Normalize rotation to 0-360° range.
+
+        Args:
+            degrees: Rotation in degrees (any value).
+
+        Returns:
+            Rotation normalized to 0 <= value < 360.
+        """
+        normalized = degrees % 360
+        if normalized < 0:
+            normalized += 360
+        return normalized
+
     @Slot(int, dict)
     def setItemTransform(self, index: int, transform: Dict[str, Any]) -> None:
         """Set transform properties for an item.
+
+        Rotation values are normalized to 0-360° range.
 
         Args:
             index: Index of the item.
@@ -777,6 +794,11 @@ class CanvasModel(QAbstractListModel):
         item = self._items[index]
         if not hasattr(item, "transform"):
             return
+
+        # Normalize rotation to 0-360° range
+        if "rotate" in transform:
+            transform = dict(transform)  # Copy to avoid mutating input
+            transform["rotate"] = self._normalizeRotation(transform["rotate"])
 
         # Get current item data and update transform
         current_data = self._itemToDict(item)

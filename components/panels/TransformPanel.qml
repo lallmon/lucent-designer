@@ -289,8 +289,8 @@ Item {
                 horizontalAlignment: TextInput.AlignHCenter
                 Layout.preferredWidth: 50
                 validator: IntValidator {
-                    bottom: -360
-                    top: 360
+                    bottom: -9999
+                    top: 9999
                 }
 
                 readonly property string expectedText: Math.round(root.currentRotation).toString()
@@ -300,9 +300,8 @@ Item {
 
                 // Sync with undo/redo; skip during commit to prevent double-fire
                 onExpectedTextChanged: {
-                    if (!isCommitting) {
+                    if (!isCommitting)
                         text = expectedText;
-                    }
                 }
 
                 onEditingFinished: {
@@ -310,8 +309,8 @@ Item {
                         return;
                     isCommitting = true;
 
+                    // Model normalizes to 0-360° automatically
                     var val = parseInt(text) || 0;
-                    val = Math.max(-360, Math.min(360, val));
                     canvasModel.updateTransformProperty(root.selectedIndex, "rotate", val);
                     appController.focusCanvas();
 
@@ -325,17 +324,16 @@ Item {
             }
             Slider {
                 id: rotationSlider
-                from: -180
-                to: 180
+                from: 0
+                to: 360
                 value: root.currentRotation
                 Layout.fillWidth: true
 
                 onPressedChanged: {
-                    if (pressed) {
+                    if (pressed)
                         canvasModel.beginTransaction();
-                    } else {
+                    else
                         canvasModel.endTransaction();
-                    }
                 }
 
                 onMoved: canvasModel.updateTransformProperty(root.selectedIndex, "rotate", value)

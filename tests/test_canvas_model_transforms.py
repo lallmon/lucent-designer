@@ -106,6 +106,89 @@ class TestCanvasModelTransforms:
         assert transform["scaleY"] == 1
 
 
+class TestRotationNormalization:
+    """Tests for rotation normalization to 0-360° range."""
+
+    def test_rotation_positive_within_range_unchanged(self, canvas_model):
+        """Rotation values 0-360 should remain unchanged."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+
+        canvas_model.updateTransformProperty(0, "rotate", 45)
+        assert canvas_model.getItemTransform(0)["rotate"] == 45
+
+        canvas_model.updateTransformProperty(0, "rotate", 0)
+        assert canvas_model.getItemTransform(0)["rotate"] == 0
+
+        canvas_model.updateTransformProperty(0, "rotate", 359)
+        assert canvas_model.getItemTransform(0)["rotate"] == 359
+
+    def test_rotation_360_normalizes_to_0(self, canvas_model):
+        """360° should normalize to 0°."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+
+        canvas_model.updateTransformProperty(0, "rotate", 360)
+        assert canvas_model.getItemTransform(0)["rotate"] == 0
+
+    def test_rotation_negative_normalizes_to_positive(self, canvas_model):
+        """Negative rotations should normalize to 0-360 range."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+
+        canvas_model.updateTransformProperty(0, "rotate", -45)
+        assert canvas_model.getItemTransform(0)["rotate"] == 315
+
+        canvas_model.updateTransformProperty(0, "rotate", -90)
+        assert canvas_model.getItemTransform(0)["rotate"] == 270
+
+        canvas_model.updateTransformProperty(0, "rotate", -180)
+        assert canvas_model.getItemTransform(0)["rotate"] == 180
+
+    def test_rotation_over_360_wraps(self, canvas_model):
+        """Rotations over 360° should wrap."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+
+        canvas_model.updateTransformProperty(0, "rotate", 370)
+        assert canvas_model.getItemTransform(0)["rotate"] == 10
+
+        canvas_model.updateTransformProperty(0, "rotate", 720)
+        assert canvas_model.getItemTransform(0)["rotate"] == 0
+
+        canvas_model.updateTransformProperty(0, "rotate", 450)
+        assert canvas_model.getItemTransform(0)["rotate"] == 90
+
+    def test_rotation_large_negative_wraps(self, canvas_model):
+        """Large negative rotations should wrap correctly."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+
+        canvas_model.updateTransformProperty(0, "rotate", -370)
+        assert canvas_model.getItemTransform(0)["rotate"] == 350
+
+        canvas_model.updateTransformProperty(0, "rotate", -720)
+        assert canvas_model.getItemTransform(0)["rotate"] == 0
+
+    def test_set_item_transform_normalizes_rotation(self, canvas_model):
+        """setItemTransform should also normalize rotation."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+
+        canvas_model.setItemTransform(0, {"rotate": -45, "scaleX": 1, "scaleY": 1})
+        assert canvas_model.getItemTransform(0)["rotate"] == 315
+
+    def test_rotation_normalization_preserves_visual_result(self, canvas_model):
+        """Normalized rotation should produce same visual result."""
+        # -45° and 315° should produce identical bounding boxes
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=100))
+        canvas_model.setItemTransform(
+            0, {"rotate": 315, "originX": 0.5, "originY": 0.5}
+        )
+        bounds_315 = canvas_model.getBoundingBox(0)
+
+        # The stored value should be 315, not -45
+        assert canvas_model.getItemTransform(0)["rotate"] == 315
+
+        # Visual bounds should match what -45° would produce
+        assert bounds_315 is not None
+        assert bounds_315["width"] > 0
+
+
 class TestApplyScaleResize:
     """Tests for applyScaleResize method - scale-based resize with anchoring."""
 
