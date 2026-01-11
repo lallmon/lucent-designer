@@ -214,33 +214,55 @@ Item {
                 spacing: 4
                 Layout.fillWidth: true
 
-                Lucent.SpinBoxLabeled {
-                    label: qsTr("X:")
-                    labelSize: root.labelSize
-                    labelColor: root.labelColor
-                    from: -100000
-                    to: 100000
-                    value: Math.round(root.unitX)
+                RowLayout {
+                    spacing: 4
                     Layout.fillWidth: true
-                    onValueModified: newValue => {
-                        var target = root.hasUnitSettings ? unitSettings.displayToCanvas(newValue) : newValue;
-                        canvasModel.setItemPosition(root.selectedIndex, "x", target);
-                        appController.focusCanvas();
+                    Label {
+                        text: qsTr("X:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    TextField {
+                        id: xField
+                        Layout.fillWidth: true
+                        implicitHeight: 24
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedX) : root.displayedX).toFixed(root.unitPrecision)
+                        onEditingFinished: {
+                            var val = parseFloat(text);
+                            if (isFinite(val)) {
+                                var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
+                                canvasModel.setItemPosition(root.selectedIndex, "x", target);
+                                appController.focusCanvas();
+                            }
+                            text = (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedX) : root.displayedX).toFixed(root.unitPrecision);
+                        }
                     }
                 }
 
-                Lucent.SpinBoxLabeled {
-                    label: qsTr("Y:")
-                    labelSize: root.labelSize
-                    labelColor: root.labelColor
-                    from: -100000
-                    to: 100000
-                    value: Math.round(root.unitY)
+                RowLayout {
+                    spacing: 4
                     Layout.fillWidth: true
-                    onValueModified: newValue => {
-                        var target = root.hasUnitSettings ? unitSettings.displayToCanvas(newValue) : newValue;
-                        canvasModel.setItemPosition(root.selectedIndex, "y", target);
-                        appController.focusCanvas();
+                    Label {
+                        text: qsTr("Y:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    TextField {
+                        id: yField
+                        Layout.fillWidth: true
+                        implicitHeight: 24
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedY) : root.displayedY).toFixed(root.unitPrecision)
+                        onEditingFinished: {
+                            var val = parseFloat(text);
+                            if (isFinite(val)) {
+                                var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
+                                canvasModel.setItemPosition(root.selectedIndex, "y", target);
+                                appController.focusCanvas();
+                            }
+                            text = (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedY) : root.displayedY).toFixed(root.unitPrecision);
+                        }
                     }
                 }
             }
