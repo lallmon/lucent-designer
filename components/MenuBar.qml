@@ -151,6 +151,17 @@ MenuBar {
     Menu {
         title: qsTr("&View")
         Action {
+            text: qsTr("Show &Grid")
+            checkable: true
+            checked: root.viewport ? root.viewport.gridVisible : false
+            onTriggered: {
+                if (root.viewport) {
+                    root.viewport.gridVisible = !root.viewport.gridVisible;
+                }
+            }
+        }
+        MenuSeparator {}
+        Action {
             text: qsTr("Zoom &In (Ctrl++)")
             shortcut: StandardKey.ZoomIn
             onTriggered: {

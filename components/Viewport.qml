@@ -19,6 +19,9 @@ Item {
         return 32.0;
     }
 
+    // Grid visibility (toggled from View menu)
+    property bool gridVisible: true
+
     // Zoom/pan state (camera controls)
     property real zoomLevel: 0.7  // Start at 70%
     readonly property real minZoom: 0.05
@@ -53,7 +56,8 @@ Item {
     ShaderEffect {
         id: gridShader
         anchors.fill: parent
-        visible: status === ShaderEffect.Ready
+        visible: gridVisible && status === ShaderEffect.Ready
+        z: 1000  // Render above content as an overlay
 
         property real baseGridSize: 32.0
         property real majorMultiplier: 5.0
@@ -98,9 +102,9 @@ Item {
     Canvas {
         id: gridFallback
         anchors.fill: parent
-        visible: gridShader.status !== ShaderEffect.Ready
+        visible: gridVisible && gridShader.status !== ShaderEffect.Ready
         antialiasing: false
-        z: gridShader.z
+        z: gridShader.z  // Keep overlay ordering in fallback
 
         // Mirror shader params to keep spacing/colors consistent
         property real baseGridSize: gridShader.baseGridSize
