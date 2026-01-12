@@ -1,13 +1,32 @@
 # Copyright (C) 2026 The Culture List, Inc.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Unit tests for canvas_renderer module."""
-
 import pytest
+
 from PySide6.QtGui import QImage, QPainter
 from PySide6.QtCore import QSize
 
+from lucent.canvas_renderer import CanvasRenderer
 from test_helpers import make_rectangle, make_ellipse
+
+
+class TestCanvasRendererBasics:
+    def test_canvas_renderer_properties(self, qapp):
+        renderer = CanvasRenderer()
+
+        assert renderer.zoomLevel == 1.0
+        renderer.zoomLevel = 2.0
+        assert renderer.zoomLevel == 2.0
+
+        renderer.tileOriginX = 100.0
+        renderer.tileOriginY = -50.0
+        assert renderer.tileOriginX == 100.0
+        assert renderer.tileOriginY == -50.0
+
+    def test_canvas_renderer_accepts_model_none(self, qapp):
+        renderer = CanvasRenderer()
+        renderer.setModel(object())
+        assert renderer._model is None
 
 
 class TestCanvasRendererZOrder:

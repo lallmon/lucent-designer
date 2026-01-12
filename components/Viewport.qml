@@ -11,11 +11,19 @@ Item {
     clip: true  // Constrain rendering to viewport boundaries
     readonly property SystemPalette themePalette: Lucent.Themed.palette
 
+    // Grid spacing in canvas units (physical-ready when unitSettings is present)
+    property real gridSpacingCanvas: {
+        if (typeof unitSettings !== "undefined" && unitSettings) {
+            return unitSettings.gridSpacingCanvas;
+        }
+        return 32.0;
+    }
+
     // Zoom/pan state (camera controls)
     property real zoomLevel: 0.7  // Start at 70%
-    readonly property real minZoom: 0.1
+    readonly property real minZoom: 0.05
     readonly property real maxZoom: 10.0
-    readonly property real zoomStep: 1.05  // 5% zoom increments
+    readonly property real zoomStep: 1.08  // ~8% base zoom increments for faster wheel zoom
 
     // Camera offset for panning
     property real offsetX: 0
@@ -49,6 +57,9 @@ Item {
 
         property real baseGridSize: 32.0
         property real majorMultiplier: 5.0
+        Binding on baseGridSize {
+            value: root.gridSpacingCanvas
+        }
         // Keep lines consistent across zoom by tying thickness to projected spacing.
         // Matches shader gridSize logic (base, zoomed-out major-only, zoomed-in half).
         // Keep lines very thin across zoom: small clamps plus modest scaling.
@@ -194,18 +205,6 @@ Item {
         }
     }
 
-    // Origin marker at canvas (0,0)
-    Rectangle {
-        id: originDot
-        width: 8
-        height: 8
-        radius: 4
-        color: palette.highlight
-        x: (parent.width / 2) + root.offsetX - 4
-        y: (parent.height / 2) + root.offsetY - 4
-        z: 1
-    }
-
     // The viewport surface that applies zoom and pan transforms
     Item {
         id: viewportContent
@@ -313,15 +312,28 @@ Item {
         acceptedButtons: Qt.NoButton  // Only handle wheel, not clicks
         propagateComposedEvents: true  // Allow toolMouseArea to receive events too
 
-        // Zoom with mouse wheel
+        // Zoom with mouse wheel: proportional, cursor-centered (no zoom animation)
         onWheel: wheel => {
-            var factor = wheel.angleDelta.y > 0 ? root.zoomStep : 1.0 / root.zoomStep;
+            var step = root.zoomStep;
+            var deltaSteps = (wheel.angleDelta.y / 120.0) * 2.0; // 120 per wheel notch
+            var factor = Math.pow(step, deltaSteps);
             var newZoom = root.zoomLevel * factor;
+            if (newZoom < root.minZoom || newZoom > root.maxZoom)
+                return;
 
-            // Clamp zoom level
-            if (newZoom >= root.minZoom && newZoom <= root.maxZoom) {
-                root.zoomLevel = newZoom;
-            }
+            // Compute scene point under cursor before zoom
+            var cx = wheel.x - root.width / 2 - root.offsetX;
+            var cy = wheel.y - root.height / 2 - root.offsetY;
+            var sceneX = cx / root.zoomLevel;
+            var sceneY = cy / root.zoomLevel;
+
+            root.zoomLevel = newZoom;
+
+            // Adjust offsets so cursor stays over same scene point
+            var newCx = sceneX * newZoom;
+            var newCy = sceneY * newZoom;
+            root.offsetX = -(newCx - (wheel.x - root.width / 2));
+            root.offsetY = -(newCy - (wheel.y - root.height / 2));
         }
     }
 

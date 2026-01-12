@@ -24,6 +24,7 @@ from lucent.canvas_model import CanvasModel
 from lucent.document_manager import DocumentManager
 from lucent.font_provider import FontProvider
 from lucent.app_controller import AppController
+from lucent.unit_settings import UnitSettings
 
 # Version placeholder - replaced by GitHub Actions during release builds
 __version__ = "__VERSION__"
@@ -125,8 +126,12 @@ if __name__ == "__main__":
     canvas_model = CanvasModel()
     engine.rootContext().setContextProperty("canvasModel", canvas_model)
 
+    # Unit and DPI settings exposed to QML
+    unit_settings = UnitSettings()
+    engine.rootContext().setContextProperty("unitSettings", unit_settings)
+
     # Create and register document manager for file operations
-    document_manager = DocumentManager(canvas_model)
+    document_manager = DocumentManager(canvas_model, unit_settings)
     engine.rootContext().setContextProperty("documentManager", document_manager)
 
     # Create and register font provider for dynamic font lists

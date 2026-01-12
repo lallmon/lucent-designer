@@ -12,6 +12,7 @@ from PySide6.QtCore import QObject, Property, Signal, Slot, QUrl
 
 from lucent.file_io import save_document, load_document, FileVersionError
 from lucent.item_schema import item_to_dict
+from lucent.unit_settings import UnitSettings
 
 if TYPE_CHECKING:
     from lucent.canvas_model import CanvasModel
@@ -31,10 +32,14 @@ class DocumentManager(QObject):
     documentDPIChanged = Signal()
 
     def __init__(
-        self, canvas_model: "CanvasModel", parent: Optional[QObject] = None
+        self,
+        canvas_model: "CanvasModel",
+        unit_settings: Optional[UnitSettings] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self._canvas_model = canvas_model
+        self._unit_settings = unit_settings
         self._dirty = False
         self._file_path = ""
         self._document_title = "Untitled"
@@ -44,8 +49,8 @@ class DocumentManager(QObject):
         self._viewport_offset_x = 0.0
         self._viewport_offset_y = 0.0
 
-        # Document DPI (72 is standard screen DPI, used for points-to-pixels at 1:1)
-        self._document_dpi = 72
+        # Document DPI for export/metadata (decoupled from preview DPI)
+        self._document_dpi = 300
 
         # Don't track changes until app is fully initialized
         # Call startTracking() from QML after Component.onCompleted
@@ -173,7 +178,12 @@ class DocumentManager(QObject):
         self._connect_model_signals()
         self._set_file_path("")
         self._set_dirty(False)
-        self.setDocumentDPI(72)
+        self.setDocumentDPI(300)
+        if self._unit_settings:
+            # Reset unit and grid spacing to defaults
+            self._unit_settings._set_display_unit("px")
+            self._unit_settings._set_grid_spacing_value(10.0)
+            self._unit_settings._set_grid_spacing_unit("mm")
 
         return True
 
@@ -208,9 +218,16 @@ class DocumentManager(QObject):
         self._viewport_offset_y = viewport.get("offsetY", 0.0)
         self.viewportChanged.emit()
 
-        # Load document DPI (defaults to 72 if not present in file)
+        # Load document metadata (DPI and unit-related)
         meta = data.get("meta", {})
-        self.setDocumentDPI(meta.get("documentDPI", 72))
+        dpi_value = meta.get("documentDPI", self._document_dpi)
+        self.setDocumentDPI(
+            int(dpi_value)
+            if isinstance(dpi_value, (int, float))
+            else self._document_dpi
+        )
+        if self._unit_settings:
+            self._unit_settings.load_from_meta(meta)
 
         self._connect_model_signals()
 
@@ -254,7 +271,13 @@ class DocumentManager(QObject):
                 "offsetY": self._viewport_offset_y,
             }
 
-            meta = {"name": Path(local_path).stem, "documentDPI": self._document_dpi}
+            meta: Dict[str, Any] = {
+                "name": Path(local_path).stem,
+                "documentDPI": self._document_dpi,
+            }
+
+            if self._unit_settings:
+                meta.update(self._unit_settings.to_meta())
 
             save_document(path=local_path, items=items, viewport=viewport, meta=meta)
 

@@ -56,6 +56,9 @@ ApplicationWindow {
         zoomLevel: viewport.zoomLevel
         cursorX: canvas.cursorX
         cursorY: canvas.cursorY
+        onZoomRequested: value => {
+            viewport.zoomLevel = value;
+        }
     }
 
     Shortcut {

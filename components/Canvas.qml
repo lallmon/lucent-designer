@@ -51,19 +51,79 @@ Item {
         width: 0
         height: 0
 
-        // Renderer sized to the current viewport; we only render what is visible.
-        CanvasRenderer {
-            id: canvasRenderer
-            // Expand with zoom and modest padding; cap under GPU limits to reduce overdraw.
-            readonly property real _pad: 1000
-            width: Math.min(14000, (root.width / Math.max(root.zoomLevel, 0.001)) + _pad * 2)
-            height: Math.min(14000, (root.height / Math.max(root.zoomLevel, 0.001)) + _pad * 2)
-            x: -width / 2
-            y: -height / 2
-            zoomLevel: root.zoomLevel
+        // Tiled renderers sized to viewport coverage; improves perf on large scenes.
+        property int tileSize: 1024
+        property var _tiles: []
 
-            Component.onCompleted: {
-                setModel(canvasModel);
+        function updateTiles() {
+            if (!isFinite(root.width) || !isFinite(root.height) || root.width <= 0 || root.height <= 0) {
+                _tiles = [];
+                return;
+            }
+            var zs = Math.max(root.zoomLevel, 0.0001);
+            var halfW = root.width / zs / 2;
+            var halfH = root.height / zs / 2;
+            var minX = (-root.offsetX - halfW);
+            var maxX = (-root.offsetX + halfW);
+            var minY = (-root.offsetY - halfH);
+            var maxY = (-root.offsetY + halfH);
+
+            var ts = tileSize;
+            var startX = Math.floor(minX / ts);
+            var endX = Math.floor(maxX / ts);
+            var startY = Math.floor(minY / ts);
+            var endY = Math.floor(maxY / ts);
+
+            var list = [];
+            for (var ix = startX; ix <= endX; ix++) {
+                for (var iy = startY; iy <= endY; iy++) {
+                    list.push({
+                        cx: (ix + 0.5) * ts,
+                        cy: (iy + 0.5) * ts
+                    });
+                }
+            }
+            _tiles = list;
+        }
+
+        Connections {
+            target: root
+            function onZoomLevelChanged() {
+                shapesLayer.updateTiles();
+            }
+            function onOffsetXChanged() {
+                shapesLayer.updateTiles();
+            }
+            function onOffsetYChanged() {
+                shapesLayer.updateTiles();
+            }
+            function onWidthChanged() {
+                shapesLayer.updateTiles();
+            }
+            function onHeightChanged() {
+                shapesLayer.updateTiles();
+            }
+        }
+
+        Component.onCompleted: updateTiles()
+
+        Repeater {
+            model: shapesLayer._tiles
+            delegate: CanvasRenderer {
+                required property var modelData
+                readonly property real _dpiScale: 1.0
+                readonly property real _maxPxBase: shapesLayer.tileSize
+                readonly property real _padBase: 0
+
+                width: shapesLayer.tileSize
+                height: shapesLayer.tileSize
+                x: modelData.cx - width / 2
+                y: modelData.cy - height / 2
+                zoomLevel: root.zoomLevel
+                tileOriginX: modelData.cx
+                tileOriginY: modelData.cy
+
+                Component.onCompleted: setModel(canvasModel)
             }
         }
 
@@ -134,9 +194,15 @@ Item {
                 if (root._selectionGeometryBounds) {
                     var scaleX = root._selectionTransform ? (root._selectionTransform.scaleX || 1) : 1;
                     var scaleY = root._selectionTransform ? (root._selectionTransform.scaleY || 1) : 1;
-                    var displayedWidth = Math.round(root._selectionGeometryBounds.width * scaleX);
-                    var displayedHeight = Math.round(root._selectionGeometryBounds.height * scaleY);
-                    return displayedWidth + " × " + displayedHeight;
+                    var w = root._selectionGeometryBounds.width * scaleX;
+                    var h = root._selectionGeometryBounds.height * scaleY;
+                    var label = "px";
+                    if (typeof unitSettings !== "undefined" && unitSettings) {
+                        w = unitSettings.canvasToDisplay(w);
+                        h = unitSettings.canvasToDisplay(h);
+                        label = unitSettings.displayUnit;
+                    }
+                    return Math.round(w) + " × " + Math.round(h) + " " + label;
                 }
                 return "";
             }

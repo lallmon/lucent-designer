@@ -78,7 +78,19 @@ Item {
         zoomLevel: tool.zoomLevel
         cursorX: tool.mouseX
         cursorY: tool.mouseY
-        text: tool.currentEllipse ? Math.round(tool.currentEllipse.width) + " × " + Math.round(tool.currentEllipse.height) : ""
+        text: {
+            if (!tool.currentEllipse)
+                return "";
+            var w = tool.currentEllipse.width;
+            var h = tool.currentEllipse.height;
+            var label = "px";
+            if (tool.hasUnitSettings) {
+                w = unitSettings.canvasToDisplay(w);
+                h = unitSettings.canvasToDisplay(h);
+                label = unitSettings.displayUnit;
+            }
+            return Math.round(w) + " × " + Math.round(h) + " " + label;
+        }
     }
 
     function handleMousePress(canvasX, canvasY, button, modifiers) {

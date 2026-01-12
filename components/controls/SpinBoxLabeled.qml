@@ -19,6 +19,7 @@ RowLayout {
     property alias to: spinBox.to
     property alias editable: spinBox.editable
     property alias stepSize: spinBox.stepSize
+    property int decimals: 3
 
     signal valueModified(int newValue)
 
@@ -35,6 +36,9 @@ RowLayout {
         id: spinBox
         Layout.fillWidth: true
         editable: true
+        // SpinBox in Controls 6/QtQuick does not support decimals; we expose the
+        // property but do not bind it here to avoid binding errors. Decimal support
+        // is handled externally where supported.
 
         onValueModified: root.valueModified(value)
     }

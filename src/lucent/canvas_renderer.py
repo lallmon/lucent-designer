@@ -22,11 +22,14 @@ class CanvasRenderer(QQuickPaintedItem):
     """Custom QPainter-based renderer for canvas items"""
 
     zoomLevelChanged = Signal()
+    tileOriginChanged = Signal()
 
     def __init__(self, parent: Optional[QQuickItem] = None) -> None:
         super().__init__(parent)
         self._model: Optional["CanvasModel"] = None
         self._zoom_level: float = 1.0
+        self._tile_origin_x: float = 0.0
+        self._tile_origin_y: float = 0.0
 
     @Slot(QObject)
     def setModel(self, model: QObject) -> None:
@@ -63,9 +66,9 @@ class CanvasRenderer(QQuickPaintedItem):
 
         painter.setRenderHint(QPainter.Antialiasing, True)  # type: ignore[attr-defined]
 
-        # Compute offsets so (0,0) maps to the center of the renderer surface.
-        offset_x = self.width() / 2.0
-        offset_y = self.height() / 2.0
+        # Compute offsets so (0,0) maps to the global canvas origin, adjusted by tile.
+        offset_x = (self.width() / 2.0) - self._tile_origin_x
+        offset_y = (self.height() / 2.0) - self._tile_origin_y
 
         ordered_items = self._get_render_order()
 
@@ -92,4 +95,26 @@ class CanvasRenderer(QQuickPaintedItem):
         if self._zoom_level != value:
             self._zoom_level = value
             self.zoomLevelChanged.emit()
+            self.update()
+
+    @Property(float, notify=tileOriginChanged)
+    def tileOriginX(self) -> float:
+        return self._tile_origin_x
+
+    @tileOriginX.setter  # type: ignore[no-redef]
+    def tileOriginX(self, value: float) -> None:
+        if self._tile_origin_x != value:
+            self._tile_origin_x = value
+            self.tileOriginChanged.emit()
+            self.update()
+
+    @Property(float, notify=tileOriginChanged)
+    def tileOriginY(self) -> float:
+        return self._tile_origin_y
+
+    @tileOriginY.setter  # type: ignore[no-redef]
+    def tileOriginY(self, value: float) -> None:
+        if self._tile_origin_y != value:
+            self._tile_origin_y = value
+            self.tileOriginChanged.emit()
             self.update()

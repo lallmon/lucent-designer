@@ -21,6 +21,7 @@ Item {
     property var currentRect: null
     property real mouseX: 0
     property real mouseY: 0
+    readonly property bool hasUnitSettings: typeof unitSettings !== "undefined" && unitSettings !== null
 
     signal itemCompleted(var itemData)
 
@@ -79,7 +80,27 @@ Item {
         zoomLevel: tool.zoomLevel
         cursorX: tool.mouseX
         cursorY: tool.mouseY
-        text: tool.currentRect ? Math.round(tool.currentRect.width) + " × " + Math.round(tool.currentRect.height) : ""
+        text: {
+            if (!tool.currentRect)
+                return "";
+            var w = tool.currentRect.width;
+            var h = tool.currentRect.height;
+            if (tool.hasUnitSettings) {
+                w = unitSettings.canvasToDisplay(w);
+                h = unitSettings.canvasToDisplay(h);
+            }
+            var unitLabel = tool.hasUnitSettings ? unitSettings.displayUnit : "px";
+            var places = 1;
+            if (tool.hasUnitSettings) {
+                if (unitSettings.displayUnit === "in")
+                    places = 3;
+                else if (unitSettings.displayUnit === "mm")
+                    places = 2;
+                else if (unitSettings.displayUnit === "pt")
+                    places = 2;
+            }
+            return w.toFixed(places) + " × " + h.toFixed(places) + " " + unitLabel;
+        }
     }
 
     function handleMousePress(canvasX, canvasY, button, modifiers) {

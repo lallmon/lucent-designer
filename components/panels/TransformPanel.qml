@@ -20,9 +20,31 @@ Item {
     readonly property bool isLocked: hasValidSelection && canvasModel.isEffectivelyLocked(selectedIndex)
 
     property var currentTransform: null
+    readonly property bool hasUnitSettings: typeof unitSettings !== "undefined" && unitSettings !== null
+    property bool hasFlattenableTransform: false
 
     function refreshTransform() {
         currentTransform = hasValidSelection ? canvasModel.getItemTransform(selectedIndex) : null;
+        if (hasValidSelection) {
+            var pos = canvasModel.getDisplayedPosition(selectedIndex);
+            displayedX = pos ? pos.x : 0;
+            displayedY = pos ? pos.y : 0;
+            var size = canvasModel.getDisplayedSize(selectedIndex);
+            displayedWidth = size ? size.width : 0;
+            displayedHeight = size ? size.height : 0;
+        } else {
+            displayedX = 0;
+            displayedY = 0;
+            displayedWidth = 0;
+            displayedHeight = 0;
+        }
+        hasFlattenableTransform = root.controlsEnabled && root.hasValidSelection && canvasModel && canvasModel.hasNonIdentityTransform(root.selectedIndex);
+        if (widthField && !widthField.activeFocus) {
+            widthField.text = (hasUnitSettings ? unitSettings.canvasToDisplay(displayedWidth) : displayedWidth).toFixed(unitPrecision);
+        }
+        if (heightField && !heightField.activeFocus) {
+            heightField.text = (hasUnitSettings ? unitSettings.canvasToDisplay(displayedHeight) : displayedHeight).toFixed(unitPrecision);
+        }
     }
 
     Connections {
@@ -35,11 +57,28 @@ Item {
             if (index === root.selectedIndex)
                 root.refreshTransform();
         }
+        function onUndoStackChanged() {
+            root.refreshTransform();
+        }
+        function onRedoStackChanged() {
+            root.refreshTransform();
+        }
     }
 
     Connections {
         target: Lucent.SelectionManager
         function onSelectedItemIndexChanged() {
+            root.refreshTransform();
+        }
+    }
+
+    Connections {
+        target: unitSettings
+        ignoreUnknownSignals: true
+        function onDisplayUnitChanged() {
+            root.refreshTransform();
+        }
+        function onPreviewDPIChanged() {
             root.refreshTransform();
         }
     }
@@ -53,14 +92,32 @@ Item {
 
     property bool proportionalScale: false
 
-    // Displayed position and size from model
-    readonly property var displayedPosition: hasValidSelection ? canvasModel.getDisplayedPosition(selectedIndex) : null
-    readonly property real displayedX: displayedPosition ? displayedPosition.x : 0
-    readonly property real displayedY: displayedPosition ? displayedPosition.y : 0
+    // Displayed position and size from model (updated in refreshTransform)
+    property real displayedX: 0
+    property real displayedY: 0
+    property real displayedWidth: 0
+    property real displayedHeight: 0
 
-    readonly property var displayedSize: hasValidSelection ? canvasModel.getDisplayedSize(selectedIndex) : null
-    readonly property real displayedWidth: displayedSize ? displayedSize.width : 0
-    readonly property real displayedHeight: displayedSize ? displayedSize.height : 0
+    readonly property int unitPrecision: {
+        if (!hasUnitSettings)
+            return 1;
+        switch (unitSettings.displayUnit) {
+        case "in":
+            return 3;
+        case "mm":
+            return 2;
+        case "pt":
+            return 2;
+        default:
+            return 1;
+        }
+    }
+
+    // Include displayUnit/previewDPI to ensure bindings update when units change.
+    readonly property real unitX: hasUnitSettings ? unitSettings.canvasToDisplay(displayedX) : displayedX
+    readonly property real unitY: hasUnitSettings ? unitSettings.canvasToDisplay(displayedY) : displayedY
+    readonly property real unitWidth: hasUnitSettings ? unitSettings.canvasToDisplay(displayedWidth) : displayedWidth
+    readonly property real unitHeight: hasUnitSettings ? unitSettings.canvasToDisplay(displayedHeight) : displayedHeight
 
     // Transform state for rotation display and origin buttons
     readonly property real currentRotation: currentTransform ? (currentTransform.rotate ?? 0) : 0
@@ -157,31 +214,55 @@ Item {
                 spacing: 4
                 Layout.fillWidth: true
 
-                Lucent.SpinBoxLabeled {
-                    label: qsTr("X:")
-                    labelSize: root.labelSize
-                    labelColor: root.labelColor
-                    from: -100000
-                    to: 100000
-                    value: Math.round(root.displayedX)
+                RowLayout {
+                    spacing: 4
                     Layout.fillWidth: true
-                    onValueModified: newValue => {
-                        canvasModel.setItemPosition(root.selectedIndex, "x", newValue);
-                        appController.focusCanvas();
+                    Label {
+                        text: qsTr("X:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    TextField {
+                        id: xField
+                        Layout.fillWidth: true
+                        implicitHeight: 24
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedX) : root.displayedX).toFixed(root.unitPrecision)
+                        onEditingFinished: {
+                            var val = parseFloat(text);
+                            if (isFinite(val)) {
+                                var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
+                                canvasModel.setItemPosition(root.selectedIndex, "x", target);
+                                appController.focusCanvas();
+                            }
+                            text = (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedX) : root.displayedX).toFixed(root.unitPrecision);
+                        }
                     }
                 }
 
-                Lucent.SpinBoxLabeled {
-                    label: qsTr("Y:")
-                    labelSize: root.labelSize
-                    labelColor: root.labelColor
-                    from: -100000
-                    to: 100000
-                    value: Math.round(root.displayedY)
+                RowLayout {
+                    spacing: 4
                     Layout.fillWidth: true
-                    onValueModified: newValue => {
-                        canvasModel.setItemPosition(root.selectedIndex, "y", newValue);
-                        appController.focusCanvas();
+                    Label {
+                        text: qsTr("Y:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    TextField {
+                        id: yField
+                        Layout.fillWidth: true
+                        implicitHeight: 24
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedY) : root.displayedY).toFixed(root.unitPrecision)
+                        onEditingFinished: {
+                            var val = parseFloat(text);
+                            if (isFinite(val)) {
+                                var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
+                                canvasModel.setItemPosition(root.selectedIndex, "y", target);
+                                appController.focusCanvas();
+                            }
+                            text = (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedY) : root.displayedY).toFixed(root.unitPrecision);
+                        }
                     }
                 }
             }
@@ -189,35 +270,71 @@ Item {
             Lucent.VerticalDivider {}
 
             ColumnLayout {
-                spacing: 4
+                spacing: 2
                 Layout.fillWidth: true
 
-                Lucent.SpinBoxLabeled {
-                    label: qsTr("W:")
-                    labelSize: root.labelSize
-                    labelColor: root.labelColor
-                    from: 0
-                    to: 100000
-                    value: Math.round(root.displayedWidth)
+                RowLayout {
+                    spacing: 4
                     Layout.fillWidth: true
-                    onValueModified: newValue => {
-                        canvasModel.setDisplayedSize(root.selectedIndex, "width", newValue, root.proportionalScale);
-                        appController.focusCanvas();
+                    Label {
+                        text: qsTr("W:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
+                    }
+                    TextField {
+                        id: widthField
+                        Layout.fillWidth: true
+                        implicitHeight: 24
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedWidth) : root.displayedWidth).toFixed(root.unitPrecision)
+                        onEditingFinished: {
+                            var val = parseFloat(text);
+                            if (isFinite(val)) {
+                                var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
+                                canvasModel.setDisplayedSize(root.selectedIndex, "width", target, root.proportionalScale);
+                                appController.focusCanvas();
+                            }
+                            text = root.unitWidth.toFixed(root.unitPrecision);
+                        }
                     }
                 }
 
-                Lucent.SpinBoxLabeled {
-                    label: qsTr("H:")
-                    labelSize: root.labelSize
-                    labelColor: root.labelColor
-                    from: 0
-                    to: 100000
-                    value: Math.round(root.displayedHeight)
+                RowLayout {
+                    spacing: 4
                     Layout.fillWidth: true
-                    onValueModified: newValue => {
-                        canvasModel.setDisplayedSize(root.selectedIndex, "height", newValue, root.proportionalScale);
-                        appController.focusCanvas();
+                    Label {
+                        text: qsTr("H:")
+                        font.pixelSize: root.labelSize
+                        color: root.labelColor
                     }
+                    TextField {
+                        id: heightField
+                        Layout.fillWidth: true
+                        implicitHeight: 24
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedHeight) : root.displayedHeight).toFixed(root.unitPrecision)
+                        onEditingFinished: {
+                            var val = parseFloat(text);
+                            if (isFinite(val)) {
+                                var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
+                                canvasModel.setDisplayedSize(root.selectedIndex, "height", target, root.proportionalScale);
+                                appController.focusCanvas();
+                            }
+                            text = root.unitHeight.toFixed(root.unitPrecision);
+                        }
+                    }
+                }
+            }
+
+            // Unit label column for both W/H
+            ColumnLayout {
+                spacing: 0
+                Layout.alignment: Qt.AlignVCenter
+                Label {
+                    text: root.hasUnitSettings ? unitSettings.displayUnit : "px"
+                    font.pixelSize: 12
+                    color: root.labelColor
+                    Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                 }
             }
 
@@ -256,7 +373,7 @@ Item {
 
                     Lucent.ToolTipStyled {
                         visible: proportionalToggle.hovered
-                        text: proportionalToggle.checked ? qsTr("Constrain proportions") : qsTr("Free resize")
+                        text: proportionalToggle.checked ? qsTr("Free resize") : qsTr("Constrain proportions")
                     }
                 }
 
@@ -355,9 +472,9 @@ Item {
                 iconWeight: "fill"
                 iconSize: 14
                 tooltipText: qsTr("Flatten Transform")
-                enabled: root.controlsEnabled && canvasModel.hasNonIdentityTransform(root.selectedIndex)
+                enabled: hasFlattenableTransform
                 onClicked: {
-                    if (root.hasValidSelection) {
+                    if (hasFlattenableTransform && canvasModel) {
                         canvasModel.bakeTransform(root.selectedIndex);
                         appController.focusCanvas();
                     }
