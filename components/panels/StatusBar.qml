@@ -47,10 +47,6 @@ ToolBar {
                     }
                     model: [
                         {
-                            label: qsTr("Points"),
-                            value: "pt"
-                        },
-                        {
                             label: qsTr("Inches"),
                             value: "in"
                         },

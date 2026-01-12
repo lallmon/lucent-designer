@@ -11,13 +11,24 @@ Item {
     clip: true  // Constrain rendering to viewport boundaries
     readonly property SystemPalette themePalette: Lucent.Themed.palette
 
-    // Grid spacing in canvas units (physical-ready when unitSettings is present)
-    property real gridSpacingCanvas: {
+    // Grid config derived from unitSettings (display unit + preview DPI)
+    readonly property var gridConfig: {
         if (typeof unitSettings !== "undefined" && unitSettings) {
-            return unitSettings.gridSpacingCanvas;
+            // Touch properties so binding re-evaluates on change
+            unitSettings.displayUnit;
+            unitSettings.previewDPI;
+            return unitSettings.gridConfig();
         }
-        return 32.0;
+        return {
+            minorCanvas: 32.0,
+            majorMultiplier: 5.0,
+            labelStyle: "decimal",
+            targetMajorPx: 80.0
+        };
     }
+
+    // Grid spacing in canvas units (driven by gridConfig)
+    property real gridSpacingCanvas: gridConfig.minorCanvas || 32.0
 
     // Grid visibility (toggled from View menu)
     property bool gridVisible: true
@@ -37,11 +48,22 @@ Item {
             viewportWidth: width,
             viewportHeight: height,
             gridSpacing: gridSpacingCanvas,
-            majorMultiplier: gridShader.majorMultiplier,
+            majorMultiplier: gridConfig.majorMultiplier,
+            labelStyle: gridConfig.labelStyle,
+            targetMajorPx: gridConfig.targetMajorPx,
+            allowedMajorUnits: gridConfig.allowedMajorUnits,
             unitSettings: typeof unitSettings !== "undefined" ? unitSettings : null,
             cursorViewportX: _cursorViewportX,
             cursorViewportY: _cursorViewportY
         })
+
+    function refreshGrid() {
+        gridShader.baseGridSize = gridSpacingCanvas;
+        gridShader.majorMultiplier = gridConfig.majorMultiplier;
+        if (gridFallback.visible) {
+            gridFallback.requestPaint();
+        }
+    }
 
     // Zoom/pan state (camera controls)
     property real zoomLevel: 0.7  // Start at 70%
@@ -71,6 +93,19 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: Lucent.Themed.gridBackground
+    }
+
+    Connections {
+        target: typeof unitSettings !== "undefined" ? unitSettings : null
+        function onDisplayUnitChanged() {
+            refreshGrid();
+        }
+        function onPreviewDPIChanged() {
+            refreshGrid();
+        }
+        function onGridSpacingCanvasChanged() {
+            refreshGrid();
+        }
     }
 
     // Rulers overlay (non-interactive)
@@ -109,6 +144,9 @@ Item {
         property real majorMultiplier: 5.0
         Binding on baseGridSize {
             value: root.gridSpacingCanvas
+        }
+        Binding on majorMultiplier {
+            value: root.gridConfig.majorMultiplier
         }
         // Keep lines consistent across zoom by tying thickness to projected spacing.
         // Matches shader gridSize logic (base, zoomed-out major-only, zoomed-in half).
@@ -261,6 +299,25 @@ Item {
                 }
             }
             function onOffsetYChanged() {
+                if (gridFallback.visible) {
+                    gridFallback.requestPaint();
+                }
+            }
+        }
+
+        Connections {
+            target: typeof unitSettings !== "undefined" ? unitSettings : null
+            function onDisplayUnitChanged() {
+                if (gridFallback.visible) {
+                    gridFallback.requestPaint();
+                }
+            }
+            function onPreviewDPIChanged() {
+                if (gridFallback.visible) {
+                    gridFallback.requestPaint();
+                }
+            }
+            function onGridSpacingCanvasChanged() {
                 if (gridFallback.visible) {
                     gridFallback.requestPaint();
                 }

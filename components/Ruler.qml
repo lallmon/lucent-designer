@@ -21,7 +21,7 @@ Item {
     property real majorMultiplier: viewState.majorMultiplier
 
     // Internal
-    property real _targetPx: 60  // desired spacing in px
+    property real _targetPx: viewState && typeof viewState.targetMajorPx !== "undefined" ? viewState.targetMajorPx : 60
     property var _ticks: []      // {posPx, label, isMajor}
 
     implicitHeight: orientation === "horizontal" ? 22 : parent ? parent.height : 100
@@ -63,11 +63,34 @@ Item {
     }
 
     // Snap step to a multiple of the major grid to hit ~target px spacing
+    function unitStepToCanvas(uStep) {
+        if (viewState.unitSettings && viewState.unitSettings.displayToCanvas) {
+            return viewState.unitSettings.displayToCanvas(uStep);
+        }
+        return uStep * baseGridSizeVal();
+    }
+
     function computeStep() {
-        var zoom = zoomLevel;
+        if (!viewState)
+            return baseGridSizeVal();
+        var zoom = viewState.zoom;
         var stepBase = majorStepCanvas();
         if (!isFinite(zoom) || zoom <= 0 || stepBase <= 0)
             return stepBase;
+
+        var allowed = viewState.allowedMajorUnits;
+        if (allowed && allowed.length) {
+            var chosen = allowed[allowed.length - 1];
+            for (var i = 0; i < allowed.length; i++) {
+                var projPx = unitStepToCanvas(allowed[i]) * zoom;
+                if (projPx >= _targetPx) {
+                    chosen = allowed[i];
+                    break;
+                }
+            }
+            return unitStepToCanvas(chosen);
+        }
+
         var stepPx = stepBase * zoom;
         var mult = Math.max(1, Math.ceil(_targetPx / stepPx));
         return stepBase * mult;
