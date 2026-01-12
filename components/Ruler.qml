@@ -168,16 +168,17 @@ Item {
             ctx.font = "10px monospace";
             ctx.textBaseline = "top";
 
-            // Axis line at canvas origin (neutral color)
+            // Axis marker (short, not full height/width)
             ctx.beginPath();
             ctx.strokeStyle = tickColor;
+            var axisLen = 8;
             if (orientation === "horizontal") {
                 var originX = width * 0.5 + offsetX;
-                ctx.moveTo(originX + 0.5, 0);
+                ctx.moveTo(originX + 0.5, height - axisLen);
                 ctx.lineTo(originX + 0.5, height);
             } else {
                 var originY = height * 0.5 + offsetY;
-                ctx.moveTo(0, originY + 0.5);
+                ctx.moveTo(width - axisLen, originY + 0.5);
                 ctx.lineTo(width, originY + 0.5);
             }
             ctx.stroke();
@@ -201,11 +202,13 @@ Item {
             ctx.strokeStyle = tickColor;
             ticks.forEach(function (t) {
                 ctx.beginPath();
+                var isOrigin = Math.abs(t.posPx - (orientation === "horizontal" ? width * 0.5 + offsetX : height * 0.5 + offsetY)) < 0.5;
+                var tickLen = isOrigin ? 8 : 4;
                 if (orientation === "horizontal") {
-                    ctx.moveTo(t.posPx + 0.5, height - 4);
+                    ctx.moveTo(t.posPx + 0.5, height - tickLen);
                     ctx.lineTo(t.posPx + 0.5, height);
                 } else {
-                    ctx.moveTo(width - 4, t.posPx + 0.5);
+                    ctx.moveTo(width - tickLen, t.posPx + 0.5);
                     ctx.lineTo(width, t.posPx + 0.5);
                 }
                 ctx.stroke();
