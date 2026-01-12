@@ -45,17 +45,24 @@ Item {
     function updateAll() {
         if (!viewState)
             return;
-        // Guard: only regenerate if relevant inputs changed
-        if (_lastZoom === viewState.zoom && _lastOffsetX === viewState.offsetX && _lastOffsetY === viewState.offsetY && _lastW === viewState.viewportWidth && _lastH === viewState.viewportHeight && _lastGrid === baseGridSizeVal() && _lastMajorMult === majorMultiplier) {
+        // Guard: only regenerate if relevant inputs changed (rounded to reduce churn)
+        var z = Math.round(viewState.zoom * 1000) / 1000;
+        var ox = Math.round(viewState.offsetX);
+        var oy = Math.round(viewState.offsetY);
+        var vw = Math.round(viewState.viewportWidth);
+        var vh = Math.round(viewState.viewportHeight);
+        var gs = Math.round(baseGridSizeVal() * 1000) / 1000;
+        var mm = Math.round(majorMultiplier * 1000) / 1000;
+        if (_lastZoom === z && _lastOffsetX === ox && _lastOffsetY === oy && _lastW === vw && _lastH === vh && _lastGrid === gs && _lastMajorMult === mm) {
             return;
         }
-        _lastZoom = viewState.zoom;
-        _lastOffsetX = viewState.offsetX;
-        _lastOffsetY = viewState.offsetY;
-        _lastW = viewState.viewportWidth;
-        _lastH = viewState.viewportHeight;
-        _lastGrid = baseGridSizeVal();
-        _lastMajorMult = majorMultiplier;
+        _lastZoom = z;
+        _lastOffsetX = ox;
+        _lastOffsetY = oy;
+        _lastW = vw;
+        _lastH = vh;
+        _lastGrid = gs;
+        _lastMajorMult = mm;
 
         _ticks = generateTicks();
     }
