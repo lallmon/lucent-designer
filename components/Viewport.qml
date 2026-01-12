@@ -176,8 +176,6 @@ Item {
         onStatusChanged: {
             if (status === ShaderEffect.Error) {
                 console.error("[gridShader] status=Error; grid fallback will activate");
-            } else if (status !== ShaderEffect.Ready) {
-                console.warn("[gridShader] status:", status, "grid fallback will activate if not Ready");
             }
         }
     }

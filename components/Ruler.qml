@@ -17,12 +17,19 @@ Item {
     property real devicePixelRatio: Screen.devicePixelRatio
     property real cursorViewportX: NaN
     property real cursorViewportY: NaN
-    property real baseGridSize: viewState.gridSpacing
-    property real majorMultiplier: viewState.majorMultiplier
+    property real baseGridSize: viewState ? viewState.gridSpacing : 32
+    property real majorMultiplier: viewState ? viewState.majorMultiplier : 5
 
     // Internal
     property real _targetPx: viewState && typeof viewState.targetMajorPx !== "undefined" ? viewState.targetMajorPx : 60
     property var _ticks: []      // {posPx, label, isMajor}
+    property real _lastZoom: NaN
+    property real _lastOffsetX: NaN
+    property real _lastOffsetY: NaN
+    property real _lastW: NaN
+    property real _lastH: NaN
+    property real _lastGrid: NaN
+    property real _lastMajorMult: NaN
 
     implicitHeight: orientation === "horizontal" ? 22 : parent ? parent.height : 100
     implicitWidth: orientation === "vertical" ? 22 : parent ? parent.width : 100
@@ -36,8 +43,21 @@ Item {
     Component.onCompleted: updateAll()
 
     function updateAll() {
+        if (!viewState)
+            return;
+        // Guard: only regenerate if relevant inputs changed
+        if (_lastZoom === viewState.zoom && _lastOffsetX === viewState.offsetX && _lastOffsetY === viewState.offsetY && _lastW === viewState.viewportWidth && _lastH === viewState.viewportHeight && _lastGrid === baseGridSizeVal() && _lastMajorMult === majorMultiplier) {
+            return;
+        }
+        _lastZoom = viewState.zoom;
+        _lastOffsetX = viewState.offsetX;
+        _lastOffsetY = viewState.offsetY;
+        _lastW = viewState.viewportWidth;
+        _lastH = viewState.viewportHeight;
+        _lastGrid = baseGridSizeVal();
+        _lastMajorMult = majorMultiplier;
+
         _ticks = generateTicks();
-        canvas.requestPaint();
     }
 
     function baseGridSizeVal() {
@@ -156,78 +176,42 @@ Item {
         return ticks;
     }
 
-    Canvas {
-        id: canvas
+    Rectangle {
         anchors.fill: parent
-        renderTarget: Canvas.FramebufferObject
-        antialiasing: false
-        onPaint: {
-            var ctx = getContext("2d");
-            ctx.resetTransform();
-            ctx.clearRect(0, 0, width, height);
+        color: backgroundColor
+    }
 
-            // background
-            ctx.fillStyle = backgroundColor;
-            ctx.fillRect(0, 0, width, height);
+    // Axis marker (short, not full height/width)
+    Rectangle {
+        color: tickColor
+        visible: viewState !== null
+        width: orientation === "horizontal" ? 1 : 8
+        height: orientation === "horizontal" ? 8 : 1
+        x: orientation === "horizontal" ? (viewState ? viewState.viewportWidth * 0.5 + viewState.offsetX : 0) : parent.width - width
+        y: orientation === "horizontal" ? parent.height - height : (viewState ? viewState.viewportHeight * 0.5 + viewState.offsetY : 0)
+    }
 
-            var ticks = _ticks;
-            if (!ticks.length)
-                return;
+    // Cursor marker (full length)
+    Rectangle {
+        color: axisColor
+        visible: viewState && ((orientation === "horizontal" && isFinite(viewState.cursorViewportX)) || (orientation === "vertical" && isFinite(viewState.cursorViewportY)))
+        width: orientation === "horizontal" ? 1 : parent.width
+        height: orientation === "horizontal" ? parent.height : 1
+        x: orientation === "horizontal" ? viewState.cursorViewportX : 0
+        y: orientation === "horizontal" ? 0 : viewState.cursorViewportY
+    }
 
-            ctx.save();
-            ctx.strokeStyle = tickColor;
-            ctx.fillStyle = textColor;
-            ctx.lineWidth = 1;
-            ctx.font = "10px monospace";
-            ctx.textBaseline = "top";
-
-            // Axis marker (short, not full height/width)
-            ctx.beginPath();
-            ctx.strokeStyle = tickColor;
-            var axisLen = 8;
-            if (orientation === "horizontal") {
-                var originX = viewState.viewportWidth * 0.5 + viewState.offsetX;
-                ctx.moveTo(originX + 0.5, height - axisLen);
-                ctx.lineTo(originX + 0.5, height);
-            } else {
-                var originY = viewState.viewportHeight * 0.5 + viewState.offsetY;
-                ctx.moveTo(width - axisLen, originY + 0.5);
-                ctx.lineTo(width, originY + 0.5);
-            }
-            ctx.stroke();
-
-            // Cursor marker (full length, light)
-            var cx = viewState.cursorViewportX;
-            var cy = viewState.cursorViewportY;
-            ctx.strokeStyle = axisColor;
-            if (orientation === "horizontal" && isFinite(cx)) {
-                ctx.beginPath();
-                ctx.moveTo(cx + 0.5, 0);
-                ctx.lineTo(cx + 0.5, height);
-                ctx.stroke();
-            } else if (orientation === "vertical" && isFinite(cy)) {
-                ctx.beginPath();
-                ctx.moveTo(0, cy + 0.5);
-                ctx.lineTo(width, cy + 0.5);
-                ctx.stroke();
-            }
-
-            ctx.strokeStyle = tickColor;
-            ticks.forEach(function (t) {
-                ctx.beginPath();
-                var isOrigin = Math.abs(t.posPx - (orientation === "horizontal" ? width * 0.5 + offsetX : height * 0.5 + offsetY)) < 0.5;
-                var tickLen = isOrigin ? 8 : 4;
-                if (orientation === "horizontal") {
-                    ctx.moveTo(t.posPx + 0.5, height - tickLen);
-                    ctx.lineTo(t.posPx + 0.5, height);
-                } else {
-                    ctx.moveTo(width - tickLen, t.posPx + 0.5);
-                    ctx.lineTo(width, t.posPx + 0.5);
-                }
-                ctx.stroke();
-            });
-
-            ctx.restore();
+    // Tick marks
+    Repeater {
+        model: _ticks
+        delegate: Rectangle {
+            property var t: modelData
+            color: tickColor
+            width: orientation === "horizontal" ? 1 : (isOrigin ? 8 : 4)
+            height: orientation === "horizontal" ? (isOrigin ? 8 : 4) : 1
+            x: orientation === "horizontal" ? t.posPx : parent.width - width
+            y: orientation === "horizontal" ? parent.height - height : t.posPx
+            readonly property bool isOrigin: Math.abs(t.posPx - (orientation === "horizontal" ? parent.width * 0.5 + viewState.offsetX : parent.height * 0.5 + viewState.offsetY)) < 0.5
         }
     }
 
