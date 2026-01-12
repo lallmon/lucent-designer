@@ -11,3 +11,14 @@ readme = "README.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Required by pyside6-deploy: list project entrypoints and assets.
+[tool.pyside6-project]
+files = [
+    "main.py",
+    "App.qml",
+    "components/",
+    "assets/",
+    "pysidedeploy.spec",
+    "src/",
+]
