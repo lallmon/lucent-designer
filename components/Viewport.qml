@@ -109,15 +109,25 @@ Item {
         function gridParams() {
             var gridSize = baseGridSize;
             var showMinor = true;
-            if (root.zoomLevel < 0.5) {
-                gridSize = baseGridSize * majorMultiplier;
+
+            var minorStepPx = gridSize * root.zoomLevel;
+            if (minorStepPx < 6) {
                 showMinor = false;
-            } else if (root.zoomLevel > 2.0) {
+            } else if (minorStepPx > 24) {
                 gridSize = baseGridSize * 0.5;
+                minorStepPx = gridSize * root.zoomLevel;
             }
+
+            var majorStep = baseGridSize * majorMultiplier;
+            var majorStepPx = majorStep * root.zoomLevel;
+            if (majorStepPx < 12) {
+                majorStep = baseGridSize * majorMultiplier * 2.0;
+                majorStepPx = majorStep * root.zoomLevel;
+            }
+
             return {
                 gridSize: gridSize,
-                majorStep: baseGridSize * majorMultiplier,
+                majorStep: majorStep,
                 showMinor: showMinor
             };
         }
@@ -168,6 +178,9 @@ Item {
 
             var minorStepPx = params.gridSize * zoom;
             var majorStepPx = params.majorStep * zoom;
+
+            if (majorStepPx < 2)
+                return;
 
             // Minor grid
             if (params.showMinor) {

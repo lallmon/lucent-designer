@@ -44,22 +44,33 @@ void main() {
     highp float canvasX = (screenPos.x - centerX - offsetX) / zoomLevel;
     highp float canvasY = (screenPos.y - centerY - offsetY) / zoomLevel;
 
-    // Adaptive grid spacing based on zoom level
+    // Adaptive grid spacing based on on-screen pixel density
     highp float gridSize = baseGridSize;
     bool showMinor = true;
-    if (zoomLevel < 0.5) {
-        gridSize = baseGridSize * majorMultiplier;
-        showMinor = false;
-    } else if (zoomLevel > 2.0) {
-        gridSize = baseGridSize * 0.5;
-    }
-    highp float majorStep = baseGridSize * majorMultiplier;
 
-    // Distance to nearest minor grid in canvas units
-    highp float gx = abs(mod(canvasX, gridSize));
-    gx = min(gx, gridSize - gx);
-    highp float gy = abs(mod(canvasY, gridSize));
-    gy = min(gy, gridSize - gy);
+    // Hide minor lines if they would be thinner than ~6px spacing
+    highp float minorStepPx = gridSize * zoomLevel;
+    if (minorStepPx < 6.0) {
+        showMinor = false;
+    } else if (minorStepPx > 24.0) {
+        // When minors get very chunky, subdivide once
+        gridSize = baseGridSize * 0.5;
+        minorStepPx = gridSize * zoomLevel;
+    }
+
+    // Major grid anchors to the base spacing; expand if majors get too tight
+    highp float majorStep = baseGridSize * majorMultiplier;
+    highp float majorStepPx = majorStep * zoomLevel;
+    if (majorStepPx < 12.0) {
+        majorStep = baseGridSize * majorMultiplier * 2.0;
+        majorStepPx = majorStep * zoomLevel;
+    }
+
+    // Cull entirely when even majors would be sub-pixel
+    if (majorStepPx < 2.0) {
+        fragColor = vec4(0.0);
+        return;
+    }
 
     // Distance to nearest major grid in canvas units
     highp float gmx = abs(mod(canvasX, majorStep));
@@ -68,11 +79,20 @@ void main() {
     gmy = min(gmy, majorStep - gmy);
 
     // Convert to screen pixels to keep 1px visual thickness
-    highp float minorDistPx = min(gx, gy) * zoomLevel;
     highp float majorDistPx = min(gmx, gmy) * zoomLevel;
-
-    lowp float minorA = showMinor ? lineAlpha(minorDistPx, minorThicknessPx, featherPx) : 0.0;
     lowp float majorA = lineAlpha(majorDistPx, majorThicknessPx, featherPx);
+
+    lowp float minorA = 0.0;
+    if (showMinor) {
+        // Distance to nearest minor grid in canvas units
+        highp float gx = abs(mod(canvasX, gridSize));
+        gx = min(gx, gridSize - gx);
+        highp float gy = abs(mod(canvasY, gridSize));
+        gy = min(gy, gridSize - gy);
+
+        highp float minorDistPx = min(gx, gy) * zoomLevel;
+        minorA = lineAlpha(minorDistPx, minorThicknessPx, featherPx);
+    }
 
     // Combine: major lines override minor where they overlap
     vec4 color = vec4(0.0);
