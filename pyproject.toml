@@ -17,8 +17,8 @@ where = ["src"]
 files = [
     "main.py",
     "App.qml",
-    "components/",
-    "assets/",
+    "components",
+    "assets",
     "pysidedeploy.spec",
-    "src/",
+    "src/lucent",
 ]
