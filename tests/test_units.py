@@ -7,7 +7,13 @@ import math
 
 import pytest
 
-from lucent.units import canvas_to_unit, unit_to_canvas, convert
+from lucent.units import (
+    canvas_to_unit,
+    unit_to_canvas,
+    convert,
+    format_value,
+    DISPLAY_PRECISION,
+)
 
 
 @pytest.mark.parametrize("dpi", [96, 300])
@@ -43,3 +49,17 @@ def test_invalid_dpi_raises():
         canvas_to_unit(10, "in", 0)
     with pytest.raises(ValueError):
         unit_to_canvas(10, "in", -1)
+
+
+@pytest.mark.parametrize(
+    "unit,places,raw,expected",
+    [
+        ("px", 1, 12.345, "12.3"),
+        ("mm", 2, 12.345, "12.35"),
+        ("in", 3, 1.23456, "1.235"),
+        ("pt", 2, 12.345, "12.35"),
+    ],
+)
+def test_format_value_precision(unit, places, raw, expected):
+    assert DISPLAY_PRECISION[unit] == places
+    assert format_value(raw, unit) == expected
