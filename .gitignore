@@ -129,3 +129,5 @@ desktop.ini
 .rcc/
 .uic/
 /build*/
+/dist/
+/venv/
