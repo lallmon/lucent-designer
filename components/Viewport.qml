@@ -60,6 +60,44 @@ Item {
     property real offsetX: 0
     property real offsetY: 0
 
+    // Animation control - disabled during wheel zoom for precise cursor tracking
+    property bool animationsEnabled: true
+
+    // Smooth zoom animation for menu-driven zoom (not wheel)
+    Behavior on zoomLevel {
+        enabled: root.animationsEnabled
+        NumberAnimation {
+            duration: 150
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    // Inertial panning state
+    property real panVelocityX: 0
+    property real panVelocityY: 0
+    readonly property real panFriction: 0.92  // Velocity multiplier per frame
+    readonly property real panMinVelocity: 0.5  // Stop threshold
+
+    // Inertia timer for smooth pan deceleration
+    Timer {
+        id: inertiaTimer
+        interval: 16  // ~60fps
+        repeat: true
+        running: Math.abs(root.panVelocityX) > root.panMinVelocity || Math.abs(root.panVelocityY) > root.panMinVelocity
+        onTriggered: {
+            root.offsetX += root.panVelocityX;
+            root.offsetY += root.panVelocityY;
+            root.panVelocityX *= root.panFriction;
+            root.panVelocityY *= root.panFriction;
+
+            // Stop when velocity is negligible
+            if (Math.abs(root.panVelocityX) <= root.panMinVelocity && Math.abs(root.panVelocityY) <= root.panMinVelocity) {
+                root.panVelocityX = 0;
+                root.panVelocityY = 0;
+            }
+        }
+    }
+
     // Canvas bounds (matches the viewport-sized renderer surface)
     readonly property real canvasWidth: width
     readonly property real canvasHeight: height
@@ -395,6 +433,8 @@ Item {
 
         onPressed: mouse => {
             forceActiveFocus();
+            // Stop any ongoing inertia when user starts a new interaction
+            root.stopInertia();
             if (canvasComponent) {
                 canvasComponent.handleMousePress(mouse.x, mouse.y, mouse.button, mouse.modifiers);
             }
@@ -428,7 +468,8 @@ Item {
         acceptedButtons: Qt.NoButton  // Only handle wheel, not clicks
         propagateComposedEvents: true  // Allow toolMouseArea to receive events too
 
-        // Zoom with mouse wheel: proportional, cursor-centered (no zoom animation)
+        // Zoom with mouse wheel: proportional, cursor-centered
+        // Animations disabled for precise cursor tracking during wheel zoom
         onWheel: wheel => {
             var step = root.zoomStep;
             var deltaSteps = (wheel.angleDelta.y / 120.0) * 2.0; // 120 per wheel notch
@@ -436,6 +477,9 @@ Item {
             var newZoom = root.zoomLevel * factor;
             if (newZoom < root.minZoom || newZoom > root.maxZoom)
                 return;
+
+            // Disable animations for precise cursor-centered zoom
+            root.animationsEnabled = false;
 
             // Compute scene point under cursor before zoom
             var cx = wheel.x - root.width / 2 - root.offsetX;
@@ -450,7 +494,18 @@ Item {
             var newCy = sceneY * newZoom;
             root.offsetX = -(newCx - (wheel.x - root.width / 2));
             root.offsetY = -(newCy - (wheel.y - root.height / 2));
+
+            // Re-enable animations after wheel zoom completes
+            wheelAnimationReenableTimer.restart();
         }
+    }
+
+    // Timer to re-enable animations after wheel zoom settles
+    Timer {
+        id: wheelAnimationReenableTimer
+        interval: 100  // Re-enable after 100ms of no wheel events
+        repeat: false
+        onTriggered: root.animationsEnabled = true
     }
 
     // Public functions for zoom control
@@ -535,6 +590,10 @@ Item {
             return;  // Abort pan operation
         }
 
+        // Track velocity for inertia (smoothed with previous velocity)
+        panVelocityX = dx * 0.7 + panVelocityX * 0.3;
+        panVelocityY = dy * 0.7 + panVelocityY * 0.3;
+
         // Apply pan delta
         var newOffsetX = offsetX + dx;
         var newOffsetY = offsetY + dy;
@@ -549,5 +608,11 @@ Item {
             offsetX = 0;
             offsetY = 0;
         }
+    }
+
+    // Stop inertia when user starts a new interaction
+    function stopInertia() {
+        panVelocityX = 0;
+        panVelocityY = 0;
     }
 }
