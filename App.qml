@@ -13,7 +13,8 @@ ApplicationWindow {
     width: 1920
     height: 1080
     visible: true
-    title: (documentManager && documentManager.dirty ? "• " : "") + (documentManager ? documentManager.documentTitle : "Untitled") + " — Lucent"
+    visibility: Window.Maximized
+    title: "Lucent Designer"
     font: Qt.application.font
     readonly property SystemPalette themePalette: Lucent.Themed.palette
 
@@ -41,9 +42,11 @@ ApplicationWindow {
         }
     }
 
-    menuBar: MenuBar {
+    header: HeaderBar {
         viewport: viewport
         canvas: canvas
+        documentTitle: documentManager ? documentManager.documentTitle : "Untitled"
+        documentDirty: documentManager ? documentManager.dirty : false
         onAboutRequested: aboutDialog.open()
         onNewRequested: root.handleNew()
         onOpenRequested: openDialog.open()
@@ -53,12 +56,9 @@ ApplicationWindow {
     }
 
     footer: StatusBar {
-        zoomLevel: viewport.zoomLevel
         cursorX: canvas.cursorX
         cursorY: canvas.cursorY
-        onZoomRequested: value => {
-            viewport.zoomLevel = value;
-        }
+        activeTool: canvas.drawingMode === "" ? "select" : canvas.drawingMode
     }
 
     Shortcut {
@@ -103,6 +103,38 @@ ApplicationWindow {
         sequence: "F12"
         context: Qt.ApplicationShortcut
         onActivated: debugPanel.visible = !debugPanel.visible
+    }
+
+    // Tool shortcuts
+    Shortcut {
+        sequence: "V"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("select")
+    }
+    Shortcut {
+        sequence: "R"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("rectangle")
+    }
+    Shortcut {
+        sequence: "O"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("ellipse")
+    }
+    Shortcut {
+        sequence: "P"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("pen")
+    }
+    Shortcut {
+        sequence: "T"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("text")
     }
 
     Platform.FileDialog {
@@ -279,7 +311,7 @@ ApplicationWindow {
                 RightPanel {
                     id: rightPanel
                     SplitView.preferredWidth: 280
-                    SplitView.minimumWidth: 128
+                    SplitView.minimumWidth: 160
                     SplitView.maximumWidth: 400
                     SplitView.fillHeight: true
                 }
@@ -290,10 +322,6 @@ ApplicationWindow {
     AboutDialog {
         id: aboutDialog
         anchors.centerIn: parent
-        appVersion: appInfo ? appInfo.appVersion : ""
-        rendererBackend: appInfo ? appInfo.rendererBackend : ""
-        rendererType: appInfo ? appInfo.rendererType : ""
-        glVendor: appInfo ? appInfo.glVendor : ""
     }
 
     ExportDialog {

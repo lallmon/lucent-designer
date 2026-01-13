@@ -32,69 +32,27 @@ Pane {
     }
 
     contentItem: ColumnLayout {
-        Lucent.ToolIconButton {
-            id: selButton
-            toolName: "select"
-            iconName: "cursor-fill"
-            tooltipText: ""
-            activeTool: root.activeTool
-            buttonGroup: toolButtonGroup
-            isDefaultSelect: true
-            deselectValue: ""
-            onToolClicked: function (nextTool) {
-                root.toolSelected(nextTool);
-            }
-        }
+        Repeater {
+            model: Lucent.ToolRegistry.toolOrder
 
-        Lucent.ToolIconButton {
-            id: rectButton
-            toolName: "rectangle"
-            iconName: "rectangle"
-            iconWeight: "regular"
-            tooltipText: "Rectangle Tool\n\nShift: Constrain to square\nAlt: Draw from center"
-            activeTool: root.activeTool
-            buttonGroup: toolButtonGroup
-            onToolClicked: function (nextTool) {
-                root.toolSelected(nextTool);
-            }
-        }
+            Lucent.ToolIconButton {
+                required property int index
+                required property string modelData
 
-        Lucent.ToolIconButton {
-            id: ellipseButton
-            toolName: "ellipse"
-            iconName: "circle"
-            iconWeight: "regular"
-            tooltipText: "Ellipse Tool\n\nShift: Constrain to circle\nAlt: Draw from center"
-            activeTool: root.activeTool
-            buttonGroup: toolButtonGroup
-            onToolClicked: function (nextTool) {
-                root.toolSelected(nextTool);
-            }
-        }
+                readonly property var toolInfo: Lucent.ToolRegistry.getTool(modelData)
 
-        Lucent.ToolIconButton {
-            id: penButton
-            toolName: "pen"
-            iconName: "pen-nib"
-            iconWeight: "regular"
-            tooltipText: "Pen Tool\n\nClick to add points, click first point to close"
-            activeTool: root.activeTool
-            buttonGroup: toolButtonGroup
-            onToolClicked: function (nextTool) {
-                root.toolSelected(nextTool);
-            }
-        }
+                toolName: modelData
+                iconName: toolInfo ? toolInfo.icon : ""
+                iconWeight: toolInfo ? toolInfo.iconWeight : "regular"
+                tooltipText: Lucent.ToolRegistry.getTooltip(modelData)
+                activeTool: root.activeTool
+                buttonGroup: toolButtonGroup
+                isDefaultSelect: modelData === "select"
+                deselectValue: ""
 
-        Lucent.ToolIconButton {
-            id: textButton
-            toolName: "text"
-            iconName: "text-t"
-            iconWeight: "regular"
-            tooltipText: "Text Tool\n\nClick to place text, type, then press Enter to confirm"
-            activeTool: root.activeTool
-            buttonGroup: toolButtonGroup
-            onToolClicked: function (nextTool) {
-                root.toolSelected(nextTool);
+                onToolClicked: function (nextTool) {
+                    root.toolSelected(nextTool);
+                }
             }
         }
 

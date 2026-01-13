@@ -11,13 +11,13 @@ from lucent.units import DISPLAY_PRECISION, unit_to_canvas
 def test_defaults_and_meta_roundtrip():
     us = UnitSettings()
     assert us.displayUnit == "px"
-    assert us.previewDPI == 150.0
+    assert us.previewDPI == 96.0
     assert us.gridSpacingValue == 10.0
     assert us.gridSpacingUnit == "mm"
 
     meta = us.to_meta()
     assert meta["displayUnit"] == "px"
-    assert meta["previewDPI"] == 150.0
+    assert meta["previewDPI"] == 96.0
     assert meta["gridSpacingValue"] == 10.0
     assert meta["gridSpacingUnit"] == "mm"
 

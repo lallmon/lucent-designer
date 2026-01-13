@@ -14,15 +14,9 @@ Pane {
         anchors.fill: parent
         spacing: 0
 
-        Pane {
+        TransformPanel {
+            id: transformPanel
             Layout.fillWidth: true
-            padding: 0
-
-            TransformPanel {
-                id: transformPanel
-                anchors.left: parent.left
-                anchors.right: parent.right
-            }
         }
 
         ToolSeparator {
@@ -34,16 +28,11 @@ Pane {
             }
         }
 
-        Pane {
+        LayerPanel {
+            id: layerPanel
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: 150
-            padding: 0
-
-            LayerPanel {
-                id: layerPanel
-                anchors.fill: parent
-            }
         }
     }
 }

@@ -22,7 +22,7 @@ class UnitSettings(QObject):
     def __init__(
         self,
         display_unit: Unit = "px",
-        preview_dpi: float = 150.0,
+        preview_dpi: float = 96.0,
         grid_spacing_value: float = 10.0,
         grid_spacing_unit: Unit = "mm",
         parent: Optional[QObject] = None,

@@ -15,7 +15,7 @@ from pathlib import Path
 
 from typing import Optional, cast
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QOpenGLContext, QFont
+from PySide6.QtGui import QOpenGLContext, QFont, QIcon
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtCore import QObject, Property, Signal
 from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
@@ -53,6 +53,11 @@ if __name__ == "__main__":
     # Use QApplication (not QGuiApplication) to support Qt.labs.platform native dialogs
     app = QApplication(sys.argv)
 
+    # Set application icon
+    icon_path = Path(__file__).resolve().parent / "assets" / "appIcon.png"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+
     # Use fusion style on Windows to match Linux
     if sys.platform == "win32":
         from PySide6.QtQuickControls2 import QQuickStyle
@@ -65,10 +70,9 @@ if __name__ == "__main__":
     app.setFont(app_font)
 
     class AppInfo(QObject):
-        rendererBackendChanged = Signal()
-        appVersionChanged = Signal()
-        glVendorChanged = Signal()
-        rendererTypeChanged = Signal()
+        """Exposes app version and renderer info to QML for About dialog."""
+
+        infoChanged = Signal()
 
         def __init__(self, version: str) -> None:
             super().__init__()
@@ -77,55 +81,30 @@ if __name__ == "__main__":
             self._gl_vendor = "unknown"
             self._renderer_type = "unknown"
 
-        def get_app_version(self) -> str:
+        def setRendererInfo(
+            self, backend: str, vendor: str, renderer_type: str
+        ) -> None:
+            """Set all renderer info at once and notify QML."""
+            self._renderer_backend = backend
+            self._gl_vendor = vendor
+            self._renderer_type = renderer_type
+            self.infoChanged.emit()
+
+        @Property(str, constant=True)
+        def appVersion(self) -> str:
             return self._app_version
 
-        def set_app_version(self, value: str) -> None:
-            if self._app_version == value:
-                return
-            self._app_version = value
-            self.appVersionChanged.emit()
-
-        def get_renderer_backend(self) -> str:
+        @Property(str, notify=infoChanged)
+        def rendererBackend(self) -> str:
             return self._renderer_backend
 
-        def set_renderer_backend(self, value: str) -> None:
-            if self._renderer_backend == value:
-                return
-            self._renderer_backend = value
-            self.rendererBackendChanged.emit()
-
-        def get_gl_vendor(self) -> str:
+        @Property(str, notify=infoChanged)
+        def glVendor(self) -> str:
             return self._gl_vendor
 
-        def set_gl_vendor(self, value: str) -> None:
-            if self._gl_vendor == value:
-                return
-            self._gl_vendor = value
-            self.glVendorChanged.emit()
-
-        def get_renderer_type(self) -> str:
+        @Property(str, notify=infoChanged)
+        def rendererType(self) -> str:
             return self._renderer_type
-
-        def set_renderer_type(self, value: str) -> None:
-            if self._renderer_type == value:
-                return
-            self._renderer_type = value
-            self.rendererTypeChanged.emit()
-
-        appVersion = Property(
-            str, get_app_version, set_app_version, notify=appVersionChanged
-        )  # type: ignore[assignment]
-        rendererBackend = Property(
-            str,
-            get_renderer_backend,
-            set_renderer_backend,
-            notify=rendererBackendChanged,
-        )  # type: ignore[assignment]
-        glVendor = Property(str, get_gl_vendor, set_gl_vendor, notify=glVendorChanged)  # type: ignore[assignment]
-        rendererType = Property(
-            str, get_renderer_type, set_renderer_type, notify=rendererTypeChanged
-        )  # type: ignore[assignment]
 
     qmlRegisterType(
         cast(type, CanvasRenderer), "CanvasRendering", 1, 0, "CanvasRenderer"
@@ -190,31 +169,28 @@ if __name__ == "__main__":
         }
         return mapping_int.get(value, "unknown")
 
-    # Initial guess
-    app_info.set_renderer_backend(_renderer_backend(QQuickWindow.graphicsApi()))
     qml_file = Path(__file__).resolve().parent / "App.qml"
     engine.load(qml_file)
     if not engine.rootObjects():
         sys.exit(-1)
 
-    # Update renderer info now that a window exists
+    # Collect renderer info now that a window exists
+    backend = "unknown"
+    vendor = "unknown"
+    resolved_type = "unknown"
+
     try:
         window = engine.rootObjects()[0]
         ri = window.rendererInterface()  # type: ignore[attr-defined]
         api = ri.graphicsApi() if ri is not None else QQuickWindow.graphicsApi()
         backend = _renderer_backend(api)
-        app_info.set_renderer_backend(backend)
 
-        resolved_type: Optional[str] = None
-
-        # For non-OpenGL backends, GL vendor is meaningless;
-        # assume hardware unless software/null.
         if backend in ("software", "unknown", "null"):
             resolved_type = "software"
-            app_info.set_gl_vendor("n/a")
+            vendor = "n/a"
         elif backend != "opengl":
             resolved_type = "hardware"
-            app_info.set_gl_vendor(f"n/a ({backend})")
+            vendor = f"n/a ({backend})"
         else:
             # Try to collect GL vendor/renderer and classify hardware vs software
             ctx_candidates = []
@@ -246,7 +222,6 @@ if __name__ == "__main__":
                     renderer_str = (
                         renderer_bytes.decode(errors="ignore") if renderer_bytes else ""
                     )
-                    app_info.set_gl_vendor(vendor or "unknown")
                     rend_lower = (renderer_str or vendor).lower()
                     if (
                         "llvmpipe" in rend_lower
@@ -260,15 +235,14 @@ if __name__ == "__main__":
                 except Exception:
                     continue
 
-            # If we couldn't resolve type from GL strings, default to hardware for GL
-            if resolved_type is None:
+            # Default to hardware for GL if we couldn't determine from strings
+            if resolved_type == "unknown":
                 resolved_type = "hardware"
-                if app_info.get_gl_vendor() == "unknown":
-                    app_info.set_gl_vendor("unknown (OpenGL)")
-
-        app_info.set_renderer_type(resolved_type or "unknown")
+                if vendor == "unknown":
+                    vendor = "unknown (OpenGL)"
     except Exception:
-        # Leave the initial value if introspection fails
         pass
+
+    app_info.setRendererInfo(backend, vendor, resolved_type)
 
     sys.exit(app.exec())

@@ -15,7 +15,6 @@ Rectangle {
     property int frameCount: 0
     property real fps: 0
 
-    // FrameAnimation fires exactly once per rendered frame
     FrameAnimation {
         running: root.visible
         onTriggered: root.frameCount++
@@ -36,7 +35,6 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 4
 
-        // FPS Counter
         Row {
             spacing: 6
 
@@ -55,11 +53,5 @@ Rectangle {
                 font.family: "monospace"
             }
         }
-
-        // Add more debug info here as needed:
-        // - Tile count
-        // - Item count
-        // - Zoom level
-        // - Memory usage
     }
 }
