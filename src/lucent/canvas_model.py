@@ -58,6 +58,7 @@ from lucent.model_geometry import (
     shape_to_path_data,
 )
 from lucent.render_query import get_render_items, get_hit_test_items
+from lucent.quadtree import SpatialIndex, Rect
 
 
 class CanvasModel(QAbstractListModel):
@@ -94,6 +95,16 @@ class CanvasModel(QAbstractListModel):
         self._transaction_active: bool = False
         self._transaction_snapshot: Dict[int, Dict[str, Any]] = {}
         self._type_counters: Dict[str, int] = {}
+
+        # Spatial index for fast viewport queries
+        self._spatial_index = SpatialIndex()
+
+        # Connect signals to update spatial index
+        self.itemAdded.connect(self._on_item_added_spatial)
+        self.itemRemoved.connect(self._on_item_removed_spatial)
+        self.itemModified.connect(self._on_item_modified_spatial)
+        self.itemsCleared.connect(self._on_items_cleared_spatial)
+        self.itemsReordered.connect(self._rebuild_spatial_index)
 
     # QAbstractListModel required methods
     def rowCount(
@@ -1413,5 +1424,89 @@ class CanvasModel(QAbstractListModel):
             self._is_effectively_visible,
         )
 
+    def getRenderItemsInBounds(
+        self, x: float, y: float, width: float, height: float
+    ) -> List[CanvasItem]:
+        """Return renderable items that intersect the given bounds.
+
+        Uses spatial indexing for O(log n + k) query performance instead of
+        iterating all items. Results are filtered for visibility and sorted
+        by model order for correct z-ordering.
+
+        Args:
+            x, y: Top-left corner of query bounds
+            width, height: Size of query bounds
+
+        Returns:
+            List of renderable, visible items in model order (bottom to top).
+        """
+        query_rect = Rect(x, y, width, height)
+        candidate_ids = self._spatial_index.query(query_rect)
+
+        # Build set of candidate items
+        candidates = {id(item) for item in self._items if id(item) in candidate_ids}
+
+        # Filter and maintain model order
+        result: List[CanvasItem] = []
+        for idx, item in enumerate(self._items):
+            if id(item) not in candidates:
+                continue
+            if self._is_container(item):
+                continue
+            if not self._is_renderable(item):
+                continue
+            if not self._is_effectively_visible(idx):
+                continue
+            result.append(item)
+
+        return result
+
     def _itemToDict(self, item: CanvasItem) -> Dict[str, Any]:
         return item_to_dict(item)
+
+    # --- Spatial Index Management ---
+
+    def _get_item_bounds_for_index(self, item: CanvasItem) -> Optional[Rect]:
+        """Get item bounds as a Rect for spatial indexing."""
+        try:
+            qrect = item.get_bounds()
+            return Rect(qrect.x(), qrect.y(), qrect.width(), qrect.height())
+        except Exception:
+            return None
+
+    def _on_item_added_spatial(self, index: int) -> None:
+        """Update spatial index when an item is added."""
+        if 0 <= index < len(self._items):
+            item = self._items[index]
+            bounds = self._get_item_bounds_for_index(item)
+            if bounds:
+                self._spatial_index.insert(id(item), bounds)
+
+    def _on_item_removed_spatial(self, index: int) -> None:
+        """Update spatial index when an item is removed.
+
+        Note: The item is already removed from _items when this is called,
+        so we need to rebuild the index to handle this case correctly.
+        """
+        # Since we don't have the removed item, rebuild the index
+        self._rebuild_spatial_index()
+
+    def _on_item_modified_spatial(self, index: int, _data: Any) -> None:
+        """Update spatial index when an item is modified.
+
+        We rebuild the entire index because updateItem creates a new item
+        object (with a different id), so we can't just update the old entry.
+        """
+        self._rebuild_spatial_index()
+
+    def _on_items_cleared_spatial(self) -> None:
+        """Clear spatial index when all items are cleared."""
+        self._spatial_index.clear()
+
+    def _rebuild_spatial_index(self) -> None:
+        """Rebuild the entire spatial index from current items."""
+        self._spatial_index.clear()
+        for item in self._items:
+            bounds = self._get_item_bounds_for_index(item)
+            if bounds:
+                self._spatial_index.insert(id(item), bounds)

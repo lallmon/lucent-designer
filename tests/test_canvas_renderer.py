@@ -153,11 +153,17 @@ class TestCanvasRendererZOrder:
         """paint should iterate over render items and call their paint methods."""
         calls = []
 
+        from PySide6.QtCore import QRectF
+
         class DummyItem:
-            def paint(self, painter, zoom):
+            def get_bounds(self):
+                return QRectF(0, 0, 100, 100)
+
+            def paint(self, painter, zoom, offset_x=0, offset_y=0):
                 calls.append(("paint", zoom))
 
-        canvas_model.getRenderItems = lambda: [DummyItem()]  # type: ignore[attr-defined]
+        # Use getRenderItemsInBounds (spatial index query)
+        canvas_model.getRenderItemsInBounds = lambda x, y, w, h: [DummyItem()]  # type: ignore[attr-defined]
         canvas_renderer.setModel(canvas_model)
 
         image = QImage(QSize(10, 10), QImage.Format_ARGB32)
@@ -294,10 +300,9 @@ class TestCanvasRendererTileCulling:
 
         # Item inside tile
         inside_item = TrackedItem("inside", QRectF(25, 25, 50, 50))
-        # Item outside tile
-        outside_item = TrackedItem("outside", QRectF(500, 500, 50, 50))
 
-        canvas_model.getRenderItems = lambda: [inside_item, outside_item]
+        # Spatial index filters to only inside_item (simulates culling outside items)
+        canvas_model.getRenderItemsInBounds = lambda x, y, w, h: [inside_item]
 
         image = QImage(QSize(100, 100), QImage.Format_ARGB32)
         image.fill(0)
@@ -335,7 +340,8 @@ class TestCanvasRendererTileCulling:
             TrackedItem("third", QRectF(80, 80, 15, 15)),
         ]
 
-        canvas_model.getRenderItems = lambda: items
+        # Mock getRenderItemsInBounds to return all items (spatial index simulation)
+        canvas_model.getRenderItemsInBounds = lambda x, y, w, h: items
 
         image = QImage(QSize(100, 100), QImage.Format_ARGB32)
         image.fill(0)
@@ -359,7 +365,8 @@ class TestCanvasRendererTileCulling:
             def paint(self, painter, zoom, offset_x=0, offset_y=0):
                 paint_calls.append("broken")
 
-        canvas_model.getRenderItems = lambda: [BrokenBoundsItem()]
+        # Model returns the broken item (spatial index can't filter without bounds)
+        canvas_model.getRenderItemsInBounds = lambda x, y, w, h: [BrokenBoundsItem()]
 
         image = QImage(QSize(100, 100), QImage.Format_ARGB32)
         image.fill(0)
@@ -367,5 +374,135 @@ class TestCanvasRendererTileCulling:
         canvas_renderer.paint(painter)
         painter.end()
 
-        # Should render anyway since we couldn't determine bounds
+        # Should render anyway since we couldn't determine bounds for LOD
         assert paint_calls == ["broken"]
+
+
+class TestCanvasRendererLOD:
+    """Tests for Level of Detail (LOD) skipping optimization."""
+
+    @pytest.fixture(autouse=True)
+    def _attach_model(self, canvas_renderer, canvas_model):
+        canvas_renderer.setModel(canvas_model)
+        canvas_renderer.setWidth(100)
+        canvas_renderer.setHeight(100)
+        canvas_renderer.tileOriginX = 50
+        canvas_renderer.tileOriginY = 50
+        return canvas_renderer
+
+    def test_item_too_small_at_low_zoom(self, canvas_renderer):
+        """Item smaller than 2px at current zoom should be skipped."""
+        # At 1% zoom, a 100x100 canvas item = 1x1 screen pixels
+        canvas_renderer.zoomLevel = 0.01
+
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+
+        item = RectangleItem(
+            geometry=RectGeometry(x=0, y=0, width=100, height=100),
+            appearances=[],
+        )
+
+        # 100 * 0.01 = 1px, which is below MIN_RENDER_SIZE_PX (2)
+        assert canvas_renderer._item_too_small_to_render(item) is True
+
+    def test_item_large_enough_at_low_zoom(self, canvas_renderer):
+        """Item larger than 2px at current zoom should be rendered."""
+        canvas_renderer.zoomLevel = 0.01
+
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+
+        # 300 * 0.01 = 3px, which is above MIN_RENDER_SIZE_PX
+        item = RectangleItem(
+            geometry=RectGeometry(x=0, y=0, width=300, height=300),
+            appearances=[],
+        )
+
+        assert canvas_renderer._item_too_small_to_render(item) is False
+
+    def test_item_visible_at_normal_zoom(self, canvas_renderer):
+        """Even small items should render at normal zoom levels."""
+        canvas_renderer.zoomLevel = 1.0
+
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+
+        # 10 * 1.0 = 10px, well above threshold
+        item = RectangleItem(
+            geometry=RectGeometry(x=0, y=0, width=10, height=10),
+            appearances=[],
+        )
+
+        assert canvas_renderer._item_too_small_to_render(item) is False
+
+    def test_one_dimension_large_enough_renders(self, canvas_renderer):
+        """Item with one dimension >= 2px should still render (e.g., thin lines)."""
+        canvas_renderer.zoomLevel = 0.01
+
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+
+        # 1000 * 0.01 = 10px wide, 10 * 0.01 = 0.1px tall
+        # Width is >= 2px, so should render
+        item = RectangleItem(
+            geometry=RectGeometry(x=0, y=0, width=1000, height=10),
+            appearances=[],
+        )
+
+        assert canvas_renderer._item_too_small_to_render(item) is False
+
+    def test_paint_skips_tiny_items(self, canvas_renderer, canvas_model):
+        """Paint should skip items too small to see at current zoom."""
+        canvas_renderer.zoomLevel = 0.01
+
+        paint_calls = []
+
+        from PySide6.QtCore import QRectF
+
+        class TrackedItem:
+            def __init__(self, name, bounds):
+                self.name = name
+                self._bounds = bounds
+
+            def get_bounds(self):
+                return self._bounds
+
+            def paint(self, painter, zoom, offset_x=0, offset_y=0):
+                paint_calls.append(self.name)
+
+        # Large item that will be visible (500 * 0.01 = 5px)
+        large_item = TrackedItem("large", QRectF(0, 0, 500, 500))
+        # Tiny item that will be invisible (50 * 0.01 = 0.5px)
+        tiny_item = TrackedItem("tiny", QRectF(10, 10, 50, 50))
+
+        # Spatial index returns both items (LOD filtering happens in paint)
+        canvas_model.getRenderItemsInBounds = lambda x, y, w, h: [
+            large_item,
+            tiny_item,
+        ]
+
+        image = QImage(QSize(100, 100), QImage.Format_ARGB32)
+        image.fill(0)
+        painter = QPainter(image)
+        canvas_renderer.paint(painter)
+        painter.end()
+
+        # Only the large item should have been painted (tiny is LOD-skipped)
+        assert paint_calls == ["large"]
+
+    def test_item_without_bounds_still_renders_lod(self, canvas_renderer, canvas_model):
+        """Items that fail get_bounds should still render (safety fallback)."""
+        canvas_renderer.zoomLevel = 0.01
+
+        class BrokenBoundsItem:
+            def get_bounds(self):
+                raise RuntimeError("No bounds")
+
+            def paint(self, painter, zoom, offset_x=0, offset_y=0):
+                pass
+
+        item = BrokenBoundsItem()
+
+        # Should return False (don't skip) when bounds fail
+        assert canvas_renderer._item_too_small_to_render(item) is False

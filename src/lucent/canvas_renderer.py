@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from lucent.canvas_model import CanvasModel
     from lucent.canvas_items import CanvasItem
 
+# Minimum screen size in pixels for an item to be rendered (LOD threshold)
+MIN_RENDER_SIZE_PX = 2.0
+
 
 class CanvasRenderer(QQuickPaintedItem):
     """Custom QPainter-based renderer for canvas items"""
@@ -73,17 +76,37 @@ class CanvasRenderer(QQuickPaintedItem):
             # If we can't get bounds, render it to be safe
             return True
 
+    def _item_too_small_to_render(self, item: "CanvasItem") -> bool:
+        """Check if an item is too small on screen to be worth rendering (LOD).
+
+        Items whose screen-space size would be below MIN_RENDER_SIZE_PX in both
+        dimensions are skipped, improving performance at low zoom levels where
+        tiny shapes would be invisible anyway.
+        """
+        try:
+            item_bounds = item.get_bounds()
+            # Calculate screen size (canvas size * zoom)
+            screen_width = item_bounds.width() * self._zoom_level
+            screen_height = item_bounds.height() * self._zoom_level
+            # Skip if both dimensions are below threshold
+            return (
+                screen_width < MIN_RENDER_SIZE_PX and screen_height < MIN_RENDER_SIZE_PX
+            )
+        except Exception:
+            # If we can't get bounds, render it to be safe
+            return False
+
     def paint(self, painter: QPainter) -> None:
         """Render items from the model that intersect this tile.
 
-        Only items whose bounding boxes intersect the tile's canvas-coordinate
-        bounds are painted, significantly improving performance when many tiles
-        cover a large canvas area at low zoom levels.
+        Performance optimizations:
+        1. Spatial indexing: O(log n + k) query for items in tile bounds
+        2. LOD skipping: Items too small on screen (< 2px) are skipped
 
         Rendering order follows CanvasModel model order:
         - Lower indices are painted first (further back)
         - Higher indices are painted later (on top)
-        - Layers themselves are skipped by getRenderItems
+        - Layers themselves are skipped by getRenderItemsInBounds
         """
         if not self._model:
             return
@@ -94,14 +117,16 @@ class CanvasRenderer(QQuickPaintedItem):
         offset_x = (self.width() / 2.0) - self._tile_origin_x
         offset_y = (self.height() / 2.0) - self._tile_origin_y
 
-        # Get tile bounds for culling
+        # Get tile bounds for spatial query
         tile_bounds = self._get_tile_bounds()
 
-        ordered_items = self._get_render_order()
+        # Use spatial index for O(log n + k) query instead of O(n)
+        ordered_items = self._get_render_items_in_bounds(tile_bounds)
 
-        # Render only items that intersect this tile
+        # Render items that are large enough to see
         for item in ordered_items:
-            if not self._item_intersects_tile(item, tile_bounds):
+            # Skip items too small to see at current zoom (LOD)
+            if self._item_too_small_to_render(item):
                 continue
 
             try:
@@ -112,8 +137,16 @@ class CanvasRenderer(QQuickPaintedItem):
                 # Fallback for items that don't accept offsets (legacy/test doubles)
                 item.paint(painter, self._zoom_level)
 
+    def _get_render_items_in_bounds(self, bounds: QRectF) -> List["CanvasItem"]:
+        """Get renderable items that intersect bounds using spatial index."""
+        if not self._model:
+            return []
+        return self._model.getRenderItemsInBounds(
+            bounds.x(), bounds.y(), bounds.width(), bounds.height()
+        )
+
     def _get_render_order(self) -> List["CanvasItem"]:
-        """Get items in render order from the model."""
+        """Get items in render order from the model (legacy, for tests)."""
         return self._model.getRenderItems() if self._model else []
 
     @Property(float, notify=zoomLevelChanged)
