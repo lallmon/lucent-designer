@@ -276,18 +276,31 @@ Item {
         handleMouseRelease(canvasX, canvasY);
     }
 
-    // Enter/Escape key handling
-    function handleKeyPress(key) {
-        if (key === Qt.Key_Return || key === Qt.Key_Enter) {
-            if (tool.points.length >= 2) {
-                tool._finalize();
-            }
+    // Undo last action - called by Escape key
+    function undoLastAction() {
+        if (tool.isDragging) {
+            // Cancel current drag without placing point
+            tool.isDragging = false;
+            tool.pendingAnchor = null;
+            tool.pendingHandle = null;
+            previewCanvas.requestPaint();
             return true;
         }
-        if (key === Qt.Key_Escape) {
+
+        if (tool.points.length > 1) {
+            // Remove last point
+            var nextPoints = tool.points.slice(0, -1);
+            tool.points = nextPoints;
+            previewCanvas.requestPaint();
+            return true;
+        }
+
+        if (tool.points.length === 1) {
+            // Cancel entirely
             reset();
             return true;
         }
+
         return false;
     }
 

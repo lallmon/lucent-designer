@@ -674,10 +674,15 @@ Item {
         refreshSelectionGeometryBounds();
     }
 
-    // Cancel the current drawing tool operation
+    // Undo last action in current drawing tool (Escape key)
     function cancelCurrentTool() {
         if (currentToolLoader.item) {
-            currentToolLoader.item.reset();
+            // Use undoLastAction if available (progressive undo), otherwise reset
+            if (currentToolLoader.item.undoLastAction) {
+                currentToolLoader.item.undoLastAction();
+            } else if (currentToolLoader.item.reset) {
+                currentToolLoader.item.reset();
+            }
         }
     }
 
