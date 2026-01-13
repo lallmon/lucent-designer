@@ -10,27 +10,43 @@ from test_helpers import make_rectangle, make_ellipse
 class TestRendererModelIntegration:
     """Tests for CanvasRenderer integration with CanvasModel."""
 
-    def test_renderer_accepts_model(self, canvas_renderer, canvas_model):
-        """Test that renderer accepts and stores a CanvasModel."""
-        canvas_renderer.setModel(canvas_model)
-        assert True
+    def test_renderer_accepts_model(self, canvas_renderer, canvas_model, monkeypatch):
+        """Renderer should store valid models and invoke update once."""
+        updates = []
+        monkeypatch.setattr(canvas_renderer, "update", lambda: updates.append("update"))
 
-    def test_renderer_rejects_non_model_object(self, canvas_renderer, qapp):
-        """Test that renderer safely handles non-CanvasModel objects."""
-        not_a_model = QObject()
-        canvas_renderer.setModel(not_a_model)
-        assert True
+        canvas_renderer.setModel(canvas_model)
+
+        assert canvas_renderer._model is canvas_model
+        assert updates == ["update"]  # initial render triggered
+
+    def test_renderer_rejects_non_model_object(
+        self, canvas_renderer, qapp, monkeypatch
+    ):
+        """Renderer should ignore non-CanvasModel objects and not call update."""
+        updates = []
+        monkeypatch.setattr(canvas_renderer, "update", lambda: updates.append("update"))
+
+        canvas_renderer.setModel(QObject())
+
+        assert canvas_renderer._model is None
+        assert updates == []
 
     def test_renderer_connects_to_model_signals(
-        self, canvas_renderer, canvas_model, qtbot
+        self, canvas_renderer, canvas_model, qtbot, monkeypatch
     ):
-        """Test that renderer connects to model's change signals."""
+        """Renderer update should run when model signals fire."""
+        updates = []
+        monkeypatch.setattr(canvas_renderer, "update", lambda: updates.append("update"))
+
         canvas_renderer.setModel(canvas_model)
 
         with qtbot.waitSignal(canvas_model.itemAdded, timeout=1000):
             canvas_model.addItem(make_rectangle(width=10, height=10))
 
-        assert True
+        qtbot.waitUntil(lambda: len(updates) >= 2, timeout=1000)
+        # One update from setModel, one from itemAdded
+        assert len(updates) >= 2
 
     def test_renderer_updates_on_item_added(self, canvas_renderer, canvas_model, qtbot):
         """Test that renderer receives notification when item is added."""
@@ -57,9 +73,11 @@ class TestRendererModelIntegration:
         assert canvas_model.count() == 0
 
     def test_renderer_updates_on_item_modified(
-        self, canvas_renderer, canvas_model, qtbot
+        self, canvas_renderer, canvas_model, qtbot, monkeypatch
     ):
-        """Test that renderer receives notification when item is modified."""
+        """Renderer should update when an item is modified."""
+        updates = []
+        monkeypatch.setattr(canvas_renderer, "update", lambda: updates.append("update"))
         canvas_renderer.setModel(canvas_model)
 
         canvas_model.addItem(make_rectangle(width=10, height=10))
@@ -67,10 +85,16 @@ class TestRendererModelIntegration:
         with qtbot.waitSignal(canvas_model.itemModified, timeout=1000):
             canvas_model.updateItem(0, make_rectangle(x=50, y=75, width=10, height=10))
 
+        qtbot.waitUntil(lambda: len(updates) >= 3, timeout=1000)
+        # setModel -> addItem -> itemModified
+        assert len(updates) >= 3
+
     def test_renderer_updates_on_items_cleared(
-        self, canvas_renderer, canvas_model, qtbot
+        self, canvas_renderer, canvas_model, qtbot, monkeypatch
     ):
-        """Test that renderer receives notification when all items are cleared."""
+        """Renderer should update when items are cleared."""
+        updates = []
+        monkeypatch.setattr(canvas_renderer, "update", lambda: updates.append("update"))
         canvas_renderer.setModel(canvas_model)
 
         canvas_model.addItem(make_rectangle(width=10, height=10))
@@ -80,6 +104,10 @@ class TestRendererModelIntegration:
 
         with qtbot.waitSignal(canvas_model.itemsCleared, timeout=1000):
             canvas_model.clear()
+
+        qtbot.waitUntil(lambda: len(updates) >= 4, timeout=1000)
+        # setModel -> two adds emit update twice -> itemsCleared emits update
+        assert len(updates) >= 4
 
 
 class TestRendererZoomLevel:
