@@ -11,6 +11,7 @@ ToolBar {
     implicitHeight: 32
     property real cursorX: 0
     property real cursorY: 0
+    property string activeTool: "select"
 
     readonly property bool hasUnitSettings: typeof unitSettings !== "undefined" && unitSettings !== null
     readonly property real displayCursorX: hasUnitSettings ? unitSettings.canvasToDisplay(root.cursorX) : root.cursorX
@@ -22,8 +23,14 @@ ToolBar {
         spacing: 12
         Layout.alignment: Qt.AlignVCenter
 
-        Item {
+        // Tool instructions (left side)
+        Label {
+            Layout.leftMargin: 10
             Layout.fillWidth: true
+            text: Lucent.ToolRegistry.getInstruction(root.activeTool)
+            color: palette.text
+            font.pixelSize: 11
+            elide: Text.ElideRight
         }
 
         // Cursor readout (right side)

@@ -57,6 +57,7 @@ ApplicationWindow {
     footer: StatusBar {
         cursorX: canvas.cursorX
         cursorY: canvas.cursorY
+        activeTool: canvas.drawingMode === "" ? "select" : canvas.drawingMode
     }
 
     Shortcut {

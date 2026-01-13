@@ -1,6 +1,7 @@
 singleton Styles Styles.qml
 singleton SelectionManager SelectionManager.qml
 singleton Themed Themed.qml
+singleton ToolRegistry ToolRegistry.qml
 MenuBar 1.0 MenuBar.qml
 HeaderBar 1.0 HeaderBar.qml
 Canvas 1.0 Canvas.qml
