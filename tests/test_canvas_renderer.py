@@ -184,3 +184,188 @@ class TestCanvasRendererZOrder:
 
         render_order = canvas_renderer._get_render_order()
         assert render_order == []
+
+
+class TestCanvasRendererTileCulling:
+    """Tests for per-tile culling optimization."""
+
+    @pytest.fixture(autouse=True)
+    def _attach_model(self, canvas_renderer, canvas_model):
+        canvas_renderer.setModel(canvas_model)
+        # Set tile size for predictable bounds
+        canvas_renderer.setWidth(100)
+        canvas_renderer.setHeight(100)
+        return canvas_renderer
+
+    def test_get_tile_bounds_at_origin(self, canvas_renderer):
+        """Tile at origin should have correct bounds."""
+        canvas_renderer.tileOriginX = 0
+        canvas_renderer.tileOriginY = 0
+
+        bounds = canvas_renderer._get_tile_bounds()
+
+        assert bounds.x() == -50  # origin - half_width
+        assert bounds.y() == -50
+        assert bounds.width() == 100
+        assert bounds.height() == 100
+
+    def test_get_tile_bounds_offset(self, canvas_renderer):
+        """Tile with offset origin should have correct bounds."""
+        canvas_renderer.tileOriginX = 500
+        canvas_renderer.tileOriginY = 300
+
+        bounds = canvas_renderer._get_tile_bounds()
+
+        assert bounds.x() == 450  # 500 - 50
+        assert bounds.y() == 250  # 300 - 50
+        assert bounds.width() == 100
+        assert bounds.height() == 100
+
+    def test_item_intersects_tile_inside(self, canvas_renderer):
+        """Item fully inside tile should intersect."""
+        canvas_renderer.tileOriginX = 50
+        canvas_renderer.tileOriginY = 50
+        tile_bounds = canvas_renderer._get_tile_bounds()  # 0-100, 0-100
+
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+
+        item = RectangleItem(
+            geometry=RectGeometry(x=25, y=25, width=50, height=50),
+            appearances=[],
+        )
+
+        assert canvas_renderer._item_intersects_tile(item, tile_bounds) is True
+
+    def test_item_intersects_tile_overlapping(self, canvas_renderer):
+        """Item partially overlapping tile should intersect."""
+        canvas_renderer.tileOriginX = 50
+        canvas_renderer.tileOriginY = 50
+        tile_bounds = canvas_renderer._get_tile_bounds()  # 0-100, 0-100
+
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+
+        # Item at -25 to 25 overlaps tile at 0 to 100
+        item = RectangleItem(
+            geometry=RectGeometry(x=-25, y=-25, width=50, height=50),
+            appearances=[],
+        )
+
+        assert canvas_renderer._item_intersects_tile(item, tile_bounds) is True
+
+    def test_item_intersects_tile_outside(self, canvas_renderer):
+        """Item outside tile should not intersect."""
+        canvas_renderer.tileOriginX = 50
+        canvas_renderer.tileOriginY = 50
+        tile_bounds = canvas_renderer._get_tile_bounds()  # 0-100, 0-100
+
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+
+        # Item at 200-250 is outside tile at 0-100
+        item = RectangleItem(
+            geometry=RectGeometry(x=200, y=200, width=50, height=50),
+            appearances=[],
+        )
+
+        assert canvas_renderer._item_intersects_tile(item, tile_bounds) is False
+
+    def test_paint_culls_items_outside_tile(self, canvas_renderer, canvas_model):
+        """Paint should skip items that don't intersect the tile."""
+        canvas_renderer.tileOriginX = 50
+        canvas_renderer.tileOriginY = 50
+        # Tile bounds: 0-100, 0-100
+
+        paint_calls = []
+
+        from PySide6.QtCore import QRectF
+
+        class TrackedItem:
+            def __init__(self, name, bounds):
+                self.name = name
+                self._bounds = bounds
+
+            def get_bounds(self):
+                return self._bounds
+
+            def paint(self, painter, zoom, offset_x=0, offset_y=0):
+                paint_calls.append(self.name)
+
+        # Item inside tile
+        inside_item = TrackedItem("inside", QRectF(25, 25, 50, 50))
+        # Item outside tile
+        outside_item = TrackedItem("outside", QRectF(500, 500, 50, 50))
+
+        canvas_model.getRenderItems = lambda: [inside_item, outside_item]
+
+        image = QImage(QSize(100, 100), QImage.Format_ARGB32)
+        image.fill(0)
+        painter = QPainter(image)
+        canvas_renderer.paint(painter)
+        painter.end()
+
+        # Only the inside item should have been painted
+        assert paint_calls == ["inside"]
+
+    def test_paint_renders_intersecting_items(self, canvas_renderer, canvas_model):
+        """Paint should render all items that intersect the tile."""
+        canvas_renderer.tileOriginX = 50
+        canvas_renderer.tileOriginY = 50
+
+        paint_calls = []
+
+        from PySide6.QtCore import QRectF
+
+        class TrackedItem:
+            def __init__(self, name, bounds):
+                self.name = name
+                self._bounds = bounds
+
+            def get_bounds(self):
+                return self._bounds
+
+            def paint(self, painter, zoom, offset_x=0, offset_y=0):
+                paint_calls.append(self.name)
+
+        # Multiple items inside tile
+        items = [
+            TrackedItem("first", QRectF(10, 10, 20, 20)),
+            TrackedItem("second", QRectF(50, 50, 30, 30)),
+            TrackedItem("third", QRectF(80, 80, 15, 15)),
+        ]
+
+        canvas_model.getRenderItems = lambda: items
+
+        image = QImage(QSize(100, 100), QImage.Format_ARGB32)
+        image.fill(0)
+        painter = QPainter(image)
+        canvas_renderer.paint(painter)
+        painter.end()
+
+        assert paint_calls == ["first", "second", "third"]
+
+    def test_item_without_bounds_still_renders(self, canvas_renderer, canvas_model):
+        """Items that fail get_bounds should still render (safety fallback)."""
+        canvas_renderer.tileOriginX = 50
+        canvas_renderer.tileOriginY = 50
+
+        paint_calls = []
+
+        class BrokenBoundsItem:
+            def get_bounds(self):
+                raise RuntimeError("No bounds available")
+
+            def paint(self, painter, zoom, offset_x=0, offset_y=0):
+                paint_calls.append("broken")
+
+        canvas_model.getRenderItems = lambda: [BrokenBoundsItem()]
+
+        image = QImage(QSize(100, 100), QImage.Format_ARGB32)
+        image.fill(0)
+        painter = QPainter(image)
+        canvas_renderer.paint(painter)
+        painter.end()
+
+        # Should render anyway since we couldn't determine bounds
+        assert paint_calls == ["broken"]

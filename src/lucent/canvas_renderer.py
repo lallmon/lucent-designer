@@ -9,7 +9,7 @@ that bridges QML and Python, rendering canvas items using QPainter.
 """
 
 from typing import Optional, List, TYPE_CHECKING
-from PySide6.QtCore import Property, Signal, Slot, QObject
+from PySide6.QtCore import Property, Signal, Slot, QObject, QRectF
 from PySide6.QtQuick import QQuickPaintedItem, QQuickItem
 from PySide6.QtGui import QPainter
 
@@ -53,8 +53,32 @@ class CanvasRenderer(QQuickPaintedItem):
             # Initial render
             self.update()
 
+    def _get_tile_bounds(self) -> QRectF:
+        """Calculate this tile's bounds in canvas coordinates."""
+        half_w = self.width() / 2.0
+        half_h = self.height() / 2.0
+        return QRectF(
+            self._tile_origin_x - half_w,
+            self._tile_origin_y - half_h,
+            self.width(),
+            self.height(),
+        )
+
+    def _item_intersects_tile(self, item: "CanvasItem", tile_bounds: QRectF) -> bool:
+        """Check if an item's bounds intersect the tile bounds."""
+        try:
+            item_bounds = item.get_bounds()
+            return tile_bounds.intersects(item_bounds)
+        except Exception:
+            # If we can't get bounds, render it to be safe
+            return True
+
     def paint(self, painter: QPainter) -> None:
-        """Render all items from the model using QPainter.
+        """Render items from the model that intersect this tile.
+
+        Only items whose bounding boxes intersect the tile's canvas-coordinate
+        bounds are painted, significantly improving performance when many tiles
+        cover a large canvas area at low zoom levels.
 
         Rendering order follows CanvasModel model order:
         - Lower indices are painted first (further back)
@@ -70,10 +94,16 @@ class CanvasRenderer(QQuickPaintedItem):
         offset_x = (self.width() / 2.0) - self._tile_origin_x
         offset_y = (self.height() / 2.0) - self._tile_origin_y
 
+        # Get tile bounds for culling
+        tile_bounds = self._get_tile_bounds()
+
         ordered_items = self._get_render_order()
 
-        # Render each item with dynamic offsets
+        # Render only items that intersect this tile
         for item in ordered_items:
+            if not self._item_intersects_tile(item, tile_bounds):
+                continue
+
             try:
                 item.paint(
                     painter, self._zoom_level, offset_x=offset_x, offset_y=offset_y
