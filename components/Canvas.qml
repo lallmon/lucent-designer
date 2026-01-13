@@ -391,8 +391,7 @@ Item {
 
         // Clear selection when switching to drawing tools
         if (drawingMode !== "") {
-            Lucent.SelectionManager.selectedItemIndex = -1;
-            Lucent.SelectionManager.selectedItem = null;
+            Lucent.SelectionManager.setSelection([]);
         }
     }
 
