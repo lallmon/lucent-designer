@@ -13,6 +13,7 @@ ApplicationWindow {
     width: 1920
     height: 1080
     visible: true
+    visibility: Window.Maximized
     title: "Lucent Designer"
     font: Qt.application.font
     readonly property SystemPalette themePalette: Lucent.Themed.palette
