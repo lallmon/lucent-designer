@@ -27,6 +27,9 @@ layout(std140, binding = 0) uniform ubuf {
     highp vec2 viewportSize;
     lowp vec4 minorColor;
     lowp vec4 majorColor;
+    highp float minorStepCanvas;
+    highp float majorStepCanvas;
+    highp float showMinorFlag;
 };
 
 // Compute distance in screen pixels to nearest grid line and feather for AA.
@@ -44,33 +47,10 @@ void main() {
     highp float canvasX = (screenPos.x - centerX - offsetX) / zoomLevel;
     highp float canvasY = (screenPos.y - centerY - offsetY) / zoomLevel;
 
-    // Adaptive grid spacing based on on-screen pixel density
-    highp float gridSize = baseGridSize;
-    bool showMinor = true;
-
-    // Hide minor lines if they would be thinner than ~6px spacing
-    highp float minorStepPx = gridSize * zoomLevel;
-    if (minorStepPx < 6.0) {
-        showMinor = false;
-    } else if (minorStepPx > 24.0) {
-        // When minors get very chunky, subdivide once
-        gridSize = baseGridSize * 0.5;
-        minorStepPx = gridSize * zoomLevel;
-    }
-
-    // Major grid anchors to the base spacing; expand if majors get too tight
-    highp float majorStep = baseGridSize * majorMultiplier;
-    highp float majorStepPx = majorStep * zoomLevel;
-    if (majorStepPx < 12.0) {
-        majorStep = baseGridSize * majorMultiplier * 2.0;
-        majorStepPx = majorStep * zoomLevel;
-    }
-
-    // Cull entirely when even majors would be sub-pixel
-    if (majorStepPx < 2.0) {
-        fragColor = vec4(0.0);
-        return;
-    }
+    // Spacing/visibility precomputed in QML
+    highp float gridSize = minorStepCanvas;
+    bool showMinor = showMinorFlag > 0.5;
+    highp float majorStep = majorStepCanvas;
 
     // Distance to nearest major grid in canvas units
     highp float gmx = abs(mod(canvasX, majorStep));

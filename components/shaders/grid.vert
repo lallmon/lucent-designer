@@ -26,6 +26,9 @@ layout(std140, binding = 0) uniform ubuf {
     vec2 viewportSize;
     vec4 minorColor;
     vec4 majorColor;
+    float minorStepCanvas;
+    float majorStepCanvas;
+    float showMinorFlag;
 };
 
 void main() {

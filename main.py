@@ -40,7 +40,7 @@ def _set_default_rhi_backend() -> None:
     elif sys.platform == "win32":
         os.environ["QSG_RHI_BACKEND"] = "direct3d11"
     else:
-        # Linux/BSD: prefer Vulkan; Qt will fall back to OpenGL if needed.
+        # Linux/BSD: force OpenGL for grid shader compatibility
         os.environ["QSG_RHI_BACKEND"] = "vulkan"
 
 
