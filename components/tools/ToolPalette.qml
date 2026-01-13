@@ -36,7 +36,7 @@ Pane {
             id: selButton
             toolName: "select"
             iconName: "cursor-fill"
-            tooltipText: ""
+            tooltipText: "Move Tool (V)\n\nSelect and transform objects"
             activeTool: root.activeTool
             buttonGroup: toolButtonGroup
             isDefaultSelect: true
@@ -51,7 +51,7 @@ Pane {
             toolName: "rectangle"
             iconName: "rectangle"
             iconWeight: "regular"
-            tooltipText: "Rectangle Tool\n\nShift: Constrain to square\nAlt: Draw from center"
+            tooltipText: "Rectangle Tool (R)\n\nShift: Constrain to square\nAlt: Draw from center"
             activeTool: root.activeTool
             buttonGroup: toolButtonGroup
             onToolClicked: function (nextTool) {
@@ -64,7 +64,7 @@ Pane {
             toolName: "ellipse"
             iconName: "circle"
             iconWeight: "regular"
-            tooltipText: "Ellipse Tool\n\nShift: Constrain to circle\nAlt: Draw from center"
+            tooltipText: "Ellipse Tool (O)\n\nShift: Constrain to circle\nAlt: Draw from center"
             activeTool: root.activeTool
             buttonGroup: toolButtonGroup
             onToolClicked: function (nextTool) {
@@ -77,7 +77,7 @@ Pane {
             toolName: "pen"
             iconName: "pen-nib"
             iconWeight: "regular"
-            tooltipText: "Pen Tool\n\nClick to add points, click first point to close"
+            tooltipText: "Pen Tool (P)\n\nClick to add points, click first point to close"
             activeTool: root.activeTool
             buttonGroup: toolButtonGroup
             onToolClicked: function (nextTool) {
@@ -90,7 +90,7 @@ Pane {
             toolName: "text"
             iconName: "text-t"
             iconWeight: "regular"
-            tooltipText: "Text Tool\n\nClick to place text, type, then press Enter to confirm"
+            tooltipText: "Text Tool (T)\n\nClick to place text, type, then press Enter to confirm"
             activeTool: root.activeTool
             buttonGroup: toolButtonGroup
             onToolClicked: function (nextTool) {

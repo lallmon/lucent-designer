@@ -103,6 +103,38 @@ ApplicationWindow {
         onActivated: debugPanel.visible = !debugPanel.visible
     }
 
+    // Tool shortcuts
+    Shortcut {
+        sequence: "V"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("select")
+    }
+    Shortcut {
+        sequence: "R"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("rectangle")
+    }
+    Shortcut {
+        sequence: "O"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("ellipse")
+    }
+    Shortcut {
+        sequence: "P"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("pen")
+    }
+    Shortcut {
+        sequence: "T"
+        context: Qt.ApplicationShortcut
+        onActivated: if (!root.isTextInputActive())
+            canvas.setDrawingMode("text")
+    }
+
     Platform.FileDialog {
         id: openDialog
         title: qsTr("Open Document")
