@@ -345,8 +345,12 @@ class CanvasModel(QAbstractListModel):
         if not commands:
             return
 
-        # Execute as single transaction for undo/redo
-        if len(commands) == 1:
+        # If inside a transaction (e.g., drag operation), just execute without
+        # recording - the transaction will capture the full change at end
+        if self._transaction_active:
+            for cmd in commands:
+                cmd.execute()
+        elif len(commands) == 1:
             self._execute_command(commands[0])
         else:
             transaction = TransactionCommand(commands, "Move Items")
