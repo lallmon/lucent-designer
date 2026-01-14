@@ -136,7 +136,7 @@ Item {
                 ctx.lineTo(mx, my);
                 ctx.stroke();
 
-                var gripSize = 6 / Math.max(tool.zoomLevel, 0.0001);
+                var gripSize = 10 / Math.max(tool.zoomLevel, 0.0001);
                 ctx.beginPath();
                 ctx.arc(hx, hy, gripSize / 2, 0, Math.PI * 2);
                 ctx.fill();
@@ -152,7 +152,7 @@ Item {
         model: tool.points.length
         delegate: Rectangle {
             property var point: tool.points[index]
-            width: 8 / Math.max(tool.zoomLevel, 0.0001)
+            width: 10 / Math.max(tool.zoomLevel, 0.0001)
             height: width
             radius: width / 2
             x: point.x - width / 2
@@ -165,7 +165,7 @@ Item {
 
     Rectangle {
         visible: tool.isDragging && tool.pendingAnchor !== null
-        width: 8 / Math.max(tool.zoomLevel, 0.0001)
+        width: 10 / Math.max(tool.zoomLevel, 0.0001)
         height: width
         radius: width / 2
         x: tool.pendingAnchor ? tool.pendingAnchor.x - width / 2 : 0
@@ -388,7 +388,7 @@ Item {
     function _drawHandles(ctx, originX, originY, p) {
         var ax = originX + p.x;
         var ay = originY + p.y;
-        var gripSize = 6 / Math.max(tool.zoomLevel, 0.0001);
+        var gripSize = 10 / Math.max(tool.zoomLevel, 0.0001);
 
         if (p.handleIn) {
             var hix = originX + p.handleIn.x;

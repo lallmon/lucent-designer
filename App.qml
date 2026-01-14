@@ -290,7 +290,7 @@ ApplicationWindow {
                     SplitView.fillHeight: true
 
                     // GPU rendering flag - controlled by debug panel
-                    property bool gpuRenderingEnabled: false
+                    property bool gpuRenderingEnabled: true
 
                     // Debug panel overlay (toggle with F12) - declared first for property access
                     DebugPanel {
