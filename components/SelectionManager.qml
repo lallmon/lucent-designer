@@ -94,12 +94,25 @@ QtObject {
 
     // Refresh transform and bounds from the model
     function refreshSelectionData() {
-        if (selectedItemIndex >= 0 && canvasModel) {
-            selectionTransform = canvasModel.getItemTransform(selectedItemIndex);
-            geometryBounds = canvasModel.getGeometryBounds(selectedItemIndex);
-        } else {
+        var indices = currentSelectionIndices();
+        if (indices.length === 0 || !canvasModel) {
             selectionTransform = null;
             geometryBounds = null;
+            return;
+        }
+
+        if (indices.length === 1) {
+            // Single selection
+            selectionTransform = canvasModel.getItemTransform(indices[0]);
+            var bounds = canvasModel.getGeometryBounds(indices[0]);
+            if (!bounds) {
+                bounds = canvasModel.getBoundingBox(indices[0]);
+            }
+            geometryBounds = bounds;
+        } else {
+            // Multi-selection: compute union of all bounding boxes
+            selectionTransform = null;  // No single transform for multi-select
+            geometryBounds = canvasModel.getUnionBoundingBox(indices);
         }
     }
 
