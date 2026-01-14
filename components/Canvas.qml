@@ -816,6 +816,11 @@ Item {
             refreshSelectionTransform();
             refreshSelectionGeometryBounds();
         }
+        function onEditModeExited() {
+            // Refresh bounds after path editing to ensure overlay is correctly sized
+            refreshSelectionTransform();
+            refreshSelectionGeometryBounds();
+        }
     }
 
     Connections {
