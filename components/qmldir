@@ -14,6 +14,7 @@ RightPane 1.0 panels/RightPane.qml
 TransformPanel 1.0 panels/TransformPanel.qml
 DebugPanel 1.0 panels/DebugPanel.qml
 SelectionOverlay 1.0 SelectionOverlay.qml
+PathEditOverlay 1.0 PathEditOverlay.qml
 ToolPalette 1.0 tools/ToolPalette.qml
 ToolSettings 1.0 tools/ToolSettings.qml
 RectangleTool 1.0 tools/RectangleTool.qml

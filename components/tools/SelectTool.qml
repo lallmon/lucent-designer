@@ -288,7 +288,7 @@ Item {
             return true;
         }
 
-        if (isSelecting && clickedOnSelectedObject && !overlayActive && Lucent.SelectionManager.selectedItemIndex >= 0) {
+        if (isSelecting && clickedOnSelectedObject && !overlayActive && !Lucent.SelectionManager.editModeActive && Lucent.SelectionManager.selectedItemIndex >= 0) {
             var dx = Math.abs(screenX - selectPressX);
             var dy = Math.abs(screenY - selectPressY);
 
