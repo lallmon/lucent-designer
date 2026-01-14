@@ -177,7 +177,7 @@ Item {
         });
     }
 
-    function handlePathHandleMoved(index, handleType, x, y) {
+    function handlePathHandleMoved(index, handleType, x, y, modifiers) {
         var idx = Lucent.SelectionManager.selectedItemIndex;
         if (idx < 0)
             return;
@@ -185,6 +185,8 @@ Item {
         var item = Lucent.SelectionManager.selectedItem;
         if (!item || item.type !== "path")
             return;
+
+        var breakSymmetry = !!(modifiers & Qt.AltModifier);
 
         var newPoints = [];
         for (var i = 0; i < item.geometry.points.length; i++) {
@@ -194,27 +196,72 @@ Item {
                     x: pt.x,
                     y: pt.y
                 };
-                if (pt.handleIn)
-                    newPt.handleIn = {
-                        x: pt.handleIn.x,
-                        y: pt.handleIn.y
-                    };
-                if (pt.handleOut)
-                    newPt.handleOut = {
-                        x: pt.handleOut.x,
-                        y: pt.handleOut.y
-                    };
 
-                if (handleType === "handleIn")
+                if (handleType === "handleIn") {
                     newPt.handleIn = {
                         x: x,
                         y: y
                     };
-                else if (handleType === "handleOut")
+                    if (pt.handleOut) {
+                        if (breakSymmetry) {
+                            newPt.handleOut = {
+                                x: pt.handleOut.x,
+                                y: pt.handleOut.y
+                            };
+                        } else {
+                            // Mirror angle, preserve opposite handle length
+                            var dx = x - pt.x;
+                            var dy = y - pt.y;
+                            var outDx = pt.handleOut.x - pt.x;
+                            var outDy = pt.handleOut.y - pt.y;
+                            var outLen = Math.sqrt(outDx * outDx + outDy * outDy);
+                            var inLen = Math.sqrt(dx * dx + dy * dy);
+                            if (inLen > 0.001) {
+                                newPt.handleOut = {
+                                    x: pt.x - (dx / inLen) * outLen,
+                                    y: pt.y - (dy / inLen) * outLen
+                                };
+                            } else {
+                                newPt.handleOut = {
+                                    x: pt.handleOut.x,
+                                    y: pt.handleOut.y
+                                };
+                            }
+                        }
+                    }
+                } else if (handleType === "handleOut") {
                     newPt.handleOut = {
                         x: x,
                         y: y
                     };
+                    if (pt.handleIn) {
+                        if (breakSymmetry) {
+                            newPt.handleIn = {
+                                x: pt.handleIn.x,
+                                y: pt.handleIn.y
+                            };
+                        } else {
+                            // Mirror angle, preserve opposite handle length
+                            var dx = x - pt.x;
+                            var dy = y - pt.y;
+                            var inDx = pt.handleIn.x - pt.x;
+                            var inDy = pt.handleIn.y - pt.y;
+                            var inLen = Math.sqrt(inDx * inDx + inDy * inDy);
+                            var outLen = Math.sqrt(dx * dx + dy * dy);
+                            if (outLen > 0.001) {
+                                newPt.handleIn = {
+                                    x: pt.x - (dx / outLen) * inLen,
+                                    y: pt.y - (dy / outLen) * inLen
+                                };
+                            } else {
+                                newPt.handleIn = {
+                                    x: pt.handleIn.x,
+                                    y: pt.handleIn.y
+                                };
+                            }
+                        }
+                    }
+                }
 
                 newPoints.push(newPt);
             } else {

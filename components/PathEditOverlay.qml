@@ -20,7 +20,7 @@ Item {
 
     signal pointClicked(int index, int modifiers)
     signal pointMoved(int index, real x, real y)
-    signal handleMoved(int index, string handleType, real x, real y)
+    signal handleMoved(int index, string handleType, real x, real y, int modifiers)
     signal backgroundClicked
     signal dragStarted
     signal dragEnded
@@ -196,7 +196,7 @@ Item {
                         var dy = (overlay.cursorY - handleIn.startY) / overlay._scaleY;
                         var newX = handleIn.startHandleX + dx;
                         var newY = handleIn.startHandleY + dy;
-                        overlay.handleMoved(pointItem.index, "handleIn", newX, newY);
+                        overlay.handleMoved(pointItem.index, "handleIn", newX, newY, overlay.currentModifiers);
                     }
                 }
             }
@@ -243,7 +243,7 @@ Item {
                         var dy = (overlay.cursorY - handleOut.startY) / overlay._scaleY;
                         var newX = handleOut.startHandleX + dx;
                         var newY = handleOut.startHandleY + dy;
-                        overlay.handleMoved(pointItem.index, "handleOut", newX, newY);
+                        overlay.handleMoved(pointItem.index, "handleOut", newX, newY, overlay.currentModifiers);
                     }
                 }
             }

@@ -365,10 +365,9 @@ Item {
                     }
                 }
 
-                onHandleMoved: function (index, handleType, x, y) {
-                    if (overlayContainer.canvasRef) {
-                        overlayContainer.canvasRef.handlePathHandleMoved(index, handleType, x, y);
-                    }
+                onHandleMoved: function (index, handleType, x, y, modifiers) {
+                    if (overlayContainer.canvasRef)
+                        overlayContainer.canvasRef.handlePathHandleMoved(index, handleType, x, y, modifiers);
                 }
 
                 onDragStarted: {
