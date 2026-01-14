@@ -32,18 +32,52 @@ from lucent.unit_settings import UnitSettings
 __version__ = "__VERSION__"
 
 
+def _get_preferred_backends() -> list[str]:
+    if sys.platform == "darwin":
+        return ["metal", "opengl"]
+    elif sys.platform == "win32":
+        return ["d3d11", "opengl"]
+    else:
+        return ["vulkan", "opengl"]
+
+
+def _set_rhi_backend(backend: str) -> None:
+    os.environ["QSG_RHI_BACKEND"] = backend
+
+
+def _check_vulkan_available() -> bool:
+    vulkan_paths = [
+        "/usr/lib/libvulkan.so",
+        "/usr/lib/x86_64-linux-gnu/libvulkan.so",
+        "/usr/lib64/libvulkan.so",
+    ]
+    for path in vulkan_paths:
+        if Path(path).exists():
+            return True
+    import shutil
+
+    return shutil.which("vulkaninfo") is not None
+
+
 def _set_default_rhi_backend() -> None:
+    """Configure Qt's RHI backend with automatic fallback."""
     # Respect user override
     if os.environ.get("QSG_RHI_BACKEND"):
+        print(f"RHI backend: {os.environ['QSG_RHI_BACKEND']} (user override)")
         return
-    # Pick the most capable backend per platform; let Qt fall back if unavailable.
-    if sys.platform == "darwin":
-        os.environ["QSG_RHI_BACKEND"] = "metal"
-    elif sys.platform == "win32":
-        os.environ["QSG_RHI_BACKEND"] = "direct3d11"
+
+    backends = _get_preferred_backends()
+    preferred = backends[0]
+    fallback = backends[1] if len(backends) > 1 else "opengl"
+
+    # On Linux, check Vulkan availability before trying it
+    if sys.platform not in ("darwin", "win32") and preferred == "vulkan":
+        if _check_vulkan_available():
+            _set_rhi_backend("vulkan")
+        else:
+            _set_rhi_backend(fallback)
     else:
-        # Linux/BSD: force OpenGL for grid shader compatibility
-        os.environ["QSG_RHI_BACKEND"] = "vulkan"
+        _set_rhi_backend(preferred)
 
 
 if __name__ == "__main__":
@@ -55,7 +89,6 @@ if __name__ == "__main__":
     # Use QApplication (not QGuiApplication) to support Qt.labs.platform native dialogs
     app = QApplication(sys.argv)
 
-    # Set application icon
     icon_path = Path(__file__).resolve().parent / "assets" / "appIcon.png"
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
