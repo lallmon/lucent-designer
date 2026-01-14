@@ -137,15 +137,25 @@ Item {
         if (!item || item.type !== "path")
             return;
 
+        // Calculate delta from the dragged point
+        var draggedPt = item.geometry.points[index];
+        var dx = x - draggedPt.x;
+        var dy = y - draggedPt.y;
+
+        // Get selected points - if dragged point is selected, move all selected points
+        var selectedIndices = Lucent.SelectionManager.selectedPointIndices || [];
+        var isDraggedSelected = selectedIndices.indexOf(index) >= 0;
+
         var newPoints = [];
         for (var i = 0; i < item.geometry.points.length; i++) {
             var pt = item.geometry.points[i];
-            if (i === index) {
-                var dx = x - pt.x;
-                var dy = y - pt.y;
+            // Move this point if it's the dragged point, or if it's selected and the dragged point is also selected
+            var shouldMove = (i === index) || (isDraggedSelected && selectedIndices.indexOf(i) >= 0);
+
+            if (shouldMove) {
                 var newPt = {
-                    x: x,
-                    y: y
+                    x: pt.x + dx,
+                    y: pt.y + dy
                 };
                 if (pt.handleIn) {
                     newPt.handleIn = {
