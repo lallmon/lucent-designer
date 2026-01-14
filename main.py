@@ -15,7 +15,7 @@ from pathlib import Path
 
 from typing import Optional, cast
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QOpenGLContext, QFont, QIcon
+from PySide6.QtGui import QOpenGLContext, QFont, QFontDatabase, QIcon
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtCore import QObject, Property, Signal
 from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
@@ -64,9 +64,18 @@ if __name__ == "__main__":
         from PySide6.QtQuickControls2 import QQuickStyle
 
         QQuickStyle.setStyle("Fusion")
+
+    # Load custom bundled fonts from assets/fonts/
+    fonts_dir = Path(__file__).resolve().parent / "assets" / "fonts"
+    if fonts_dir.exists():
+        for font_file in fonts_dir.glob("*.ttf"):
+            QFontDatabase.addApplicationFont(str(font_file))
+        for font_file in fonts_dir.glob("*.otf"):
+            QFontDatabase.addApplicationFont(str(font_file))
+
     app_font = QFont()
     app_font.setFamilies(
-        ["Cantarell", "Segoe UI", "Tahoma", "Ubuntu", "Roboto", "sans-serif"]
+        ["Inter", "Cantarell", "Segoe UI", "Ubuntu", "Roboto", "sans-serif"]
     )
     app.setFont(app_font)
 
