@@ -283,30 +283,33 @@ ToolBar {
         Item {
             Layout.fillWidth: true
         }
+    }
 
-        RowLayout {
-            Layout.alignment: Qt.AlignVCenter
-            Layout.rightMargin: 12
-            spacing: 6
+    // Centered: file name, dirty indicator, zoom
+    Row {
+        anchors.centerIn: parent
+        spacing: 6
 
-            Label {
-                text: "(" + Math.round((root.viewport ? root.viewport.zoomLevel : 1) * 100) + "%)"
-                color: themePalette.text
-                font.pixelSize: 11
-            }
+        Label {
+            text: root.documentTitle
+            color: themePalette.windowText
+            font.pixelSize: 12
+            anchors.verticalCenter: parent.verticalCenter
+        }
 
-            Label {
-                text: root.documentTitle
-                color: themePalette.windowText
-                font.pixelSize: 12
-            }
+        Label {
+            visible: root.documentDirty
+            text: "●"
+            color: themePalette.highlight
+            font.pixelSize: 10
+            anchors.verticalCenter: parent.verticalCenter
+        }
 
-            Label {
-                visible: root.documentDirty
-                text: "[Modified]"
-                color: themePalette.text
-                font.pixelSize: 11
-            }
+        Label {
+            text: "(" + Math.round((root.viewport ? root.viewport.zoomLevel : 1) * 100) + "%)"
+            color: themePalette.text
+            font.pixelSize: 11
+            anchors.verticalCenter: parent.verticalCenter
         }
     }
 }
