@@ -14,13 +14,13 @@ RowLayout {
     property var selectedItem: null
 
     // Internal defaults for creation mode
-    property real _defaultStrokeWidth: 1
+    property real _defaultStrokeWidth: 2
     property color _defaultStrokeColor: Lucent.Themed.defaultStroke
     property real _defaultStrokeOpacity: 1.0
-    property bool _defaultStrokeVisible: false
+    property bool _defaultStrokeVisible: true
     property string _defaultStrokeAlign: "center"
     property color _defaultFillColor: Lucent.Themed.defaultFill
-    property real _defaultFillOpacity: 1.0
+    property real _defaultFillOpacity: 0.0
 
     // Helper to get fill appearance from selectedItem
     function _getFill() {
