@@ -15,6 +15,10 @@ Item {
     property real viewportWidth: 0
     property real viewportHeight: 0
 
+    // Preview rendering callbacks from Canvas
+    property var setPreviewCallback: null
+    property var clearPreviewCallback: null
+
     // Expose the loaded tool for mouse event forwarding
     readonly property var currentTool: loader.item
 
@@ -61,6 +65,14 @@ Item {
                     item.viewportHeight = Qt.binding(function () {
                         return root.viewportHeight;
                     });
+                }
+
+                // Bind preview callbacks if the tool supports them
+                if (item.hasOwnProperty("setPreviewCallback")) {
+                    item.setPreviewCallback = root.setPreviewCallback;
+                }
+                if (item.hasOwnProperty("clearPreviewCallback")) {
+                    item.clearPreviewCallback = root.clearPreviewCallback;
                 }
 
                 // Connect tool's itemCompleted to our signal

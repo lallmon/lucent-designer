@@ -14,7 +14,7 @@ Key benefits:
 - All shape types supported (anything that can paint to QPainter)
 """
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import Any, Optional, List, TYPE_CHECKING
 from PySide6.QtCore import Property, Signal, Slot, QObject, QRectF
 from PySide6.QtQuick import (
     QQuickItem,
@@ -25,6 +25,7 @@ from PySide6.QtQuick import (
 )
 
 from lucent.texture_cache import TextureCache
+from lucent.item_schema import parse_item
 
 if TYPE_CHECKING:
     from lucent.canvas_model import CanvasModel
@@ -41,6 +42,7 @@ class SceneGraphRenderer(QQuickItem):
 
     zoomLevelChanged = Signal()
     tileOriginChanged = Signal()
+    previewItemChanged = Signal()
 
     def __init__(self, parent: Optional[QQuickItem] = None) -> None:
         super().__init__(parent)
@@ -52,6 +54,10 @@ class SceneGraphRenderer(QQuickItem):
         self._tile_origin_y: float = 0.0
         self._texture_cache = TextureCache()
         self._needs_full_rebuild: bool = True
+
+        # Preview item for tool drawing (rendered on top of all items)
+        self._preview_item: Optional["CanvasItem"] = None
+        self._preview_cache = TextureCache()
 
         # Prevent GC of GPU resources
         self._textures: List[QSGTexture] = []
@@ -93,6 +99,36 @@ class SceneGraphRenderer(QQuickItem):
         self._needs_full_rebuild = True
         self.update()
 
+    @Slot("QVariant")  # type: ignore[arg-type]
+    def setPreviewItem(self, item_data: Any) -> None:
+        """Set preview item for tool drawing. Rendered on top of all items."""
+        from PySide6.QtQml import QJSValue
+
+        if isinstance(item_data, QJSValue):
+            item_data = item_data.toVariant()
+
+        if not item_data:
+            self.clearPreview()
+            return
+        try:
+            self._preview_item = parse_item(item_data)
+            self._preview_cache.clear()
+            self._needs_full_rebuild = True
+            self.previewItemChanged.emit()
+            self.update()
+        except Exception:
+            self._preview_item = None
+
+    @Slot()
+    def clearPreview(self) -> None:
+        """Clear the preview item."""
+        if self._preview_item is not None:
+            self._preview_item = None
+            self._preview_cache.clear()
+            self._needs_full_rebuild = True
+            self.previewItemChanged.emit()
+            self.update()
+
     def updatePaintNode(  # type: ignore[override]
         self, old_node: Optional[QSGNode], update_data: QQuickItem.UpdatePaintNodeData
     ) -> Optional[QSGNode]:
@@ -118,9 +154,6 @@ class SceneGraphRenderer(QQuickItem):
         self._texture_nodes.clear()
         self._transform_nodes.clear()
 
-        if not self._model:
-            return
-
         offset_x = self.width() / 2.0 - self._tile_origin_x
         offset_y = self.height() / 2.0 - self._tile_origin_y
 
@@ -128,15 +161,25 @@ class SceneGraphRenderer(QQuickItem):
         if not window:
             return
 
-        count = self._model.count()
-        for i in range(count):
-            item = self._model.getItem(i)
-            if item is None:
-                continue
+        if self._model:
+            count = self._model.count()
+            for i in range(count):
+                item = self._model.getItem(i)
+                if item is None:
+                    continue
 
-            node = self._create_node_for_item(item, offset_x, offset_y, window)
-            if node:
-                root.appendChildNode(node)
+                node = self._create_node_for_item(
+                    item, offset_x, offset_y, window, self._texture_cache
+                )
+                if node:
+                    root.appendChildNode(node)
+
+        if self._preview_item:
+            preview_node = self._create_node_for_item(
+                self._preview_item, offset_x, offset_y, window, self._preview_cache
+            )
+            if preview_node:
+                root.appendChildNode(preview_node)
 
     def _create_node_for_item(
         self,
@@ -144,6 +187,7 @@ class SceneGraphRenderer(QQuickItem):
         offset_x: float,
         offset_y: float,
         window: object,
+        texture_cache: TextureCache,
     ) -> Optional[QSGNode]:
         """Create texture node for item, wrapped in transform node if needed."""
         from lucent.canvas_items import LayerItem, GroupItem
@@ -155,7 +199,7 @@ class SceneGraphRenderer(QQuickItem):
             return None
 
         item_id = item.id if hasattr(item, "id") else str(id(item))
-        cache_entry = self._texture_cache.get_or_create(item, item_id)
+        cache_entry = texture_cache.get_or_create(item, item_id)
 
         if not cache_entry:
             return None
@@ -169,8 +213,8 @@ class SceneGraphRenderer(QQuickItem):
         tex_node = QSGSimpleTextureNode()
         tex_node.setTexture(texture)
 
-        tex_offset = self._texture_cache.get_texture_offset(cache_entry)
-        tex_size = self._texture_cache.get_texture_size(cache_entry)
+        tex_offset = texture_cache.get_texture_offset(cache_entry)
+        tex_size = texture_cache.get_texture_size(cache_entry)
 
         tex_node.setRect(
             QRectF(

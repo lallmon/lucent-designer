@@ -3,7 +3,6 @@
 
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Shapes
 import ".." as Lucent
 
 // Rectangle drawing tool component
@@ -15,6 +14,10 @@ Item {
     property bool active: false
     property var settings: null  // Tool settings object
 
+    // Preview callbacks from ToolLoader
+    property var setPreviewCallback: null
+    property var clearPreviewCallback: null
+
     TwoPointToolHelper {
         id: helper
     }
@@ -25,54 +28,43 @@ Item {
 
     signal itemCompleted(var itemData)
 
-    // Preview rectangle using Shape for better performance
-    Shape {
-        id: previewRect
+    onCurrentRectChanged: updatePreview()
 
-        visible: tool.currentRect !== null && tool.currentRect.width > 0 && tool.currentRect.height > 0
-
-        x: tool.currentRect ? tool.currentRect.x : 0
-        y: tool.currentRect ? tool.currentRect.y : 0
-        width: tool.currentRect ? tool.currentRect.width : 0
-        height: tool.currentRect ? tool.currentRect.height : 0
-
-        ShapePath {
-            strokeWidth: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
-            strokeColor: {
-                if (!settings)
-                    return Lucent.Themed.palette.text;
-                var c = Qt.color(settings.strokeColor);
-                c.a = settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
-                return c;
-            }
-            fillColor: {
-                if (!settings)
-                    return "transparent";
-                var c = Qt.color(settings.fillColor);
-                c.a = settings.fillOpacity;
-                return c;
-            }
-            joinStyle: ShapePath.MiterJoin
-
-            startX: 0
-            startY: 0
-            PathLine {
-                x: previewRect.width
-                y: 0
-            }
-            PathLine {
-                x: previewRect.width
-                y: previewRect.height
-            }
-            PathLine {
-                x: 0
-                y: previewRect.height
-            }
-            PathLine {
-                x: 0
-                y: 0
-            }
+    function updatePreview() {
+        if (!currentRect || currentRect.width <= 0 || currentRect.height <= 0) {
+            if (clearPreviewCallback)
+                clearPreviewCallback();
+            return;
         }
+        if (!setPreviewCallback)
+            return;
+
+        var style = helper.extractStyle(settings);
+        setPreviewCallback({
+            type: "rectangle",
+            geometry: {
+                x: currentRect.x,
+                y: currentRect.y,
+                width: currentRect.width,
+                height: currentRect.height
+            },
+            appearances: [
+                {
+                    type: "fill",
+                    color: style.fillColor,
+                    opacity: style.fillOpacity,
+                    visible: true
+                },
+                {
+                    type: "stroke",
+                    color: style.strokeColor,
+                    width: style.strokeWidth,
+                    opacity: style.strokeOpacity,
+                    visible: style.strokeVisible,
+                    align: style.strokeAlign
+                }
+            ]
+        });
     }
 
     Lucent.ToolTipCanvas {
@@ -149,11 +141,12 @@ Item {
             });
         }
 
+        if (clearPreviewCallback)
+            clearPreviewCallback();
         currentRect = null;
         helper.reset();
     }
 
-    // Update preview during mouse movement
     function handleMouseMove(canvasX, canvasY, modifiers) {
         mouseX = canvasX;
         mouseY = canvasY;
@@ -161,7 +154,6 @@ Item {
         if (!tool.active || !helper.isDrawing)
             return;
 
-        // Calculate distance from start point to current point
         var deltaX = canvasX - helper.startX;
         var deltaY = canvasY - helper.startY;
         var rectWidth = Math.abs(deltaX);
@@ -197,9 +189,10 @@ Item {
         };
     }
 
-    // Reset tool state (called when switching tools)
     function reset() {
         helper.reset();
+        if (clearPreviewCallback)
+            clearPreviewCallback();
         currentRect = null;
     }
 }

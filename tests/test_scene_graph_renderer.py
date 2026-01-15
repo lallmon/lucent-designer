@@ -416,6 +416,7 @@ class TestSceneGraphRendererCreateNodeForItem:
         from lucent.geometry import RectGeometry
         from lucent.transforms import Transform
         from lucent.appearances import Fill
+        from lucent.texture_cache import TextureCache
 
         renderer = SceneGraphRenderer()
 
@@ -428,7 +429,7 @@ class TestSceneGraphRendererCreateNodeForItem:
             locked=False,
         )
 
-        result = renderer._create_node_for_item(item, 0, 0, None)
+        result = renderer._create_node_for_item(item, 0, 0, None, TextureCache())
 
         assert result is None
 
@@ -436,11 +437,12 @@ class TestSceneGraphRendererCreateNodeForItem:
         """LayerItem returns None (containers aren't rendered directly)."""
         from lucent.scene_graph_renderer import SceneGraphRenderer
         from lucent.canvas_items import LayerItem
+        from lucent.texture_cache import TextureCache
 
         renderer = SceneGraphRenderer()
         layer = LayerItem(name="Layer 1", visible=True, locked=False)
 
-        result = renderer._create_node_for_item(layer, 0, 0, None)
+        result = renderer._create_node_for_item(layer, 0, 0, None, TextureCache())
 
         assert result is None
 
@@ -448,11 +450,12 @@ class TestSceneGraphRendererCreateNodeForItem:
         """GroupItem returns None (containers aren't rendered directly)."""
         from lucent.scene_graph_renderer import SceneGraphRenderer
         from lucent.canvas_items import GroupItem
+        from lucent.texture_cache import TextureCache
 
         renderer = SceneGraphRenderer()
         group = GroupItem(name="Group 1", visible=True, locked=False, parent_id="")
 
-        result = renderer._create_node_for_item(group, 0, 0, None)
+        result = renderer._create_node_for_item(group, 0, 0, None, TextureCache())
 
         assert result is None
 
@@ -463,6 +466,7 @@ class TestSceneGraphRendererCreateNodeForItem:
         from lucent.geometry import RectGeometry
         from lucent.transforms import Transform
         from lucent.appearances import Fill
+        from lucent.texture_cache import TextureCache
 
         renderer = SceneGraphRenderer()
 
@@ -476,7 +480,7 @@ class TestSceneGraphRendererCreateNodeForItem:
             locked=False,
         )
 
-        result = renderer._create_node_for_item(item, 0, 0, None)
+        result = renderer._create_node_for_item(item, 0, 0, None, TextureCache())
 
         assert result is None
 

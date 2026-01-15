@@ -3,7 +3,6 @@
 
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Shapes
 import ".." as Lucent
 
 // Ellipse drawing tool component
@@ -15,62 +14,62 @@ Item {
     property bool active: false
     property var settings: null  // Tool settings object
 
+    // Preview callbacks from ToolLoader
+    property var setPreviewCallback: null
+    property var clearPreviewCallback: null
+
     TwoPointToolHelper {
         id: helper
     }
     property var currentEllipse: null
     property real mouseX: 0
     property real mouseY: 0
+    readonly property bool hasUnitSettings: typeof unitSettings !== "undefined" && unitSettings !== null
 
     signal itemCompleted(var itemData)
 
-    // Preview ellipse using Shape for better performance
-    Shape {
-        id: previewEllipse
+    onCurrentEllipseChanged: updatePreview()
 
-        visible: tool.currentEllipse !== null && tool.currentEllipse.width > 0 && tool.currentEllipse.height > 0
-
-        x: tool.currentEllipse ? tool.currentEllipse.x : 0
-        y: tool.currentEllipse ? tool.currentEllipse.y : 0
-        width: tool.currentEllipse ? tool.currentEllipse.width : 0
-        height: tool.currentEllipse ? tool.currentEllipse.height : 0
-
-        ShapePath {
-            id: ellipsePath
-            strokeWidth: (settings ? settings.strokeWidth : 1) / tool.zoomLevel
-            strokeColor: {
-                if (!settings)
-                    return Lucent.Themed.palette.text;
-                var c = Qt.color(settings.strokeColor);
-                c.a = settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
-                return c;
-            }
-            fillColor: {
-                if (!settings)
-                    return "transparent";
-                var c = Qt.color(settings.fillColor);
-                c.a = settings.fillOpacity;
-                return c;
-            }
-
-            // Draw ellipse using two arcs (top half and bottom half)
-            startX: previewEllipse.width / 2
-            startY: 0
-            PathArc {
-                x: previewEllipse.width / 2
-                y: previewEllipse.height
-                radiusX: previewEllipse.width / 2
-                radiusY: previewEllipse.height / 2
-                useLargeArc: true
-            }
-            PathArc {
-                x: previewEllipse.width / 2
-                y: 0
-                radiusX: previewEllipse.width / 2
-                radiusY: previewEllipse.height / 2
-                useLargeArc: true
-            }
+    function updatePreview() {
+        if (!currentEllipse || currentEllipse.width <= 0 || currentEllipse.height <= 0) {
+            if (clearPreviewCallback)
+                clearPreviewCallback();
+            return;
         }
+        if (!setPreviewCallback)
+            return;
+
+        var centerX = currentEllipse.x + currentEllipse.width / 2;
+        var centerY = currentEllipse.y + currentEllipse.height / 2;
+        var radiusX = currentEllipse.width / 2;
+        var radiusY = currentEllipse.height / 2;
+        var style = helper.extractStyle(settings);
+
+        setPreviewCallback({
+            type: "ellipse",
+            geometry: {
+                centerX: centerX,
+                centerY: centerY,
+                radiusX: radiusX,
+                radiusY: radiusY
+            },
+            appearances: [
+                {
+                    type: "fill",
+                    color: style.fillColor,
+                    opacity: style.fillOpacity,
+                    visible: true
+                },
+                {
+                    type: "stroke",
+                    color: style.strokeColor,
+                    width: style.strokeWidth,
+                    opacity: style.strokeOpacity,
+                    visible: style.strokeVisible,
+                    align: style.strokeAlign
+                }
+            ]
+        });
     }
 
     Lucent.ToolTipCanvas {
@@ -144,11 +143,12 @@ Item {
             });
         }
 
+        if (clearPreviewCallback)
+            clearPreviewCallback();
         currentEllipse = null;
         helper.reset();
     }
 
-    // Update preview during mouse movement
     function handleMouseMove(canvasX, canvasY, modifiers) {
         mouseX = canvasX;
         mouseY = canvasY;
@@ -156,7 +156,6 @@ Item {
         if (!tool.active || !helper.isDrawing)
             return;
 
-        // Calculate distance from start point to current point
         var deltaX = canvasX - helper.startX;
         var deltaY = canvasY - helper.startY;
         var ellipseWidth = Math.abs(deltaX);
@@ -192,9 +191,10 @@ Item {
         };
     }
 
-    // Reset tool state (called when switching tools)
     function reset() {
         helper.reset();
+        if (clearPreviewCallback)
+            clearPreviewCallback();
         currentEllipse = null;
     }
 }

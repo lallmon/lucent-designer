@@ -15,6 +15,10 @@ Item {
     property real viewportHeight: 0
     readonly property real previewPad: 256
 
+    // Preview callbacks from ToolLoader
+    property var setPreviewCallback: null
+    property var clearPreviewCallback: null
+
     property var points: []
     property var pendingAnchor: null
     property var pendingHandle: null
@@ -27,8 +31,93 @@ Item {
 
     signal itemCompleted(var itemData)
 
+    onPointsChanged: updatePreview()
+    onPendingAnchorChanged: updatePreview()
+    onPendingHandleChanged: updatePreview()
+    onPreviewPointChanged: updatePreview()
+    onIsClosedChanged: updatePreview()
+
+    function updatePreview() {
+        if (points.length === 0 && !pendingAnchor) {
+            if (clearPreviewCallback)
+                clearPreviewCallback();
+            return;
+        }
+        if (!setPreviewCallback)
+            return;
+
+        var previewPoints = points.slice();
+
+        if (!isClosed && pendingAnchor) {
+            var newPoint = {
+                x: pendingAnchor.x,
+                y: pendingAnchor.y
+            };
+            if (pendingHandle) {
+                var dx = pendingHandle.x - pendingAnchor.x;
+                var dy = pendingHandle.y - pendingAnchor.y;
+                newPoint.handleOut = {
+                    x: pendingHandle.x,
+                    y: pendingHandle.y
+                };
+                if (previewPoints.length > 0) {
+                    newPoint.handleIn = {
+                        x: pendingAnchor.x - dx,
+                        y: pendingAnchor.y - dy
+                    };
+                }
+            }
+            previewPoints.push(newPoint);
+        } else if (!isClosed && previewPoint && points.length > 0) {
+            previewPoints.push({
+                x: previewPoint.x,
+                y: previewPoint.y
+            });
+        }
+
+        if (previewPoints.length < 1) {
+            if (clearPreviewCallback)
+                clearPreviewCallback();
+            return;
+        }
+
+        var s = settings || {};
+        var strokeWidth = s.strokeWidth !== undefined ? s.strokeWidth : 1;
+        var strokeColor = _colorString(s.strokeColor);
+        var strokeOpacity = s.strokeOpacity !== undefined ? s.strokeOpacity : 1.0;
+        var strokeVisible = s.strokeVisible !== undefined ? s.strokeVisible : false;
+        var strokeAlign = s.strokeAlign !== undefined ? s.strokeAlign : "center";
+        var fillColor = _colorString(s.fillColor);
+        var fillOpacity = s.fillOpacity !== undefined ? s.fillOpacity : 1.0;
+
+        setPreviewCallback({
+            type: "path",
+            geometry: {
+                points: previewPoints,
+                closed: isClosed
+            },
+            appearances: [
+                {
+                    type: "fill",
+                    color: fillColor,
+                    opacity: fillOpacity,
+                    visible: true
+                },
+                {
+                    type: "stroke",
+                    color: strokeColor,
+                    width: strokeWidth,
+                    opacity: strokeOpacity,
+                    visible: strokeVisible,
+                    align: strokeAlign
+                }
+            ]
+        });
+    }
+
+    // Handle lines and grips rendered as QML overlay
     Canvas {
-        id: previewCanvas
+        id: handlesCanvas
         width: Math.max(0, tool.viewportWidth + tool.previewPad * 2)
         height: Math.max(0, tool.viewportHeight + tool.previewPad * 2)
         x: -width / 2
@@ -43,70 +132,8 @@ Item {
 
             var originX = width / 2;
             var originY = height / 2;
-            var strokeWidth = settings && settings.strokeWidth !== undefined ? settings.strokeWidth : 1;
-            var strokeColor = tool._colorString(settings && settings.strokeColor) || "#ffffff";
-            var strokeOpacity = settings && settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0;
-            var fillColor = tool._colorString(settings && settings.fillColor) || "#ffffff";
-            var fillOpacity = settings && settings.fillOpacity !== undefined ? settings.fillOpacity : 1.0;
-
             var handleLineColor = Lucent.Themed.palette.highlight.toString();
             var handleGripColor = Lucent.Themed.palette.highlight.toString();
-
-            if (tool.points.length > 0 || (tool.isDragging && tool.pendingAnchor)) {
-                ctx.save();
-                ctx.lineWidth = Math.max(1, strokeWidth);
-                ctx.lineJoin = "round";
-                ctx.lineCap = "round";
-                ctx.globalAlpha = strokeOpacity;
-                ctx.strokeStyle = strokeColor;
-
-                ctx.beginPath();
-
-                if (tool.points.length > 0) {
-                    var first = tool.points[0];
-                    ctx.moveTo(originX + first.x, originY + first.y);
-
-                    for (var i = 1; i < tool.points.length; i++) {
-                        var prev = tool.points[i - 1];
-                        var curr = tool.points[i];
-                        tool._drawSegment(ctx, originX, originY, prev, curr);
-                    }
-                }
-
-                if (!tool.isClosed && tool.points.length > 0) {
-                    var lastPoint = tool.points[tool.points.length - 1];
-
-                    if (tool.isDragging && tool.pendingAnchor) {
-                        // Show curve to pending anchor with proper handles
-                        var pendingHandleIn = null;
-                        if (tool.pendingHandle) {
-                            var dx = tool.pendingHandle.x - tool.pendingAnchor.x;
-                            var dy = tool.pendingHandle.y - tool.pendingAnchor.y;
-                            pendingHandleIn = {
-                                x: tool.pendingAnchor.x - dx,
-                                y: tool.pendingAnchor.y - dy
-                            };
-                        }
-                        tool._drawSegmentWithHandles(ctx, originX, originY, lastPoint, tool.pendingAnchor, pendingHandleIn);
-                    } else if (tool.previewPoint) {
-                        tool._drawSegmentToPoint(ctx, originX, originY, lastPoint, tool.previewPoint);
-                    }
-                }
-
-                if (tool.isClosed && tool.points.length > 0) {
-                    ctx.closePath();
-                }
-
-                if (fillOpacity > 0.0) {
-                    ctx.save();
-                    ctx.globalAlpha = fillOpacity;
-                    ctx.fillStyle = fillColor;
-                    ctx.fill();
-                    ctx.restore();
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
 
             ctx.save();
             ctx.lineWidth = 1;
@@ -211,7 +238,7 @@ Item {
         };
         tool.pendingHandle = null;
         tool.previewPoint = null;
-        previewCanvas.requestPaint();
+        handlesCanvas.requestPaint();
     }
 
     function handleMouseMove(canvasX, canvasY, modifiers) {
@@ -229,7 +256,7 @@ Item {
                 y: canvasY
             };
         }
-        previewCanvas.requestPaint();
+        handlesCanvas.requestPaint();
     }
 
     function handleMouseRelease(canvasX, canvasY) {
@@ -274,7 +301,7 @@ Item {
         tool.isDragging = false;
         tool.pendingAnchor = null;
         tool.pendingHandle = null;
-        previewCanvas.requestPaint();
+        handlesCanvas.requestPaint();
     }
 
     // Double-click finishes open path
@@ -289,25 +316,22 @@ Item {
 
     function undoLastAction() {
         if (tool.isDragging) {
-            // Cancel current drag without placing point
             tool.isDragging = false;
             tool.pendingAnchor = null;
             tool.pendingHandle = null;
             tool.previewPoint = null;
-            previewCanvas.requestPaint();
+            handlesCanvas.requestPaint();
             return true;
         }
 
         if (tool.points.length > 0) {
             if (tool.points.length === 1) {
-                // Last point - cancel entirely
                 reset();
             } else {
-                // Remove last point
                 var nextPoints = tool.points.slice(0, -1);
                 tool.points = nextPoints;
                 tool.previewPoint = null;
-                previewCanvas.requestPaint();
+                handlesCanvas.requestPaint();
             }
             return true;
         }
@@ -322,7 +346,9 @@ Item {
         tool.previewPoint = null;
         tool.isDragging = false;
         tool.isClosed = false;
-        previewCanvas.requestPaint();
+        if (clearPreviewCallback)
+            clearPreviewCallback();
+        handlesCanvas.requestPaint();
     }
 
     function _finalize() {
@@ -340,6 +366,8 @@ Item {
         var fillColor = tool._colorString(s.fillColor);
         var fillOpacity = s.fillOpacity !== undefined ? s.fillOpacity : 1.0;
 
+        if (clearPreviewCallback)
+            clearPreviewCallback();
         itemCompleted({
             type: "path",
             geometry: {
@@ -364,44 +392,6 @@ Item {
             ]
         });
         reset();
-    }
-
-    function _drawSegment(ctx, originX, originY, prev, curr) {
-        var hasHandles = prev.handleOut || curr.handleIn;
-
-        if (hasHandles) {
-            var cp1x = prev.handleOut ? originX + prev.handleOut.x : originX + prev.x;
-            var cp1y = prev.handleOut ? originY + prev.handleOut.y : originY + prev.y;
-            var cp2x = curr.handleIn ? originX + curr.handleIn.x : originX + curr.x;
-            var cp2y = curr.handleIn ? originY + curr.handleIn.y : originY + curr.y;
-            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, originX + curr.x, originY + curr.y);
-        } else {
-            ctx.lineTo(originX + curr.x, originY + curr.y);
-        }
-    }
-
-    // Draw segment with explicit handleIn for the target point (used during drag preview)
-    function _drawSegmentWithHandles(ctx, originX, originY, prev, target, targetHandleIn) {
-        var cp1x = prev.handleOut ? originX + prev.handleOut.x : originX + prev.x;
-        var cp1y = prev.handleOut ? originY + prev.handleOut.y : originY + prev.y;
-        var cp2x = targetHandleIn ? originX + targetHandleIn.x : originX + target.x;
-        var cp2y = targetHandleIn ? originY + targetHandleIn.y : originY + target.y;
-
-        if (prev.handleOut || targetHandleIn) {
-            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, originX + target.x, originY + target.y);
-        } else {
-            ctx.lineTo(originX + target.x, originY + target.y);
-        }
-    }
-
-    function _drawSegmentToPoint(ctx, originX, originY, prev, target) {
-        if (prev.handleOut) {
-            var cp1x = originX + prev.handleOut.x;
-            var cp1y = originY + prev.handleOut.y;
-            ctx.bezierCurveTo(cp1x, cp1y, originX + target.x, originY + target.y, originX + target.x, originY + target.y);
-        } else {
-            ctx.lineTo(originX + target.x, originY + target.y);
-        }
     }
 
     function _drawHandles(ctx, originX, originY, p) {

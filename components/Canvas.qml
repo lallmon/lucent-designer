@@ -134,6 +134,14 @@ Item {
         viewportHeight: root.height
     }
 
+    function setPreviewItem(itemData) {
+        shapesLayer.setPreviewItem(itemData);
+    }
+
+    function clearPreview() {
+        shapesLayer.clearPreview();
+    }
+
     // Select tool for object selection (panning handled by Viewport)
     SelectTool {
         id: selectTool
@@ -190,6 +198,12 @@ Item {
         toolSettings: root.toolSettings
         viewportWidth: root.width
         viewportHeight: root.height
+        setPreviewCallback: function (data) {
+            root.setPreviewItem(data);
+        }
+        clearPreviewCallback: function () {
+            root.clearPreview();
+        }
 
         onItemCompleted: function (itemData) {
             root.handleItemCompleted(itemData);

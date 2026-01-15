@@ -19,6 +19,14 @@ Item {
     required property real viewportWidth
     required property real viewportHeight
 
+    function setPreviewItem(itemData) {
+        gpuRenderer.setPreviewItem(itemData);
+    }
+
+    function clearPreview() {
+        gpuRenderer.clearPreview();
+    }
+
     // Single SceneGraphRenderer covering the canvas
     SceneGraphRenderer {
         id: gpuRenderer
