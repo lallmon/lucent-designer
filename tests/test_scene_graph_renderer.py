@@ -580,3 +580,347 @@ class TestSceneGraphRendererCreateTransformWrapper:
         # Matrix should be set
         matrix = result.matrix()
         assert not matrix.isIdentity()
+
+
+class TestSceneGraphRendererPreviewItem:
+    """Tests for preview item functionality (setPreviewItem, clearPreview)."""
+
+    def test_set_preview_item_with_valid_data(self, qapp):
+        """setPreviewItem parses valid item data and sets preview."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        item_data = {
+            "type": "rectangle",
+            "name": "Preview Rect",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 50,
+            "fill": {"color": "#ff0000", "opacity": 1.0},
+        }
+
+        renderer.setPreviewItem(item_data)
+
+        assert renderer._preview_item is not None
+        assert renderer._needs_full_rebuild is True
+
+    def test_set_preview_item_with_none_clears_preview(self, qapp):
+        """setPreviewItem with None/empty data clears preview."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        # First set a preview
+        item_data = {
+            "type": "rectangle",
+            "name": "Preview Rect",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 50,
+            "fill": {"color": "#ff0000", "opacity": 1.0},
+        }
+        renderer.setPreviewItem(item_data)
+        assert renderer._preview_item is not None
+
+        # Then clear it
+        renderer.setPreviewItem(None)
+
+        assert renderer._preview_item is None
+
+    def test_set_preview_item_with_invalid_data_clears_preview(self, qapp):
+        """setPreviewItem with invalid data sets preview to None."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        # Invalid data (missing required fields)
+        invalid_data = {"type": "unknown_type", "invalid": True}
+
+        renderer.setPreviewItem(invalid_data)
+
+        assert renderer._preview_item is None
+
+    def test_clear_preview(self, qapp):
+        """clearPreview removes preview item and triggers rebuild."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        # Set a preview first
+        item_data = {
+            "type": "ellipse",
+            "name": "Preview Ellipse",
+            "x": 10,
+            "y": 10,
+            "width": 80,
+            "height": 80,
+            "fill": {"color": "#00ff00", "opacity": 0.5},
+        }
+        renderer.setPreviewItem(item_data)
+        assert renderer._preview_item is not None
+
+        renderer._needs_full_rebuild = False
+
+        renderer.clearPreview()
+
+        assert renderer._preview_item is None
+        assert renderer._needs_full_rebuild is True
+
+    def test_clear_preview_when_no_preview_set(self, qapp):
+        """clearPreview does nothing if no preview is set."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+        renderer._needs_full_rebuild = False
+
+        renderer.clearPreview()
+
+        # Should not trigger rebuild if nothing was set
+        assert renderer._preview_item is None
+        assert renderer._needs_full_rebuild is False
+
+    def test_preview_item_clears_preview_cache_on_set(self, qapp):
+        """Setting preview item clears the preview cache."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        # Add something to preview cache
+        renderer._preview_cache._cache["fake_id"] = "fake_entry"
+        assert "fake_id" in renderer._preview_cache._cache
+
+        item_data = {
+            "type": "rectangle",
+            "name": "Preview",
+            "x": 0,
+            "y": 0,
+            "width": 50,
+            "height": 50,
+            "fill": {"color": "#0000ff", "opacity": 1.0},
+        }
+        renderer.setPreviewItem(item_data)
+
+        # Preview cache should be cleared
+        assert "fake_id" not in renderer._preview_cache._cache
+
+    def test_preview_item_with_stroke(self, qapp):
+        """setPreviewItem handles items with stroke appearance."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        item_data = {
+            "type": "rectangle",
+            "name": "Stroked Rect",
+            "geometry": {"x": 0, "y": 0, "width": 100, "height": 100},
+            "appearances": [
+                {"type": "fill", "color": "#ffffff", "opacity": 1.0},
+                {
+                    "type": "stroke",
+                    "color": "#000000",
+                    "opacity": 1.0,
+                    "width": 5,
+                    "align": "center",
+                    "cap": "round",
+                    "order": "top",
+                },
+            ],
+        }
+
+        renderer.setPreviewItem(item_data)
+
+        assert renderer._preview_item is not None
+        # Verify stroke was parsed
+        from lucent.appearances import Stroke
+
+        stroke = next(
+            (a for a in renderer._preview_item.appearances if isinstance(a, Stroke)),
+            None,
+        )
+        assert stroke is not None
+        assert stroke.align == "center"
+        assert stroke.cap == "round"
+        assert stroke.order == "top"
+
+    def test_preview_item_emits_signal(self, qapp):
+        """setPreviewItem emits previewItemChanged signal."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+        signal_received = []
+
+        renderer.previewItemChanged.connect(lambda: signal_received.append(True))
+
+        item_data = {
+            "type": "rectangle",
+            "name": "Signal Test",
+            "x": 0,
+            "y": 0,
+            "width": 50,
+            "height": 50,
+            "fill": {"color": "#ff0000", "opacity": 1.0},
+        }
+        renderer.setPreviewItem(item_data)
+
+        assert len(signal_received) == 1
+
+    def test_clear_preview_emits_signal(self, qapp):
+        """clearPreview emits previewItemChanged signal when preview exists."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        # Set preview first
+        item_data = {
+            "type": "rectangle",
+            "name": "Signal Test",
+            "x": 0,
+            "y": 0,
+            "width": 50,
+            "height": 50,
+            "fill": {"color": "#ff0000", "opacity": 1.0},
+        }
+        renderer.setPreviewItem(item_data)
+
+        signal_received = []
+        renderer.previewItemChanged.connect(lambda: signal_received.append(True))
+
+        renderer.clearPreview()
+
+        assert len(signal_received) == 1
+
+    def test_clear_preview_no_signal_when_no_preview(self, qapp):
+        """clearPreview doesn't emit signal if no preview was set."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+        signal_received = []
+
+        renderer.previewItemChanged.connect(lambda: signal_received.append(True))
+
+        renderer.clearPreview()
+
+        assert len(signal_received) == 0
+
+
+class TestSceneGraphRendererPreviewPath:
+    """Tests for preview path items specifically."""
+
+    def test_preview_path_item(self, qapp):
+        """setPreviewItem handles path items."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        item_data = {
+            "type": "path",
+            "name": "Preview Path",
+            "geometry": {
+                "points": [
+                    {"x": 0, "y": 0},
+                    {"x": 100, "y": 100},
+                    {"x": 200, "y": 50},
+                ],
+                "closed": False,
+            },
+            "appearances": [
+                {"type": "fill", "color": "#00ff00", "opacity": 0.5},
+                {
+                    "type": "stroke",
+                    "color": "#000000",
+                    "opacity": 1.0,
+                    "width": 2,
+                    "align": "center",
+                    "cap": "butt",
+                    "order": "top",
+                },
+            ],
+        }
+
+        renderer.setPreviewItem(item_data)
+
+        assert renderer._preview_item is not None
+
+    def test_preview_with_inner_stroke_align(self, qapp):
+        """Preview handles inner stroke alignment."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        item_data = {
+            "type": "ellipse",
+            "name": "Inner Stroke",
+            "geometry": {"centerX": 50, "centerY": 50, "radiusX": 50, "radiusY": 50},
+            "appearances": [
+                {"type": "fill", "color": "#ffffff", "opacity": 1.0},
+                {
+                    "type": "stroke",
+                    "color": "#ff0000",
+                    "opacity": 1.0,
+                    "width": 10,
+                    "align": "inner",
+                    "cap": "butt",
+                    "order": "top",
+                },
+            ],
+        }
+
+        renderer.setPreviewItem(item_data)
+
+        assert renderer._preview_item is not None
+        from lucent.appearances import Stroke
+
+        stroke = next(
+            (a for a in renderer._preview_item.appearances if isinstance(a, Stroke)),
+            None,
+        )
+        assert stroke.align == "inner"
+
+    def test_preview_with_outer_stroke_align(self, qapp):
+        """Preview handles outer stroke alignment."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        item_data = {
+            "type": "rectangle",
+            "name": "Outer Stroke",
+            "geometry": {"x": 50, "y": 50, "width": 150, "height": 100},
+            "appearances": [
+                {"type": "fill", "color": "#0000ff", "opacity": 0.8},
+                {
+                    "type": "stroke",
+                    "color": "#ffff00",
+                    "opacity": 1.0,
+                    "width": 8,
+                    "align": "outer",
+                    "cap": "square",
+                    "order": "bottom",
+                },
+            ],
+        }
+
+        renderer.setPreviewItem(item_data)
+
+        assert renderer._preview_item is not None
+        from lucent.appearances import Stroke
+
+        stroke = next(
+            (a for a in renderer._preview_item.appearances if isinstance(a, Stroke)),
+            None,
+        )
+        assert stroke.align == "outer"
+        assert stroke.cap == "square"
+        assert stroke.order == "bottom"
+
+    def test_has_preview_cache(self, qapp):
+        """SceneGraphRenderer has separate preview cache."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+
+        renderer = SceneGraphRenderer()
+
+        assert hasattr(renderer, "_preview_cache")
+        assert renderer._preview_cache is not renderer._texture_cache
