@@ -346,6 +346,36 @@ class TestStroke:
         stroke.render(painter, path, zoom_level=1.0, offset_x=0, offset_y=0)
         painter.end()
 
+    def test_render_inner_align(self, qtbot):
+        """Test that inner alignment renders without crashing."""
+        img = QImage(100, 100, QImage.Format.Format_ARGB32)
+        img.fill(0)
+        painter = QPainter(img)
+
+        stroke = Stroke(
+            color="#ff0000", width=5.0, opacity=1.0, visible=True, align="inner"
+        )
+        path = QPainterPath()
+        path.addRect(20, 20, 60, 60)
+
+        stroke.render(painter, path, zoom_level=1.0, offset_x=0, offset_y=0)
+        painter.end()
+
+    def test_render_outer_align(self, qtbot):
+        """Test that outer alignment renders without crashing."""
+        img = QImage(100, 100, QImage.Format.Format_ARGB32)
+        img.fill(0)
+        painter = QPainter(img)
+
+        stroke = Stroke(
+            color="#0000ff", width=5.0, opacity=1.0, visible=True, align="outer"
+        )
+        path = QPainterPath()
+        path.addRect(20, 20, 60, 60)
+
+        stroke.render(painter, path, zoom_level=1.0, offset_x=0, offset_y=0)
+        painter.end()
+
     def test_render_not_visible_does_nothing(self, qtbot):
         """Test that render does nothing when visible is False."""
         img = QImage(100, 100, QImage.Format.Format_ARGB32)
