@@ -114,6 +114,8 @@ class PenToolState:
         """Check if position is near first point to close the path.
 
         Returns True if path was closed, False otherwise.
+        When closing, adds symmetric handleIn to first point if it has handleOut,
+        so the closing segment has proper bezier control.
         """
         if self.closed or len(self.points) < 2:
             return False
@@ -125,6 +127,15 @@ class PenToolState:
         if dx <= tolerance and dy <= tolerance:
             self.closed = True
             self.preview_point = None
+
+            # Add symmetric handleIn to first point for proper closing curve
+            if "handleOut" in first and "handleIn" not in first:
+                anchor_x, anchor_y = first["x"], first["y"]
+                handle_out = first["handleOut"]
+                ho_dx = handle_out["x"] - anchor_x
+                ho_dy = handle_out["y"] - anchor_y
+                first["handleIn"] = {"x": anchor_x - ho_dx, "y": anchor_y - ho_dy}
+
             return True
 
         return False

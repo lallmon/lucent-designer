@@ -167,9 +167,6 @@ Item {
         if (!tool.active)
             return false;
 
-        if (button === Qt.LeftButton && Lucent.SelectionManager.editModeActive)
-            return false;
-
         if (button === Qt.LeftButton) {
             isSelecting = true;
             selectPressX = screenX;
@@ -178,6 +175,10 @@ Item {
             lastY = screenY;
             clickedOnSelectedObject = false;
             lastModifiers = modifiers;
+
+            // In edit mode, track click but don't initiate object dragging
+            if (Lucent.SelectionManager.editModeActive)
+                return true;
 
             // Don't initiate object drag if cursor is over an overlay handle
             var nearAnyHandle = isNearRotationHandle(screenX, screenY) || isNearResizeHandle(screenX, screenY);
@@ -225,8 +226,7 @@ Item {
             var dy = Math.abs(screenY - selectPressY);
 
             if (dx < clickThreshold && dy < clickThreshold) {
-                if (!Lucent.SelectionManager.editModeActive)
-                    objectClicked(screenX, screenY, modifiers);
+                objectClicked(screenX, screenY, modifiers);
             }
 
             return true;

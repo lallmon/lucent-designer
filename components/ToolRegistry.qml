@@ -40,6 +40,10 @@ QtObject {
                 icon: "text-t",
                 iconWeight: "regular",
                 instruction: "<b>Click</b> to place text box • <b>Type</b> to enter, then <b>Enter</b> to commit text"
+            },
+            "pathEdit": {
+                name: "Path Edit Mode",
+                instruction: "<b>Click</b> to select points • <b>Drag</b> handles to adjust curves • <b>Alt + Drag</b> to break handlesymmetry • <b>Click</b> outside or <b>Esc</b> to finish"
             }
         })
 

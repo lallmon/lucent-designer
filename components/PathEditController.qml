@@ -88,7 +88,7 @@ QtObject {
         });
     }
 
-    // Move a bezier handle with optional symmetric mirroring
+    // Move a bezier handle with symmetric mirroring (both angle and length)
     function handleHandleMoved(index, handleType, x, y, modifiers) {
         var idx = Lucent.SelectionManager.selectedItemIndex;
         if (idx < 0)
@@ -121,24 +121,13 @@ QtObject {
                                 y: pt.handleOut.y
                             };
                         } else {
-                            // Mirror angle, preserve opposite handle length
+                            // Mirror both angle and length symmetrically
                             var dx = x - pt.x;
                             var dy = y - pt.y;
-                            var outDx = pt.handleOut.x - pt.x;
-                            var outDy = pt.handleOut.y - pt.y;
-                            var outLen = Math.sqrt(outDx * outDx + outDy * outDy);
-                            var inLen = Math.sqrt(dx * dx + dy * dy);
-                            if (inLen > 0.001) {
-                                newPt.handleOut = {
-                                    x: pt.x - (dx / inLen) * outLen,
-                                    y: pt.y - (dy / inLen) * outLen
-                                };
-                            } else {
-                                newPt.handleOut = {
-                                    x: pt.handleOut.x,
-                                    y: pt.handleOut.y
-                                };
-                            }
+                            newPt.handleOut = {
+                                x: pt.x - dx,
+                                y: pt.y - dy
+                            };
                         }
                     }
                 } else if (handleType === "handleOut") {
@@ -153,24 +142,13 @@ QtObject {
                                 y: pt.handleIn.y
                             };
                         } else {
-                            // Mirror angle, preserve opposite handle length
+                            // Mirror both angle and length symmetrically
                             var dx = x - pt.x;
                             var dy = y - pt.y;
-                            var inDx = pt.handleIn.x - pt.x;
-                            var inDy = pt.handleIn.y - pt.y;
-                            var inLen = Math.sqrt(inDx * inDx + inDy * inDy);
-                            var outLen = Math.sqrt(dx * dx + dy * dy);
-                            if (outLen > 0.001) {
-                                newPt.handleIn = {
-                                    x: pt.x - (dx / outLen) * inLen,
-                                    y: pt.y - (dy / outLen) * inLen
-                                };
-                            } else {
-                                newPt.handleIn = {
-                                    x: pt.handleIn.x,
-                                    y: pt.handleIn.y
-                                };
-                            }
+                            newPt.handleIn = {
+                                x: pt.x - dx,
+                                y: pt.y - dy
+                            };
                         }
                     }
                 }

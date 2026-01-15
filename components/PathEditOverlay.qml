@@ -133,7 +133,7 @@ Item {
             readonly property bool hasHandleOut: pointData.handleOut !== undefined && pointData.handleOut !== null
 
             Shape {
-                visible: pointItem.isSelected && (pointItem.hasHandleIn || pointItem.hasHandleOut)
+                visible: pointItem.hasHandleIn || pointItem.hasHandleOut
 
                 ShapePath {
                     strokeColor: overlay.accentColor
@@ -156,7 +156,7 @@ Item {
 
             Rectangle {
                 id: handleIn
-                visible: pointItem.isSelected && pointItem.hasHandleIn
+                visible: pointItem.hasHandleIn
 
                 property var handlePos: pointItem.hasHandleIn ? overlay.transformPoint(pointItem.pointData.handleIn.x, pointItem.pointData.handleIn.y) : {
                     x: 0,
@@ -203,7 +203,7 @@ Item {
 
             Rectangle {
                 id: handleOut
-                visible: pointItem.isSelected && pointItem.hasHandleOut
+                visible: pointItem.hasHandleOut
 
                 property var handlePos: pointItem.hasHandleOut ? overlay.transformPoint(pointItem.pointData.handleOut.x, pointItem.pointData.handleOut.y) : {
                     x: 0,

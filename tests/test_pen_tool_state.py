@@ -118,8 +118,8 @@ class TestSymmetricHandles:
         assert second_point["handleIn"] == {"x": 70.0, "y": -20.0}
         assert second_point["handleOut"] == {"x": 130.0, "y": 20.0}
 
-    def test_first_point_has_no_handle_in(self):
-        """First point should never have handleIn (nothing before it)."""
+    def test_first_point_has_no_handle_in_for_open_path(self):
+        """First point should not have handleIn for open paths."""
         state = PenToolState()
         state.begin_point(100, 200)
         state.end_point(150, 200)  # Drag to create handles
@@ -128,6 +128,44 @@ class TestSymmetricHandles:
         assert first_point.get("handleIn") is None
         # But handleOut should exist
         assert first_point["handleOut"] == {"x": 150.0, "y": 200.0}
+
+    def test_first_point_gets_handle_in_when_closed(self):
+        """First point should get symmetric handleIn when path is closed."""
+        state = PenToolState()
+        # First point with handleOut
+        state.begin_point(100, 100)
+        state.end_point(130, 100)  # handleOut at (130, 100), dx=30
+
+        # Second point
+        state.begin_point(200, 100)
+        state.end_point(200, 100)
+
+        # Close the path
+        state.try_close(100, 100, tolerance=10.0)
+
+        first_point = state.points[0]
+        # handleIn should be symmetric: (100 - 30, 100) = (70, 100)
+        assert first_point["handleIn"] == {"x": 70.0, "y": 100.0}
+        assert first_point["handleOut"] == {"x": 130.0, "y": 100.0}
+
+    def test_first_point_corner_stays_corner_when_closed(self):
+        """First point without handleOut should not get handleIn when closed."""
+        state = PenToolState()
+        # First point as corner (click, no drag)
+        state.begin_point(100, 100)
+        state.end_point(100, 100)
+
+        # Second point
+        state.begin_point(200, 100)
+        state.end_point(200, 100)
+
+        # Close the path
+        state.try_close(100, 100, tolerance=10.0)
+
+        first_point = state.points[0]
+        # Corner point should stay a corner
+        assert first_point.get("handleIn") is None
+        assert first_point.get("handleOut") is None
 
 
 class TestUpdateDrag:

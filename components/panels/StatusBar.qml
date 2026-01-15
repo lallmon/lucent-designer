@@ -16,10 +16,12 @@ ToolBar {
     readonly property bool hasUnitSettings: typeof unitSettings !== "undefined" && unitSettings !== null
     readonly property string displayUnitLabel: hasUnitSettings ? unitSettings.displayUnit : "px"
 
-    // Cache instruction text - only updates when activeTool changes
+    // Cache instruction text - prioritize edit mode, then active tool
     readonly property string toolInstruction: {
-        var t = Lucent.ToolRegistry.tools[activeTool];
-        return t ? t.instruction : "";
+        if (Lucent.SelectionManager.editModeActive) {
+            return Lucent.ToolRegistry.getInstruction("pathEdit");
+        }
+        return Lucent.ToolRegistry.getInstruction(activeTool);
     }
 
     RowLayout {

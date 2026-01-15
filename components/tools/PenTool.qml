@@ -184,6 +184,22 @@ Item {
 
         if (tool.points.length >= 2 && tool._isNearFirst(canvasX, canvasY)) {
             tool.isClosed = true;
+
+            // Add symmetric handleIn to first point for proper closing curve
+            var first = tool.points[0];
+            if (first.handleOut && !first.handleIn) {
+                var dx = first.handleOut.x - first.x;
+                var dy = first.handleOut.y - first.y;
+                var nextPoints = tool.points.slice();
+                nextPoints[0] = Object.assign({}, first, {
+                    handleIn: {
+                        x: first.x - dx,
+                        y: first.y - dy
+                    }
+                });
+                tool.points = nextPoints;
+            }
+
             tool._finalize();
             return;
         }
