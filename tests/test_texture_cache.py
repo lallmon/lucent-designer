@@ -172,7 +172,7 @@ class TestTextureCacheGetOrCreate:
     def test_texture_size_includes_padding_and_scale(self):
         """Texture dimensions account for padding and render scale."""
         cache = TextureCache()
-        item = make_rect_item(width=100, height=50)
+        item = make_rect_item(width=100, height=50, stroke_width=0)
 
         entry = cache.get_or_create(item, "rect-1")
 
@@ -257,7 +257,7 @@ class TestTextureCacheOffsetAndSize:
     def test_get_texture_offset_accounts_for_padding(self):
         """Offset adjusts for padding so content aligns correctly."""
         cache = TextureCache()
-        item = make_rect_item(x=100, y=50)
+        item = make_rect_item(x=100, y=50, stroke_width=0)
         entry = cache.get_or_create(item, "rect-1")
 
         offset = cache.get_texture_offset(entry)
@@ -268,7 +268,7 @@ class TestTextureCacheOffsetAndSize:
     def test_get_texture_size_accounts_for_scale(self):
         """Display size accounts for render scale."""
         cache = TextureCache()
-        item = make_rect_item(width=100, height=50)
+        item = make_rect_item(width=100, height=50, stroke_width=0)
         entry = cache.get_or_create(item, "rect-1")
 
         size = cache.get_texture_size(entry)

@@ -30,10 +30,12 @@ class TextureCacheEntry:
         image: QImage,
         bounds: QRectF,
         item_version: int,
+        padding: float = 4.0,
     ) -> None:
         self.image = image
         self.bounds = bounds
         self.item_version = item_version
+        self.padding = padding
 
     @property
     def width(self) -> int:
@@ -113,7 +115,8 @@ class TextureCache:
             version ^= hash(item.fill.color)
 
         if hasattr(item, "stroke") and item.stroke:
-            version ^= hash((item.stroke.color, item.stroke.width))
+            align = getattr(item.stroke, "align", "center")
+            version ^= hash((item.stroke.color, item.stroke.width, align))
 
         return version
 
@@ -133,7 +136,15 @@ class TextureCache:
         if bounds.isEmpty():
             return None
 
-        padding = self.PADDING
+        padding = float(self.PADDING)
+        stroke = getattr(item, "stroke", None)
+        if stroke and stroke.visible and stroke.width > 0:
+            align = getattr(stroke, "align", "center")
+            if align == "outer":
+                padding = max(padding, stroke.width + self.PADDING)
+            elif align == "center":
+                padding = max(padding, stroke.width / 2 + self.PADDING)
+
         scale = self.RENDER_SCALE
 
         tex_width = max(int((bounds.width() + padding * 2) * scale), 4)
@@ -148,7 +159,6 @@ class TextureCache:
         painter.scale(scale, scale)
         painter.translate(padding - bounds.x(), padding - bounds.y())
 
-        # Rasterize at identity transform; GPU applies actual transform
         original_transform = item.transform
         item.transform = Transform()
 
@@ -163,13 +173,14 @@ class TextureCache:
             image=image,
             bounds=bounds,
             item_version=version,
+            padding=padding,
         )
 
     def get_texture_offset(self, entry: TextureCacheEntry) -> Tuple[float, float]:
         """Position offset accounting for padding around the shape."""
         return (
-            entry.bounds.x() - self.PADDING,
-            entry.bounds.y() - self.PADDING,
+            entry.bounds.x() - entry.padding,
+            entry.bounds.y() - entry.padding,
         )
 
     def get_texture_size(self, entry: TextureCacheEntry) -> Tuple[float, float]:
