@@ -155,10 +155,6 @@ Item {
         // Don't drag object when overlay resize/rotate handles are being used
         overlayActive: root.overlayIsResizing || root.overlayIsRotating
 
-        onPanDelta: (dx, dy) => {
-            root.panRequested(dx, dy);
-        }
-
         onCursorShapeChanged: shape => {
             root.currentCursorShape = shape;
         }

@@ -149,7 +149,6 @@ Item {
         }
     }
 
-    property bool isPanning: false
     property bool isSelecting: false
     property bool isDraggingObject: false
     property bool clickedOnSelectedObject: false
@@ -159,12 +158,7 @@ Item {
     property real selectPressY: 0
     property int lastModifiers: Qt.NoModifier
 
-    property var deltaBufferX: []
-    property var deltaBufferY: []
-    property int bufferSize: 3
     property real clickThreshold: 5
-
-    signal panDelta(real dx, real dy)
     signal cursorShapeChanged(int shape)
     signal objectClicked(real viewportX, real viewportY, int modifiers)
     signal objectDragged(real canvasDx, real canvasDy)
@@ -175,16 +169,6 @@ Item {
 
         if (button === Qt.LeftButton && Lucent.SelectionManager.editModeActive)
             return false;
-
-        if (button === Qt.MiddleButton) {
-            isPanning = true;
-            lastX = screenX;
-            lastY = screenY;
-            deltaBufferX = [];
-            deltaBufferY = [];
-            cursorShapeChanged(Qt.ClosedHandCursor);
-            return true;
-        }
 
         if (button === Qt.LeftButton) {
             isSelecting = true;
@@ -227,12 +211,6 @@ Item {
         if (!tool.active)
             return false;
 
-        if (isPanning && button === Qt.MiddleButton) {
-            isPanning = false;
-            cursorShapeChanged(Qt.OpenHandCursor);
-            return true;
-        }
-
         if (isSelecting && button === Qt.LeftButton) {
             if (isDraggingObject) {
                 canvasModel.endTransaction();
@@ -261,39 +239,6 @@ Item {
         if (!tool.active)
             return false;
 
-        if (isPanning) {
-            var dx = screenX - lastX;
-            var dy = screenY - lastY;
-
-            var maxDelta = 200;
-            if (Math.abs(dx) > maxDelta || Math.abs(dy) > maxDelta) {
-                dx = Math.max(-maxDelta, Math.min(maxDelta, dx));
-                dy = Math.max(-maxDelta, Math.min(maxDelta, dy));
-            }
-
-            deltaBufferX.push(dx);
-            deltaBufferY.push(dy);
-
-            if (deltaBufferX.length > bufferSize) {
-                deltaBufferX.shift();
-                deltaBufferY.shift();
-            }
-
-            var sumX = 0, sumY = 0;
-            for (var i = 0; i < deltaBufferX.length; i++) {
-                sumX += deltaBufferX[i];
-                sumY += deltaBufferY[i];
-            }
-            var avgDx = sumX / deltaBufferX.length;
-            var avgDy = sumY / deltaBufferY.length;
-
-            panDelta(avgDx, avgDy);
-
-            lastX = screenX;
-            lastY = screenY;
-            return true;
-        }
-
         if (isSelecting && clickedOnSelectedObject && !overlayActive && !Lucent.SelectionManager.editModeActive && Lucent.SelectionManager.selectedItemIndex >= 0) {
             var dx = Math.abs(screenX - selectPressX);
             var dy = Math.abs(screenY - selectPressY);
@@ -316,7 +261,6 @@ Item {
     }
 
     function reset() {
-        isPanning = false;
         isSelecting = false;
         isDraggingObject = false;
         clickedOnSelectedObject = false;

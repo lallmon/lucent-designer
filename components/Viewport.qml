@@ -429,8 +429,13 @@ Item {
         property real lastMouseX: 0
         property real lastMouseY: 0
 
-        // Bind cursor shape to Canvas's currentCursorShape
-        cursorShape: canvasComponent ? canvasComponent.currentCursorShape : Qt.ArrowCursor
+        // Middle-mouse panning state (global, works with any tool)
+        property bool isPanning: false
+        property real panStartX: 0
+        property real panStartY: 0
+
+        // Bind cursor shape - show hand cursor when panning
+        cursorShape: isPanning ? Qt.ClosedHandCursor : (canvasComponent ? canvasComponent.currentCursorShape : Qt.ArrowCursor)
 
         Keys.onDeletePressed: {
             if (!canvasComponent)
@@ -476,26 +481,45 @@ Item {
 
         onPressed: mouse => {
             forceActiveFocus();
-            // Stop any ongoing inertia when user starts a new interaction
             root.stopInertia();
+
+            // Middle mouse triggers panning globally (works with any tool)
+            if (mouse.button === Qt.MiddleButton) {
+                isPanning = true;
+                panStartX = mouse.x;
+                panStartY = mouse.y;
+                return;
+            }
+
             if (canvasComponent) {
                 canvasComponent.handleMousePress(mouse.x, mouse.y, mouse.button, mouse.modifiers);
             }
         }
 
         onReleased: mouse => {
+            if (mouse.button === Qt.MiddleButton && isPanning) {
+                isPanning = false;
+                return;
+            }
+
             if (canvasComponent) {
                 canvasComponent.handleMouseRelease(mouse.x, mouse.y, mouse.button, mouse.modifiers);
             }
         }
 
         onClicked: mouse => {
+            if (mouse.button === Qt.MiddleButton)
+                return;
+
             if (canvasComponent) {
                 canvasComponent.handleMouseClick(mouse.x, mouse.y, mouse.button);
             }
         }
 
         onDoubleClicked: mouse => {
+            if (mouse.button === Qt.MiddleButton)
+                return;
+
             if (canvasComponent) {
                 canvasComponent.handleMouseDoubleClick(mouse.x, mouse.y, mouse.button);
             }
@@ -504,6 +528,17 @@ Item {
         onPositionChanged: mouse => {
             lastMouseX = mouse.x;
             lastMouseY = mouse.y;
+
+            // Handle panning when middle mouse is held
+            if (isPanning) {
+                var dx = mouse.x - panStartX;
+                var dy = mouse.y - panStartY;
+                root.pan(dx, dy);
+                panStartX = mouse.x;
+                panStartY = mouse.y;
+                return;
+            }
+
             if (canvasComponent) {
                 canvasComponent.handleMouseMove(mouse.x, mouse.y, mouse.modifiers);
             }
