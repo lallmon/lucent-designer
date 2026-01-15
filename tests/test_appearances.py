@@ -162,6 +162,7 @@ class TestStroke:
         assert stroke.width == 1.0
         assert stroke.opacity == 1.0
         assert stroke.visible is True
+        assert stroke.align == "center"
 
     def test_creation_with_parameters(self):
         """Test creating a stroke with custom parameters."""
@@ -201,6 +202,7 @@ class TestStroke:
             "width": 2.5,
             "opacity": 0.9,
             "visible": True,
+            "align": "center",
         }
 
     def test_from_dict(self):
@@ -226,6 +228,7 @@ class TestStroke:
         assert stroke.width == 1.0
         assert stroke.opacity == 1.0
         assert stroke.visible is True
+        assert stroke.align == "center"
 
     def test_from_dict_clamps_values(self):
         """Test from_dict clamps width and opacity values."""
@@ -236,13 +239,39 @@ class TestStroke:
 
     def test_round_trip(self):
         """Test serialization round-trip."""
-        original = Stroke(color="#123456", width=5.0, opacity=0.7, visible=False)
+        original = Stroke(
+            color="#123456", width=5.0, opacity=0.7, visible=False, align="outer"
+        )
         data = original.to_dict()
         restored = Stroke.from_dict(data)
         assert restored.color == original.color
         assert restored.width == original.width
         assert restored.opacity == original.opacity
         assert restored.visible == original.visible
+        assert restored.align == original.align
+
+    def test_align_values(self):
+        """Test that all valid align values are accepted."""
+        for align_value in ("center", "inner", "outer"):
+            stroke = Stroke(align=align_value)
+            assert stroke.align == align_value
+
+    def test_align_invalid_defaults_to_center(self):
+        """Test that invalid align values default to center."""
+        stroke = Stroke(align="invalid")
+        assert stroke.align == "center"
+
+    def test_from_dict_with_align(self):
+        """Test deserialization with align value."""
+        data = {"type": "stroke", "align": "inner"}
+        stroke = Stroke.from_dict(data)
+        assert stroke.align == "inner"
+
+    def test_to_dict_with_align(self):
+        """Test serialization includes align value."""
+        stroke = Stroke(align="outer")
+        data = stroke.to_dict()
+        assert data["align"] == "outer"
 
     def test_render_smoke_test(self, qtbot):
         """Smoke test: render does not crash."""

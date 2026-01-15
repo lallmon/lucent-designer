@@ -83,6 +83,7 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "width": 1.0,
                 "opacity": 1.0,
                 "visible": True,
+                "align": "center",
             },
         ]
 
@@ -99,6 +100,9 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 }
             )
         elif app_type == "stroke":
+            align = a.get("align", "center")
+            if align not in ("center", "inner", "outer"):
+                align = "center"
             result.append(
                 {
                     "type": "stroke",
@@ -106,6 +110,7 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "width": _clamp_range(float(a.get("width", 1.0)), 0.0, 100.0),
                     "opacity": _clamp_range(float(a.get("opacity", 1.0)), 0.0, 1.0),
                     "visible": bool(a.get("visible", True)),
+                    "align": align,
                 }
             )
     return result
@@ -396,7 +401,13 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
             appearances=[
                 Fill(a["color"], a["opacity"], a["visible"])
                 if a["type"] == "fill"
-                else Stroke(a["color"], a["width"], a["opacity"], a["visible"])
+                else Stroke(
+                    a["color"],
+                    a["width"],
+                    a["opacity"],
+                    a["visible"],
+                    a.get("align", "center"),
+                )
                 for a in d["appearances"]
             ],
             transform=_create_transform(d),
@@ -417,7 +428,13 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
             appearances=[
                 Fill(a["color"], a["opacity"], a["visible"])
                 if a["type"] == "fill"
-                else Stroke(a["color"], a["width"], a["opacity"], a["visible"])
+                else Stroke(
+                    a["color"],
+                    a["width"],
+                    a["opacity"],
+                    a["visible"],
+                    a.get("align", "center"),
+                )
                 for a in d["appearances"]
             ],
             transform=_create_transform(d),
@@ -433,7 +450,13 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
             appearances=[
                 Fill(a["color"], a["opacity"], a["visible"])
                 if a["type"] == "fill"
-                else Stroke(a["color"], a["width"], a["opacity"], a["visible"])
+                else Stroke(
+                    a["color"],
+                    a["width"],
+                    a["opacity"],
+                    a["visible"],
+                    a.get("align", "center"),
+                )
                 for a in d["appearances"]
             ],
             transform=_create_transform(d),

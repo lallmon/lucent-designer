@@ -336,6 +336,7 @@ Item {
         var strokeColor = tool._colorString(s.strokeColor);
         var strokeOpacity = s.strokeOpacity !== undefined ? s.strokeOpacity : 1.0;
         var strokeVisible = s.strokeVisible !== undefined ? s.strokeVisible : false;
+        var strokeAlign = s.strokeAlign !== undefined ? s.strokeAlign : "center";
         var fillColor = tool._colorString(s.fillColor);
         var fillOpacity = s.fillOpacity !== undefined ? s.fillOpacity : 1.0;
 
@@ -357,7 +358,8 @@ Item {
                     color: strokeColor,
                     width: strokeWidth,
                     opacity: strokeOpacity,
-                    visible: strokeVisible
+                    visible: strokeVisible,
+                    align: strokeAlign
                 }
             ]
         });

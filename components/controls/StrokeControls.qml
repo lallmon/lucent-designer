@@ -11,10 +11,12 @@ ColumnLayout {
 
     property real strokeWidth: 1.0
     property string strokeStyle: "none"  // "none" or "solid"
+    property string strokeAlign: "center"  // "center", "inner", "outer"
 
     signal widthEdited(real newWidth)
     signal widthCommitted(real newWidth)
     signal styleChanged(string newStyle)
+    signal alignChanged(string newAlign)
 
     readonly property SystemPalette themePalette: Lucent.Themed.palette
 
@@ -193,6 +195,110 @@ ColumnLayout {
                 border.color: widthField.activeFocus ? root.themePalette.highlight : root.themePalette.mid
                 border.width: 1
                 radius: Lucent.Styles.rad.sm
+            }
+        }
+    }
+
+    RowLayout {
+        spacing: Lucent.Styles.pad.md
+        opacity: root.strokeStyle === "none" ? 0.5 : 1.0
+        enabled: root.strokeStyle !== "none"
+
+        Label {
+            text: qsTr("Align:")
+            font.pixelSize: 12
+            color: root.themePalette.text
+        }
+
+        ButtonGroup {
+            id: alignGroup
+            exclusive: true
+        }
+
+        Button {
+            id: centerButton
+            checkable: true
+            checked: root.strokeAlign === "center"
+            ButtonGroup.group: alignGroup
+            Layout.preferredWidth: Lucent.Styles.height.lg
+            Layout.preferredHeight: Lucent.Styles.height.lg
+
+            onClicked: {
+                if (root.strokeAlign !== "center") {
+                    root.alignChanged("center");
+                }
+            }
+
+            background: Rectangle {
+                color: centerButton.checked ? root.themePalette.highlight : root.themePalette.button
+                border.color: root.themePalette.mid
+                border.width: 1
+                radius: Lucent.Styles.rad.sm
+            }
+
+            contentItem: Item {}
+
+            Lucent.ToolTipStyled {
+                visible: centerButton.hovered
+                text: qsTr("Center")
+            }
+        }
+
+        Button {
+            id: innerButton
+            checkable: true
+            checked: root.strokeAlign === "inner"
+            ButtonGroup.group: alignGroup
+            Layout.preferredWidth: Lucent.Styles.height.lg
+            Layout.preferredHeight: Lucent.Styles.height.lg
+
+            onClicked: {
+                if (root.strokeAlign !== "inner") {
+                    root.alignChanged("inner");
+                }
+            }
+
+            background: Rectangle {
+                color: innerButton.checked ? root.themePalette.highlight : root.themePalette.button
+                border.color: root.themePalette.mid
+                border.width: 1
+                radius: Lucent.Styles.rad.sm
+            }
+
+            contentItem: Item {}
+
+            Lucent.ToolTipStyled {
+                visible: innerButton.hovered
+                text: qsTr("Inner")
+            }
+        }
+
+        Button {
+            id: outerButton
+            checkable: true
+            checked: root.strokeAlign === "outer"
+            ButtonGroup.group: alignGroup
+            Layout.preferredWidth: Lucent.Styles.height.lg
+            Layout.preferredHeight: Lucent.Styles.height.lg
+
+            onClicked: {
+                if (root.strokeAlign !== "outer") {
+                    root.alignChanged("outer");
+                }
+            }
+
+            background: Rectangle {
+                color: outerButton.checked ? root.themePalette.highlight : root.themePalette.button
+                border.color: root.themePalette.mid
+                border.width: 1
+                radius: Lucent.Styles.rad.sm
+            }
+
+            contentItem: Item {}
+
+            Lucent.ToolTipStyled {
+                visible: outerButton.hovered
+                text: qsTr("Outer")
             }
         }
     }

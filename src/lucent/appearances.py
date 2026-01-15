@@ -12,7 +12,13 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPainterPath
+from PySide6.QtGui import (
+    QPainter,
+    QPen,
+    QBrush,
+    QColor,
+    QPainterPath,
+)
 
 if TYPE_CHECKING:
     pass
@@ -138,17 +144,21 @@ class Fill(Appearance):
 class Stroke(Appearance):
     """Stroke appearance for shapes."""
 
+    VALID_ALIGNS = ("center", "inner", "outer")
+
     def __init__(
         self,
         color: str = "#ffffff",
         width: float = 1.0,
         opacity: float = 1.0,
         visible: bool = True,
+        align: str = "center",
     ) -> None:
         super().__init__(visible)
         self.color = color
         self.width = max(0.0, min(100.0, float(width)))
         self.opacity = max(0.0, min(1.0, float(opacity)))
+        self.align = align if align in self.VALID_ALIGNS else "center"
 
     def render(
         self,
@@ -162,24 +172,47 @@ class Stroke(Appearance):
         if not self.visible or self.width <= 0:
             return
 
-        # Stroke width scaling with zoom
         stroke_px = self.width * zoom_level
         clamped_px = max(0.3, min(100.0, stroke_px))
         scaled_width = clamped_px / max(zoom_level, 0.0001)
 
-        # Set up pen
         qcolor = QColor(self.color)
         qcolor.setAlphaF(self.opacity)
-        pen = QPen(qcolor)
-        pen.setWidthF(scaled_width)
+
+        translated = path.translated(offset_x, offset_y)
+
+        pen = QPen(qcolor, scaled_width)
         pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        painter.setPen(pen)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
 
-        # Apply offset and draw
-        translated = path.translated(offset_x, offset_y)
-        painter.drawPath(translated)
+        if self.align == "center":
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawPath(translated)
+        else:
+            painter.save()
+
+            if self.align == "inner":
+                painter.setClipPath(translated)
+            else:
+                bounds = translated.boundingRect()
+                margin = scaled_width * 2 + 100
+                outer_rect = QPainterPath()
+                outer_rect.addRect(
+                    bounds.x() - margin,
+                    bounds.y() - margin,
+                    bounds.width() + 2 * margin,
+                    bounds.height() + 2 * margin,
+                )
+                inverse_clip = outer_rect.subtracted(translated)
+                painter.setClipPath(inverse_clip)
+
+            pen.setWidthF(scaled_width * 2)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawPath(translated)
+
+            painter.restore()
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary."""
@@ -189,6 +222,7 @@ class Stroke(Appearance):
             "width": self.width,
             "opacity": self.opacity,
             "visible": self.visible,
+            "align": self.align,
         }
 
     @staticmethod
@@ -199,6 +233,7 @@ class Stroke(Appearance):
             width=float(data.get("width", 1.0)),
             opacity=float(data.get("opacity", 1.0)),
             visible=data.get("visible", True),
+            align=data.get("align", "center"),
         )
 
     def get_sg_color(self) -> Optional[QColor]:
