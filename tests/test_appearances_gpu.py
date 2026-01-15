@@ -123,10 +123,10 @@ class TestStrokeGPU:
 
     def test_get_scaled_width_zoomed_in(self):
         """Scaled width at high zoom should be clamped maximum."""
-        stroke = Stroke(color="#00ff00", width=2.0, opacity=1.0)
+        stroke = Stroke(color="#00ff00", width=20.0, opacity=1.0)
         scaled = stroke.get_scaled_width(10.0)
-        # At zoom 10.0, stroke_px = 20.0, clamped to 6.0, scaled = 0.6
-        assert scaled == pytest.approx(0.6, rel=0.01)
+        # At zoom 10.0, stroke_px = 200.0, clamped to 100.0, scaled = 10.0
+        assert scaled == pytest.approx(10.0, rel=0.01)
 
 
 class TestColorParsing:

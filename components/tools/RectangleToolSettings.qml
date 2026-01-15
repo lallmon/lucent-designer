@@ -137,45 +137,8 @@ RowLayout {
     spacing: 6
 
     Label {
-        text: qsTr("Stroke:")
-        font.pixelSize: 11
-        Layout.alignment: Qt.AlignVCenter
-    }
-
-    Lucent.LabeledNumericField {
-        labelText: ""
-        value: root.strokeWidth
-        minimum: 0
-        maximum: 100.0
-        decimals: 1
-        suffix: qsTr("pt")
-        onCommitted: newValue => root.updateProperty("strokeWidth", newValue)
-    }
-
-    Lucent.ColorPickerButton {
-        Layout.leftMargin: 6
-        color: root.strokeColor
-        colorOpacity: root.strokeOpacity
-        dialogTitle: qsTr("Choose Stroke Color")
-        onDialogOpened: canvasModel.beginTransaction()
-        onDialogClosed: canvasModel.endTransaction()
-        onColorPreview: previewColor => root.updateProperty("strokeColor", previewColor.toString())
-        onOpacityPreview: previewOpacity => root.updateProperty("strokeOpacity", previewOpacity)
-        onColorPicked: newColor => root.updateProperty("strokeColor", newColor.toString())
-        onOpacityPicked: newOpacity => root.updateProperty("strokeOpacity", newOpacity)
-    }
-
-    ToolSeparator {
-        contentItem: Rectangle {
-            implicitWidth: 1
-            implicitHeight: 16
-            color: Lucent.Themed.palette.mid
-        }
-    }
-
-    Label {
         text: qsTr("Fill:")
-        font.pixelSize: 11
+        font.pixelSize: 12
         Layout.alignment: Qt.AlignVCenter
     }
 
@@ -189,5 +152,34 @@ RowLayout {
         onOpacityPreview: previewOpacity => root.updateProperty("fillOpacity", previewOpacity)
         onColorPicked: newColor => root.updateProperty("fillColor", newColor.toString())
         onOpacityPicked: newOpacity => root.updateProperty("fillOpacity", newOpacity)
+    }
+
+    ToolSeparator {
+        contentItem: Rectangle {
+            implicitWidth: 1
+            implicitHeight: 16
+            color: Lucent.Themed.palette.mid
+        }
+    }
+
+    Lucent.StrokeEditorButton {
+        strokeWidth: root.strokeWidth
+        strokeColor: root.strokeColor
+        onWidthEdited: newWidth => root.updateProperty("strokeWidth", newWidth)
+        onWidthCommitted: newWidth => root.updateProperty("strokeWidth", newWidth)
+        onPanelOpened: canvasModel.beginTransaction()
+        onPanelClosed: canvasModel.endTransaction()
+    }
+
+    Lucent.ColorPickerButton {
+        color: root.strokeColor
+        colorOpacity: root.strokeOpacity
+        dialogTitle: qsTr("Choose Stroke Color")
+        onDialogOpened: canvasModel.beginTransaction()
+        onDialogClosed: canvasModel.endTransaction()
+        onColorPreview: previewColor => root.updateProperty("strokeColor", previewColor.toString())
+        onOpacityPreview: previewOpacity => root.updateProperty("strokeOpacity", previewOpacity)
+        onColorPicked: newColor => root.updateProperty("strokeColor", newColor.toString())
+        onOpacityPicked: newOpacity => root.updateProperty("strokeOpacity", newOpacity)
     }
 }

@@ -162,9 +162,9 @@ class Stroke(Appearance):
         if not self.visible or self.width <= 0:
             return
 
-        # Stroke width scaling with zoom (matches existing behavior)
+        # Stroke width scaling with zoom
         stroke_px = self.width * zoom_level
-        clamped_px = max(0.3, min(6.0, stroke_px))
+        clamped_px = max(0.3, min(100.0, stroke_px))
         scaled_width = clamped_px / max(zoom_level, 0.0001)
 
         # Set up pen
@@ -223,5 +223,5 @@ class Stroke(Appearance):
         Matches the existing QPainter behavior with clamping.
         """
         stroke_px = self.width * zoom_level
-        clamped_px = max(0.3, min(6.0, stroke_px))
+        clamped_px = max(0.3, min(100.0, stroke_px))
         return clamped_px / max(zoom_level, 0.0001)

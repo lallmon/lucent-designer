@@ -37,5 +37,6 @@ ToolTipStyled 1.0 controls/ToolTipStyled.qml
 ToolTipCanvas 1.0 controls/ToolTipCanvas.qml
 SpinBoxLabeled 1.0 controls/SpinBoxLabeled.qml
 VerticalDivider 1.0 controls/VerticalDivider.qml
+StrokeEditorButton 1.0 controls/StrokeEditorButton.qml
 AboutDialog 1.0 dialogs/AboutDialog.qml
 ExportDialog 1.0 dialogs/ExportDialog.qml
