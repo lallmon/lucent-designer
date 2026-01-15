@@ -83,6 +83,7 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "width": 1.0,
                 "opacity": 1.0,
                 "visible": True,
+                "cap": "butt",
                 "align": "center",
             },
         ]
@@ -100,6 +101,9 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 }
             )
         elif app_type == "stroke":
+            cap = a.get("cap", "butt")
+            if cap not in ("butt", "square", "round"):
+                cap = "butt"
             align = a.get("align", "center")
             if align not in ("center", "inner", "outer"):
                 align = "center"
@@ -110,6 +114,7 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "width": _clamp_range(float(a.get("width", 1.0)), 0.0, 100.0),
                     "opacity": _clamp_range(float(a.get("opacity", 1.0)), 0.0, 1.0),
                     "visible": bool(a.get("visible", True)),
+                    "cap": cap,
                     "align": align,
                 }
             )
@@ -406,6 +411,7 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
                     a["width"],
                     a["opacity"],
                     a["visible"],
+                    a.get("cap", "butt"),
                     a.get("align", "center"),
                 )
                 for a in d["appearances"]
@@ -433,6 +439,7 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
                     a["width"],
                     a["opacity"],
                     a["visible"],
+                    a.get("cap", "butt"),
                     a.get("align", "center"),
                 )
                 for a in d["appearances"]
@@ -455,6 +462,7 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
                     a["width"],
                     a["opacity"],
                     a["visible"],
+                    a.get("cap", "butt"),
                     a.get("align", "center"),
                 )
                 for a in d["appearances"]

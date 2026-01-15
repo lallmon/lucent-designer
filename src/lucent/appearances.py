@@ -145,6 +145,12 @@ class Stroke(Appearance):
     """Stroke appearance for shapes."""
 
     VALID_ALIGNS = ("center", "inner", "outer")
+    VALID_CAPS = ("butt", "square", "round")
+    CAP_STYLES = {
+        "butt": Qt.PenCapStyle.FlatCap,
+        "square": Qt.PenCapStyle.SquareCap,
+        "round": Qt.PenCapStyle.RoundCap,
+    }
 
     def __init__(
         self,
@@ -152,12 +158,14 @@ class Stroke(Appearance):
         width: float = 1.0,
         opacity: float = 1.0,
         visible: bool = True,
+        cap: str = "butt",
         align: str = "center",
     ) -> None:
         super().__init__(visible)
         self.color = color
         self.width = max(0.0, min(100.0, float(width)))
         self.opacity = max(0.0, min(1.0, float(opacity)))
+        self.cap = cap if cap in self.VALID_CAPS else "butt"
         self.align = align if align in self.VALID_ALIGNS else "center"
 
     def render(
@@ -183,7 +191,7 @@ class Stroke(Appearance):
 
         pen = QPen(qcolor, scaled_width)
         pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setCapStyle(self.CAP_STYLES.get(self.cap, Qt.PenCapStyle.FlatCap))
 
         if self.align == "center":
             painter.setPen(pen)
@@ -222,6 +230,7 @@ class Stroke(Appearance):
             "width": self.width,
             "opacity": self.opacity,
             "visible": self.visible,
+            "cap": self.cap,
             "align": self.align,
         }
 
@@ -233,6 +242,7 @@ class Stroke(Appearance):
             width=float(data.get("width", 1.0)),
             opacity=float(data.get("opacity", 1.0)),
             visible=data.get("visible", True),
+            cap=data.get("cap", "butt"),
             align=data.get("align", "center"),
         )
 

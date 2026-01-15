@@ -12,11 +12,13 @@ Item {
     property real strokeWidth: 1.0
     property color strokeColor: "#808080"
     property string strokeStyle: "none"  // "none" or "solid"
+    property string strokeCap: "butt"  // "butt", "square", "round"
     property string strokeAlign: "center"  // "center", "inner", "outer"
 
     signal widthEdited(real newWidth)
     signal widthCommitted(real newWidth)
     signal styleChanged(string newStyle)
+    signal capChanged(string newCap)
     signal alignChanged(string newAlign)
     signal panelOpened
     signal panelClosed
@@ -95,10 +97,12 @@ Item {
         contentItem: Lucent.StrokeControls {
             strokeWidth: root.strokeWidth
             strokeStyle: root.strokeStyle
+            strokeCap: root.strokeCap
             strokeAlign: root.strokeAlign
             onWidthEdited: newWidth => root.widthEdited(newWidth)
             onWidthCommitted: newWidth => root.widthCommitted(newWidth)
             onStyleChanged: newStyle => root.styleChanged(newStyle)
+            onCapChanged: newCap => root.capChanged(newCap)
             onAlignChanged: newAlign => root.alignChanged(newAlign)
         }
     }

@@ -11,11 +11,13 @@ ColumnLayout {
 
     property real strokeWidth: 1.0
     property string strokeStyle: "none"  // "none" or "solid"
+    property string strokeCap: "butt"  // "butt", "square", "round"
     property string strokeAlign: "center"  // "center", "inner", "outer"
 
     signal widthEdited(real newWidth)
     signal widthCommitted(real newWidth)
     signal styleChanged(string newStyle)
+    signal capChanged(string newCap)
     signal alignChanged(string newAlign)
 
     readonly property SystemPalette themePalette: Lucent.Themed.palette
@@ -148,6 +150,51 @@ ColumnLayout {
                 border.color: widthField.activeFocus ? root.themePalette.highlight : root.themePalette.mid
                 border.width: 1
                 radius: Lucent.Styles.rad.sm
+            }
+        }
+    }
+
+    RowLayout {
+        spacing: Lucent.Styles.pad.md
+        opacity: root.strokeStyle === "none" ? 0.5 : 1.0
+        enabled: root.strokeStyle !== "none"
+
+        Label {
+            text: qsTr("Cap:")
+            font.pixelSize: 12
+            color: root.themePalette.text
+            Layout.preferredWidth: 36
+        }
+
+        Lucent.SegmentedButtonGroup {
+            Lucent.SegmentedButton {
+                checked: root.strokeCap === "butt"
+                toolTipText: qsTr("Butt")
+                onClicked: {
+                    if (root.strokeCap !== "butt") {
+                        root.capChanged("butt");
+                    }
+                }
+            }
+
+            Lucent.SegmentedButton {
+                checked: root.strokeCap === "square"
+                toolTipText: qsTr("Square")
+                onClicked: {
+                    if (root.strokeCap !== "square") {
+                        root.capChanged("square");
+                    }
+                }
+            }
+
+            Lucent.SegmentedButton {
+                checked: root.strokeCap === "round"
+                toolTipText: qsTr("Round")
+                onClicked: {
+                    if (root.strokeCap !== "round") {
+                        root.capChanged("round");
+                    }
+                }
             }
         }
     }

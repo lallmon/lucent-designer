@@ -28,6 +28,7 @@ QtObject {
             strokeColor: settings ? settings.strokeColor.toString() : "",
             strokeOpacity: settings ? (settings.strokeOpacity !== undefined ? settings.strokeOpacity : 1.0) : 1.0,
             strokeVisible: settings ? (settings.strokeVisible !== undefined ? settings.strokeVisible : false) : false,
+            strokeCap: settings ? (settings.strokeCap !== undefined ? settings.strokeCap : "butt") : "butt",
             strokeAlign: settings ? (settings.strokeAlign !== undefined ? settings.strokeAlign : "center") : "center",
             fillColor: settings ? settings.fillColor.toString() : "",
             fillOpacity: settings ? settings.fillOpacity : 1.0

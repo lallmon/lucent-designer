@@ -61,6 +61,7 @@ Item {
                     width: style.strokeWidth,
                     opacity: style.strokeOpacity,
                     visible: style.strokeVisible,
+                    cap: style.strokeCap,
                     align: style.strokeAlign
                 }
             ]
@@ -135,6 +136,7 @@ Item {
                         width: style.strokeWidth,
                         opacity: style.strokeOpacity,
                         visible: style.strokeVisible,
+                        cap: style.strokeCap,
                         align: style.strokeAlign
                     }
                 ]

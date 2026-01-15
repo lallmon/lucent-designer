@@ -18,6 +18,7 @@ RowLayout {
     property color _defaultStrokeColor: Lucent.Themed.defaultStroke
     property real _defaultStrokeOpacity: 1.0
     property bool _defaultStrokeVisible: false
+    property string _defaultStrokeCap: "butt"
     property string _defaultStrokeAlign: "center"
     property color _defaultFillColor: Lucent.Themed.defaultFill
     property real _defaultFillOpacity: 1.0
@@ -74,6 +75,13 @@ RowLayout {
         return _defaultStrokeVisible;
     }
     readonly property string strokeStyle: strokeVisible ? "solid" : "none"
+    readonly property string strokeCap: {
+        if (editMode) {
+            var stroke = _getStroke();
+            return stroke && stroke.cap ? stroke.cap : _defaultStrokeCap;
+        }
+        return _defaultStrokeCap;
+    }
     readonly property string strokeAlign: {
         if (editMode) {
             var stroke = _getStroke();
@@ -108,6 +116,8 @@ RowLayout {
             _defaultStrokeOpacity = value;
         else if (propName === "strokeVisible")
             _defaultStrokeVisible = value;
+        else if (propName === "strokeCap")
+            _defaultStrokeCap = value;
         else if (propName === "strokeAlign")
             _defaultStrokeAlign = value;
         else if (propName === "fillColor")
@@ -140,6 +150,8 @@ RowLayout {
                         updated.opacity = value;
                     else if (propName === "strokeVisible")
                         updated.visible = value;
+                    else if (propName === "strokeCap")
+                        updated.cap = value;
                     else if (propName === "strokeAlign")
                         updated.align = value;
                 }
@@ -192,10 +204,12 @@ RowLayout {
         strokeWidth: root.strokeWidth
         strokeColor: root.strokeColor
         strokeStyle: root.strokeStyle
+        strokeCap: root.strokeCap
         strokeAlign: root.strokeAlign
         onWidthEdited: newWidth => root.updateProperty("strokeWidth", newWidth)
         onWidthCommitted: newWidth => root.updateProperty("strokeWidth", newWidth)
         onStyleChanged: newStyle => root.updateProperty("strokeVisible", newStyle === "solid")
+        onCapChanged: newCap => root.updateProperty("strokeCap", newCap)
         onAlignChanged: newAlign => root.updateProperty("strokeAlign", newAlign)
         onPanelOpened: canvasModel.beginTransaction()
         onPanelClosed: canvasModel.endTransaction()

@@ -162,6 +162,7 @@ class TestStroke:
         assert stroke.width == 1.0
         assert stroke.opacity == 1.0
         assert stroke.visible is True
+        assert stroke.cap == "butt"
         assert stroke.align == "center"
 
     def test_creation_with_parameters(self):
@@ -202,6 +203,7 @@ class TestStroke:
             "width": 2.5,
             "opacity": 0.9,
             "visible": True,
+            "cap": "butt",
             "align": "center",
         }
 
@@ -228,6 +230,7 @@ class TestStroke:
         assert stroke.width == 1.0
         assert stroke.opacity == 1.0
         assert stroke.visible is True
+        assert stroke.cap == "butt"
         assert stroke.align == "center"
 
     def test_from_dict_clamps_values(self):
@@ -240,7 +243,12 @@ class TestStroke:
     def test_round_trip(self):
         """Test serialization round-trip."""
         original = Stroke(
-            color="#123456", width=5.0, opacity=0.7, visible=False, align="outer"
+            color="#123456",
+            width=5.0,
+            opacity=0.7,
+            visible=False,
+            cap="round",
+            align="outer",
         )
         data = original.to_dict()
         restored = Stroke.from_dict(data)
@@ -248,7 +256,31 @@ class TestStroke:
         assert restored.width == original.width
         assert restored.opacity == original.opacity
         assert restored.visible == original.visible
+        assert restored.cap == original.cap
         assert restored.align == original.align
+
+    def test_cap_values(self):
+        """Test that all valid cap values are accepted."""
+        for cap_value in ("butt", "square", "round"):
+            stroke = Stroke(cap=cap_value)
+            assert stroke.cap == cap_value
+
+    def test_cap_invalid_defaults_to_butt(self):
+        """Test that invalid cap values default to butt."""
+        stroke = Stroke(cap="invalid")
+        assert stroke.cap == "butt"
+
+    def test_from_dict_with_cap(self):
+        """Test deserialization with cap value."""
+        data = {"type": "stroke", "cap": "round"}
+        stroke = Stroke.from_dict(data)
+        assert stroke.cap == "round"
+
+    def test_to_dict_with_cap(self):
+        """Test serialization includes cap value."""
+        stroke = Stroke(cap="square")
+        data = stroke.to_dict()
+        assert data["cap"] == "square"
 
     def test_align_values(self):
         """Test that all valid align values are accepted."""
