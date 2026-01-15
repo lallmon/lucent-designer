@@ -210,6 +210,12 @@ Item {
                         implicitHeight: 24
                         inputMethodHints: Qt.ImhFormattedNumbersOnly
                         text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedX) : root.displayedX).toFixed(root.unitPrecision)
+
+                        onActiveFocusChanged: if (activeFocus)
+                            selectAll()
+                        KeyNavigation.tab: yField
+                        KeyNavigation.backtab: rotationField
+
                         onEditingFinished: {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
@@ -236,6 +242,12 @@ Item {
                         implicitHeight: 24
                         inputMethodHints: Qt.ImhFormattedNumbersOnly
                         text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedY) : root.displayedY).toFixed(root.unitPrecision)
+
+                        onActiveFocusChanged: if (activeFocus)
+                            selectAll()
+                        KeyNavigation.tab: widthField
+                        KeyNavigation.backtab: xField
+
                         onEditingFinished: {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
@@ -269,6 +281,12 @@ Item {
                         implicitHeight: 24
                         inputMethodHints: Qt.ImhFormattedNumbersOnly
                         text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedWidth) : root.displayedWidth).toFixed(root.unitPrecision)
+
+                        onActiveFocusChanged: if (activeFocus)
+                            selectAll()
+                        KeyNavigation.tab: heightField
+                        KeyNavigation.backtab: yField
+
                         onEditingFinished: {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
@@ -295,6 +313,12 @@ Item {
                         implicitHeight: 24
                         inputMethodHints: Qt.ImhFormattedNumbersOnly
                         text: (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedHeight) : root.displayedHeight).toFixed(root.unitPrecision)
+
+                        onActiveFocusChanged: if (activeFocus)
+                            selectAll()
+                        KeyNavigation.tab: rotationField
+                        KeyNavigation.backtab: widthField
+
                         onEditingFinished: {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
@@ -391,6 +415,11 @@ Item {
                     bottom: -9999
                     top: 9999
                 }
+
+                onActiveFocusChanged: if (activeFocus)
+                    selectAll()
+                KeyNavigation.tab: xField
+                KeyNavigation.backtab: heightField
 
                 readonly property string expectedText: Math.round(root.currentRotation).toString()
                 property bool isCommitting: false
