@@ -417,8 +417,6 @@ RowLayout {
                 if (activeFocus) {
                     selectAll();
                     cornerSliderPopup.open();
-                } else if (!cornerSliderPopup.activeFocus && !cornerSlider.pressed) {
-                    cornerSliderPopup.close();
                 }
             }
 
@@ -496,36 +494,38 @@ RowLayout {
     }
 
     // Per-corner controls (visible when singleRadiusMode is false)
+    ListModel {
+        id: cornerRadiusModel
+        ListElement {
+            label: "TL:"
+            prop: "cornerRadiusTL"
+        }
+        ListElement {
+            label: "TR:"
+            prop: "cornerRadiusTR"
+        }
+        ListElement {
+            label: "BR:"
+            prop: "cornerRadiusBR"
+        }
+        ListElement {
+            label: "BL:"
+            prop: "cornerRadiusBL"
+        }
+    }
+
     Repeater {
-        model: !root.singleRadiusMode ? [
-            {
-                label: "TL:",
-                prop: "cornerRadiusTL",
-                value: root.cornerRadiusTL
-            },
-            {
-                label: "TR:",
-                prop: "cornerRadiusTR",
-                value: root.cornerRadiusTR
-            },
-            {
-                label: "BR:",
-                prop: "cornerRadiusBR",
-                value: root.cornerRadiusBR
-            },
-            {
-                label: "BL:",
-                prop: "cornerRadiusBL",
-                value: root.cornerRadiusBL
-            }
-        ] : []
+        model: root.singleRadiusMode ? null : cornerRadiusModel
 
         delegate: RowLayout {
             spacing: 4
             Layout.leftMargin: index > 0 ? 8 : 0
 
+            property string cornerProp: prop
+            property real cornerValue: root[cornerProp] || 0
+
             Label {
-                text: modelData.label
+                text: label
                 font.pixelSize: 12
                 Layout.alignment: Qt.AlignVCenter
             }
@@ -536,13 +536,13 @@ RowLayout {
                 Layout.preferredHeight: Lucent.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
                 model: ["None", "Rounded"]
-                currentIndex: modelData.value > 0 ? 1 : 0
+                currentIndex: cornerValue > 0 ? 1 : 0
 
                 onActivated: index => {
                     if (index === 0) {
-                        root.updateProperty(modelData.prop, 0);
+                        root.updateProperty(cornerProp, 0);
                     } else {
-                        root.updateProperty(modelData.prop, 25);
+                        root.updateProperty(cornerProp, 25);
                     }
                 }
 
@@ -564,7 +564,7 @@ RowLayout {
             }
 
             Item {
-                visible: modelData.value > 0
+                visible: cornerValue > 0
                 Layout.preferredWidth: 40
                 Layout.preferredHeight: Lucent.Styles.height.md
                 Layout.alignment: Qt.AlignVCenter
@@ -573,7 +573,7 @@ RowLayout {
                     id: cornerField
                     anchors.fill: parent
                     horizontalAlignment: Text.AlignHCenter
-                    text: Math.round(modelData.value).toString()
+                    text: Math.round(cornerValue).toString()
                     font.pixelSize: 12
                     validator: IntValidator {
                         bottom: 1
@@ -584,17 +584,15 @@ RowLayout {
                         if (activeFocus) {
                             selectAll();
                             cornerPopup.open();
-                        } else if (!cornerPopup.activeFocus && !perCornerSlider.pressed) {
-                            cornerPopup.close();
                         }
                     }
 
                     onEditingFinished: {
                         var val = parseInt(text);
                         if (!isNaN(val) && val >= 1 && val <= 50) {
-                            root.updateProperty(modelData.prop, val);
+                            root.updateProperty(cornerProp, val);
                         } else {
-                            text = Math.round(modelData.value).toString();
+                            text = Math.round(cornerValue).toString();
                         }
                     }
 
@@ -614,7 +612,7 @@ RowLayout {
                     padding: 12
                     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
-                    onOpened: perCornerSlider.value = modelData.value
+                    onOpened: perCornerSlider.value = cornerValue
 
                     background: Rectangle {
                         color: Lucent.Themed.palette.window
@@ -638,7 +636,7 @@ RowLayout {
 
                         onMoved: {
                             cornerField.text = Math.round(value).toString();
-                            root.updateProperty(modelData.prop, Math.round(value));
+                            root.updateProperty(cornerProp, Math.round(value));
                         }
 
                         handle: Rectangle {
