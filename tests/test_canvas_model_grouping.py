@@ -120,22 +120,30 @@ class TestCanvasModelMoveGroup:
 
         items = canvas_model.getItems()
         rects = [i for i in items if isinstance(i, RectangleItem)]
-        assert rects[0].geometry.x == 100
-        assert rects[0].geometry.y == 50
-        assert rects[1].geometry.x == 120
-        assert rects[1].geometry.y == 70
+        assert rects[0].geometry.x == 0
+        assert rects[0].geometry.y == 0
+        assert rects[0].transform.translate_x == 100
+        assert rects[0].transform.translate_y == 50
+        assert rects[1].geometry.x == 20
+        assert rects[1].geometry.y == 20
+        assert rects[1].transform.translate_x == 100
+        assert rects[1].transform.translate_y == 50
 
     def test_move_group_invalid_index(self, canvas_model):
         canvas_model.addItem(make_rectangle(x=0, y=0, width=10, height=10))
         canvas_model.moveGroup(999, 100, 50)
         item = canvas_model.getItems()[0]
         assert item.geometry.x == 0
+        assert item.transform.translate_x == 0
+        assert item.transform.translate_y == 0
 
     def test_move_group_non_container(self, canvas_model):
         canvas_model.addItem(make_rectangle(x=0, y=0, width=10, height=10))
         canvas_model.moveGroup(0, 100, 50)
         item = canvas_model.getItems()[0]
         assert item.geometry.x == 0
+        assert item.transform.translate_x == 0
+        assert item.transform.translate_y == 0
 
 
 class TestCanvasModelMoveGroupExtended:
@@ -152,8 +160,10 @@ class TestCanvasModelMoveGroupExtended:
         canvas_model.moveGroup(0, 10, 20)
 
         ellipse = canvas_model.getItems()[1]
-        assert ellipse.geometry.center_x == 60
-        assert ellipse.geometry.center_y == 70
+        assert ellipse.geometry.center_x == 50
+        assert ellipse.geometry.center_y == 50
+        assert ellipse.transform.translate_x == 10
+        assert ellipse.transform.translate_y == 20
 
     def test_move_group_with_text(self, canvas_model):
         canvas_model.addItem(make_layer(name="Layer", layer_id="layer-1"))
@@ -166,8 +176,10 @@ class TestCanvasModelMoveGroupExtended:
         canvas_model.moveGroup(0, 15, 25)
 
         text = canvas_model.getItems()[1]
-        assert text.x == 115
-        assert text.y == 225
+        assert text.x == 100
+        assert text.y == 200
+        assert text.transform.translate_x == 15
+        assert text.transform.translate_y == 25
 
     def test_move_group_with_path(self, canvas_model):
         canvas_model.addItem(make_layer(name="Layer", layer_id="layer-1"))
@@ -180,7 +192,9 @@ class TestCanvasModelMoveGroupExtended:
         canvas_model.moveGroup(0, 5, 10)
 
         path = canvas_model.getItems()[1]
-        assert path.geometry.points[0]["x"] == 15
-        assert path.geometry.points[0]["y"] == 30
-        assert path.geometry.points[1]["x"] == 115
-        assert path.geometry.points[1]["y"] == 80
+        assert path.geometry.points[0]["x"] == 10
+        assert path.geometry.points[0]["y"] == 20
+        assert path.geometry.points[1]["x"] == 110
+        assert path.geometry.points[1]["y"] == 70
+        assert path.transform.translate_x == 5
+        assert path.transform.translate_y == 10

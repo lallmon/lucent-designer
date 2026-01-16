@@ -4,6 +4,7 @@
 """Canvas model for Lucent - manages canvas items."""
 
 from typing import List, Optional, Dict, Any, Union
+import os
 from PySide6.QtCore import (
     QAbstractListModel,
     QModelIndex,
@@ -264,10 +265,16 @@ class CanvasModel(QAbstractListModel):
             return None
 
         old_data = self._itemToDict(item)
+        self._log_move_debug("before", idx, dx, dy, item)
         new_data = dict(old_data)
-        new_data["geometry"] = item.geometry.translated(dx, dy).to_dict()
+        new_transform = item.transform.to_dict() if hasattr(item, "transform") else {}
+        new_transform["translateX"] = item.transform.translate_x + dx
+        new_transform["translateY"] = item.transform.translate_y + dy
+        new_data["transform"] = new_transform
 
-        return UpdateItemCommand(self, idx, old_data, new_data)
+        cmd = UpdateItemCommand(self, idx, old_data, new_data)
+        self._log_move_debug("after", idx, dx, dy, item)
+        return cmd
 
     @Slot(list, float, float)
     def moveItems(self, indices: List[int], dx: float, dy: float) -> None:
@@ -300,6 +307,7 @@ class CanvasModel(QAbstractListModel):
         # Track which items we've already processed
         already_moved: set[int] = set()
         commands: List[Command] = []
+        moved_container_indices: set[int] = set()
 
         for idx in valid_indices:
             if idx in already_moved:
@@ -319,6 +327,7 @@ class CanvasModel(QAbstractListModel):
                     if cmd:
                         commands.append(cmd)
                     already_moved.add(desc_idx)
+                moved_container_indices.add(idx)
             else:
                 # Regular shape - skip if parent container is in selection
                 parent_id = getattr(item, "parent_id", None)
@@ -344,6 +353,41 @@ class CanvasModel(QAbstractListModel):
             transaction = TransactionCommand(commands, "Move Items")
             self._execute_command(transaction)
 
+        # If a container is selected, its bounds depend on descendants, so
+        # emit a synthetic modification to refresh selection overlays.
+        for container_idx in moved_container_indices:
+            if 0 <= container_idx < len(self._items):
+                self.itemModified.emit(
+                    container_idx, self._itemToDict(self._items[container_idx])
+                )
+
+    def _log_move_debug(
+        self, phase: str, idx: int, dx: float, dy: float, item: CanvasItem
+    ) -> None:
+        if os.getenv("LUCENT_DEBUG_MOVE") != "1":
+            return
+        if not hasattr(item, "geometry"):
+            return
+        bounds = compute_geometry_bounds(item)
+        transform = item.transform.to_dict() if hasattr(item, "transform") else None
+        geom = item.geometry.to_dict() if hasattr(item, "geometry") else None
+        print(
+            "[move-debug]",
+            phase,
+            "idx=",
+            idx,
+            "dx=",
+            dx,
+            "dy=",
+            dy,
+            "bounds=",
+            bounds,
+            "transform=",
+            transform,
+            "geometry=",
+            geom,
+        )
+
     @Slot(int, float, float)
     def moveGroup(self, group_index: int, dx: float, dy: float) -> None:
         """Translate all descendant shapes of a group/layer by dx, dy."""
@@ -357,8 +401,16 @@ class CanvasModel(QAbstractListModel):
             item = self._items[idx]
             if hasattr(item, "geometry"):
                 item_data = self._itemToDict(item)
-                item_data["geometry"] = item.geometry.translated(dx, dy).to_dict()
+                new_transform = (
+                    item.transform.to_dict() if hasattr(item, "transform") else {}
+                )
+                new_transform["translateX"] = item.transform.translate_x + dx
+                new_transform["translateY"] = item.transform.translate_y + dy
+                item_data["transform"] = new_transform
                 self.updateItem(idx, item_data)
+
+        # Refresh container selection overlays that depend on descendant bounds.
+        self.itemModified.emit(group_index, self._itemToDict(container))
 
     @Slot(int)
     def ungroup(self, group_index: int) -> None:
@@ -942,6 +994,25 @@ class CanvasModel(QAbstractListModel):
         origin_x, origin_y = self._derive_origin_from_pivot(
             bounds, item.transform.pivot_x, item.transform.pivot_y
         )
+        if os.getenv("LUCENT_DEBUG_MOVE") == "1":
+            print(
+                "[move-debug]",
+                "origin",
+                "idx=",
+                index,
+                "bounds=",
+                bounds,
+                "pivot=",
+                (item.transform.pivot_x, item.transform.pivot_y),
+                "origin=",
+                (origin_x, origin_y),
+                "translate=",
+                (item.transform.translate_x, item.transform.translate_y),
+                "rotate=",
+                item.transform.rotate,
+                "scale=",
+                (item.transform.scale_x, item.transform.scale_y),
+            )
         transform_dict["originX"] = origin_x
         transform_dict["originY"] = origin_y
         return transform_dict
@@ -1067,6 +1138,22 @@ class CanvasModel(QAbstractListModel):
         if not bounds:
             return None
 
+        if os.getenv("LUCENT_DEBUG_MOVE") == "1":
+            print(
+                "[move-debug]",
+                "displayed",
+                "idx=",
+                index,
+                "pivot=",
+                (item.transform.pivot_x, item.transform.pivot_y),
+                "translate=",
+                (item.transform.translate_x, item.transform.translate_y),
+                "displayed=",
+                (
+                    item.transform.pivot_x + item.transform.translate_x,
+                    item.transform.pivot_y + item.transform.translate_y,
+                ),
+            )
         return {
             "x": item.transform.pivot_x + item.transform.translate_x,
             "y": item.transform.pivot_y + item.transform.translate_y,
