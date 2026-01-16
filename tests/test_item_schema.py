@@ -723,7 +723,7 @@ class TestTransformSerialization:
     def test_item_to_dict_includes_pivot_only(self):
         """item_to_dict should include transform when pivot differs from default."""
         geometry = RectGeometry(x=0, y=0, width=10, height=10)
-        transform = Transform(pivot_x=5, pivot_y=5)
+        transform = Transform(pivot_x=0, pivot_y=0)
         rect = RectangleItem(
             geometry=geometry,
             appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
@@ -731,8 +731,8 @@ class TestTransformSerialization:
         )
         out = item_to_dict(rect)
         assert "transform" in out
-        assert out["transform"]["pivotX"] == 5
-        assert out["transform"]["pivotY"] == 5
+        assert out["transform"]["pivotX"] == 0
+        assert out["transform"]["pivotY"] == 0
 
     def test_transform_round_trip_rectangle(self):
         """Transform should survive serialize/deserialize round trip."""

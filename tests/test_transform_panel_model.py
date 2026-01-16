@@ -15,9 +15,9 @@ class TestGetDisplayedPosition:
 
         pos = canvas_model.getDisplayedPosition(0)
 
-        # With origin at (0,0) and no translation, displayed pos = geometry pos
-        assert pos["x"] == 10
-        assert pos["y"] == 20
+        # With pivot at center and no translation, displayed pos = center
+        assert pos["x"] == 60
+        assert pos["y"] == 45
 
     def test_displayed_position_with_translation(self, canvas_model):
         """Displayed position accounts for translation."""
@@ -27,10 +27,9 @@ class TestGetDisplayedPosition:
 
         pos = canvas_model.getDisplayedPosition(0)
 
-        # displayedX = geometry.x + geometry.width * originX + translateX
-        # displayedX = 10 + 100 * 0 + 5 = 15
-        assert pos["x"] == 15
-        assert pos["y"] == 35
+        # displayedX = pivotX + translateX (pivot defaults to center)
+        assert pos["x"] == 65
+        assert pos["y"] == 60
 
     def test_displayed_position_with_origin_offset(self, canvas_model):
         """Displayed position accounts for origin point in geometry."""
@@ -85,7 +84,7 @@ class TestSetItemPosition:
 
         pos = canvas_model.getDisplayedPosition(0)
         assert pos["x"] == 50
-        assert pos["y"] == 20  # Y unchanged
+        assert pos["y"] == 45  # Y unchanged (pivot defaults to center)
 
     def test_set_position_y_no_origin(self, canvas_model):
         """Setting Y position adjusts translation."""
@@ -94,7 +93,7 @@ class TestSetItemPosition:
         canvas_model.setItemPosition(0, "y", 100)
 
         pos = canvas_model.getDisplayedPosition(0)
-        assert pos["x"] == 10  # X unchanged
+        assert pos["x"] == 60  # X unchanged (pivot defaults to center)
         assert pos["y"] == 100
 
     def test_set_position_with_origin_at_center(self, canvas_model):

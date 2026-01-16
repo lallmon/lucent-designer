@@ -395,8 +395,8 @@ def _create_transform(data: Dict[str, Any], geometry: Any) -> Transform | None:
     pivot_y = t.get("pivotY")
     if pivot_x is None or pivot_y is None:
         bounds = geometry.get_bounds()
-        pivot_x = bounds.x()
-        pivot_y = bounds.y()
+        pivot_x = bounds.x() + bounds.width() * 0.5
+        pivot_y = bounds.y() + bounds.height() * 0.5
     else:
         pivot_x = float(pivot_x)
         pivot_y = float(pivot_y)
@@ -554,8 +554,8 @@ def _should_serialize_transform(item: Any) -> bool:
 
     # Persist pivot changes even if rotation/scale/translate are identity.
     bounds = item.geometry.get_bounds()
-    default_pivot_x = bounds.x()
-    default_pivot_y = bounds.y()
+    default_pivot_x = bounds.x() + bounds.width() * 0.5
+    default_pivot_y = bounds.y() + bounds.height() * 0.5
     return (
         abs(item.transform.pivot_x - default_pivot_x) > 0.001
         or abs(item.transform.pivot_y - default_pivot_y) > 0.001

@@ -1463,8 +1463,8 @@ class CanvasModel(QAbstractListModel):
     ) -> None:
         """Apply scale-based resize with anchor point.
 
-        Sets scale factors and adjusts origin/translation so the anchor
-        point remains visually fixed. Used by resize handles.
+        Sets scale factors and adjusts translation so the anchor
+        point remains visually fixed. Pivot stays unchanged.
 
         Args:
             index: Item index.
@@ -1484,8 +1484,8 @@ class CanvasModel(QAbstractListModel):
         if not bounds:
             return
 
-        old_pivot_x = item.transform.pivot_x
-        old_pivot_y = item.transform.pivot_y
+        pivot_x = item.transform.pivot_x
+        pivot_y = item.transform.pivot_y
         old_scale_x = item.transform.scale_x
         old_scale_y = item.transform.scale_y
         rotation = item.transform.rotate
@@ -1498,25 +1498,29 @@ class CanvasModel(QAbstractListModel):
         anchor_geom_x = bounds["x"] + bounds["width"] * anchor_x
         anchor_geom_y = bounds["y"] + bounds["height"] * anchor_y
 
-        # Displacement from old pivot to anchor in geometry space
-        d_x = anchor_geom_x - old_pivot_x
-        d_y = anchor_geom_y - old_pivot_y
+        # Displacement from pivot to anchor in geometry space
+        d_x = anchor_geom_x - pivot_x
+        d_y = anchor_geom_y - pivot_y
 
-        # Scale the displacement
-        scaled_d_x = d_x * old_scale_x
-        scaled_d_y = d_y * old_scale_y
+        # Scale the displacement (old vs new)
+        scaled_old_x = d_x * old_scale_x
+        scaled_old_y = d_y * old_scale_y
+        scaled_new_x = d_x * new_scale_x
+        scaled_new_y = d_y * new_scale_y
 
-        # Rotate the scaled displacement
+        # Rotate the scaled displacements
         radians = rotation * math.pi / 180
         cos_r = math.cos(radians)
         sin_r = math.sin(radians)
-        rotated_d_x = scaled_d_x * cos_r - scaled_d_y * sin_r
-        rotated_d_y = scaled_d_x * sin_r + scaled_d_y * cos_r
+        rotated_old_x = scaled_old_x * cos_r - scaled_old_y * sin_r
+        rotated_old_y = scaled_old_x * sin_r + scaled_old_y * cos_r
+        rotated_new_x = scaled_new_x * cos_r - scaled_new_y * sin_r
+        rotated_new_y = scaled_new_x * sin_r + scaled_new_y * cos_r
 
-        # Formula: T_new = T_old - d + R(S_old * d)
-        # where d = anchor - old_origin (in geometry space)
-        new_tx = old_tx - d_x + rotated_d_x
-        new_ty = old_ty - d_y + rotated_d_y
+        # Keep anchor fixed in world space:
+        # T_new = T_old + R(S_old * d) - R(S_new * d)
+        new_tx = old_tx + (rotated_old_x - rotated_new_x)
+        new_ty = old_ty + (rotated_old_y - rotated_new_y)
 
         new_transform = {
             "translateX": new_tx,
@@ -1524,8 +1528,8 @@ class CanvasModel(QAbstractListModel):
             "rotate": rotation,
             "scaleX": new_scale_x,
             "scaleY": new_scale_y,
-            "pivotX": anchor_geom_x,
-            "pivotY": anchor_geom_y,
+            "pivotX": pivot_x,
+            "pivotY": pivot_y,
         }
 
         self.setItemTransform(index, new_transform)

@@ -200,27 +200,17 @@ class TestApplyScaleResize:
         assert transform["scaleX"] == 2.0
         assert transform["scaleY"] == 1.5
 
-    def test_apply_scale_resize_sets_origin(self, canvas_model):
-        """applyScaleResize should set origin to anchor point."""
-        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
+    def test_apply_scale_resize_keeps_pivot(self, canvas_model):
+        """applyScaleResize should not change the pivot."""
+        rect_data = make_rectangle(x=0, y=0, width=100, height=50)
+        rect_data["transform"] = {"pivotX": 50, "pivotY": 25}
+        canvas_model.addItem(rect_data)
 
-        # Resize from bottom-right, anchor at top-left (0, 0)
         canvas_model.applyScaleResize(0, 1.5, 1.5, 0.0, 0.0)
 
         transform = canvas_model.getItemTransform(0)
-        assert transform["originX"] == 0.0
-        assert transform["originY"] == 0.0
-
-    def test_apply_scale_resize_anchor_bottom_right(self, canvas_model):
-        """Anchor at bottom-right should set origin to (1, 1)."""
-        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=50))
-
-        # Resize from top-left, anchor at bottom-right (1, 1)
-        canvas_model.applyScaleResize(0, 2.0, 2.0, 1.0, 1.0)
-
-        transform = canvas_model.getItemTransform(0)
-        assert transform["originX"] == 1.0
-        assert transform["originY"] == 1.0
+        assert transform["pivotX"] == 50
+        assert transform["pivotY"] == 25
 
     def test_apply_scale_resize_preserves_rotation(self, canvas_model):
         """applyScaleResize should preserve existing rotation."""
@@ -244,7 +234,9 @@ class TestApplyScaleResize:
     def test_apply_scale_resize_compensates_translation_on_origin_change(
         self, canvas_model
     ):
-        """Changing origin should adjust translation to keep visual position."""
+        """Anchor point stays fixed while scaling."""
+        import math
+
         rect_data = make_rectangle(x=0, y=0, width=100, height=100)
         rect_data["transform"] = {
             "translateX": 0,
@@ -257,13 +249,32 @@ class TestApplyScaleResize:
         }
         canvas_model.addItem(rect_data)
 
-        # Change origin from center to top-left, scale 2x
+        def _world_point(item, x, y):
+            t = item.transform
+            dx = x - t.pivot_x
+            dy = y - t.pivot_y
+            scaled_dx = dx * t.scale_x
+            scaled_dy = dy * t.scale_y
+            radians = t.rotate * math.pi / 180
+            cos_r = math.cos(radians)
+            sin_r = math.sin(radians)
+            rx = scaled_dx * cos_r - scaled_dy * sin_r
+            ry = scaled_dx * sin_r + scaled_dy * cos_r
+            return (
+                t.pivot_x + t.translate_x + rx,
+                t.pivot_y + t.translate_y + ry,
+            )
+
+        item = canvas_model._items[0]
+        anchor_geom = (0.0, 0.0)
+        before = _world_point(item, *anchor_geom)
+
         canvas_model.applyScaleResize(0, 2.0, 2.0, 0.0, 0.0)
 
-        # The visual position should remain consistent
-        transform = canvas_model.getItemTransform(0)
-        assert transform["originX"] == 0.0
-        assert transform["originY"] == 0.0
+        item_after = canvas_model._items[0]
+        after = _world_point(item_after, *anchor_geom)
+        assert abs(after[0] - before[0]) < 0.001
+        assert abs(after[1] - before[1]) < 0.001
 
     def test_apply_scale_resize_layer_no_op(self, canvas_model):
         """applyScaleResize on layer (no transform attr) should do nothing."""

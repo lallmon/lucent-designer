@@ -87,7 +87,10 @@ class ShapeItem(CanvasItem):
         self.appearances = appearances
         if transform is None:
             bounds = geometry.get_bounds()
-            transform = Transform(pivot_x=bounds.x(), pivot_y=bounds.y())
+            transform = Transform(
+                pivot_x=bounds.x() + bounds.width() * 0.5,
+                pivot_y=bounds.y() + bounds.height() * 0.5,
+            )
         self.transform = transform
         self.name = name
         self.parent_id = parent_id
