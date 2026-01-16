@@ -189,8 +189,16 @@ def shape_to_path_data(
             points.append(apply_transform(x, y))
 
     elif isinstance(item, PathItem):
-        # Apply transform to existing path points
-        points = [apply_transform(p["x"], p["y"]) for p in geom.points]
+        # Apply transform to existing path points AND bezier handles
+        for p in geom.points:
+            new_point: Dict[str, Any] = apply_transform(p["x"], p["y"])
+            if "handleIn" in p and p["handleIn"]:
+                h = apply_transform(p["handleIn"]["x"], p["handleIn"]["y"])
+                new_point["handleIn"] = h
+            if "handleOut" in p and p["handleOut"]:
+                h = apply_transform(p["handleOut"]["x"], p["handleOut"]["y"])
+                new_point["handleOut"] = h
+            points.append(new_point)
 
     else:
         return None
@@ -198,12 +206,15 @@ def shape_to_path_data(
     if not points:
         return None
 
+    # Determine if path should be closed
+    is_closed = geom.closed if isinstance(item, PathItem) else True
+
     # Create path data with identity transform
     path_data = {
         "type": "path",
         "geometry": {
             "points": points,
-            "closed": True,  # Shapes are closed
+            "closed": is_closed,
         },
         "appearances": current_data.get("appearances", []),
         "transform": {

@@ -584,6 +584,33 @@ class TestBakeTransform:
         assert width > 0
         assert height > 0
 
+    def test_bake_transform_path_preserves_bezier_handles(self, canvas_model):
+        """Baking rotated path should preserve and transform bezier handles."""
+        path_data = make_path(
+            points=[
+                {"x": 0, "y": 0, "handleOut": {"x": 50, "y": 0}},
+                {"x": 100, "y": 100, "handleIn": {"x": 50, "y": 100}},
+            ],
+            closed=False,
+        )
+        path_data["transform"] = {"translateX": 10, "translateY": 20, "rotate": 90}
+        canvas_model.addItem(path_data)
+
+        canvas_model.bakeTransform(0)
+
+        item_after = canvas_model.getItemData(0)
+        points = item_after["geometry"]["points"]
+
+        # Handles should still be present after baking
+        assert "handleOut" in points[0]
+        assert "handleIn" in points[1]
+
+        # Handles should be transformed (not at original positions)
+        assert points[0]["handleOut"]["x"] != 50 or points[0]["handleOut"]["y"] != 0
+
+        # Path should preserve open/closed state
+        assert item_after["geometry"]["closed"] is False
+
     def test_bake_transform_ellipse_no_rotation_keeps_ellipse(self, canvas_model):
         """Baking ellipse without rotation should keep it as ellipse."""
         ellipse_data = make_ellipse(center_x=50, center_y=50, radius_x=40, radius_y=20)
