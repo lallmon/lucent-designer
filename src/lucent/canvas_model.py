@@ -35,6 +35,7 @@ from lucent.commands import (
     DuplicateItemCommand,
 )
 from lucent.history_manager import HistoryManager
+from lucent.edit_context import EditContext
 from lucent.item_schema import (
     parse_item,
     parse_item_data,
@@ -95,8 +96,8 @@ class CanvasModel(QAbstractListModel):
         # Spatial index for fast viewport queries
         self._spatial_index = SpatialIndex()
 
-        # Locked edit pivots (geometry space) for stable drag operations
-        self._locked_edit_transforms: Dict[int, Dict[str, float]] = {}
+        # Edit context for stable drag operations
+        self._edit_context = EditContext()
 
         # Connect signals to update spatial index
         self.itemAdded.connect(self._on_item_added_spatial)
@@ -1176,8 +1177,6 @@ class CanvasModel(QAbstractListModel):
         Returns:
             Dictionary with x, y in geometry space, or None if failed.
         """
-        from PySide6.QtCore import QPointF
-
         if not (0 <= index < len(self._items)):
             return None
 
@@ -1185,19 +1184,9 @@ class CanvasModel(QAbstractListModel):
         if not hasattr(item, "transform") or not hasattr(item, "geometry"):
             return None
 
-        if item.transform.is_identity():
-            return {"x": screen_x, "y": screen_y}
-
-        qtransform = item.transform.to_qtransform_centered(
-            item.transform.pivot_x, item.transform.pivot_y
+        return self._edit_context.map_screen_to_geometry(
+            item.transform, screen_x, screen_y
         )
-
-        inverted, ok = qtransform.inverted()
-        if not ok:
-            return {"x": screen_x, "y": screen_y}
-
-        geom_pt = inverted.map(QPointF(screen_x, screen_y))
-        return {"x": geom_pt.x(), "y": geom_pt.y()}
 
     @Slot(int)
     def lockEditTransform(self, index: int) -> None:
@@ -1209,15 +1198,14 @@ class CanvasModel(QAbstractListModel):
         if not hasattr(item, "transform") or not hasattr(item, "geometry"):
             return
 
-        self._locked_edit_transforms[index] = {
-            "pivot_geom_x": item.transform.pivot_x,
-            "pivot_geom_y": item.transform.pivot_y,
-        }
+        self._edit_context.lock_pivot(
+            index, item.transform.pivot_x, item.transform.pivot_y
+        )
 
     @Slot(int)
     def unlockEditTransform(self, index: int) -> None:
         """Clear the locked edit transform after drag ends."""
-        self._locked_edit_transforms.pop(index, None)
+        self._edit_context.unlock_pivot(index)
 
     @Slot(int, dict)
     def updateGeometryWithOriginCompensation(
@@ -1241,7 +1229,6 @@ class CanvasModel(QAbstractListModel):
         Uses a locked pivot in geometry space for consistent mapping during drag.
         Falls back to current transform if not locked.
         """
-        from PySide6.QtCore import QPointF
 
         if not (0 <= index < len(self._items)):
             return None
@@ -1250,24 +1237,15 @@ class CanvasModel(QAbstractListModel):
         if not hasattr(item, "transform") or not hasattr(item, "geometry"):
             return None
 
-        locked_origin = self._locked_edit_transforms.get(index)
-        if locked_origin:
-            if item.transform.is_identity():
-                return {"x": screen_x, "y": screen_y}
-
-            pivot_geom_x = locked_origin["pivot_geom_x"]
-            pivot_geom_y = locked_origin["pivot_geom_y"]
-            qtransform = item.transform.to_qtransform_centered(
-                pivot_geom_x, pivot_geom_y
+        locked_pivot = self._edit_context.get_locked_pivot(index)
+        if locked_pivot:
+            return self._edit_context.map_screen_to_geometry(
+                item.transform, screen_x, screen_y, locked_pivot
             )
-            inverted, ok = qtransform.inverted()
-            if not ok:
-                return {"x": screen_x, "y": screen_y}
-            geom_pt = inverted.map(QPointF(screen_x, screen_y))
-            return {"x": geom_pt.x(), "y": geom_pt.y()}
 
-        # Fall back to current transform
-        return self.transformPointToGeometry(index, screen_x, screen_y)
+        return self._edit_context.map_screen_to_geometry(
+            item.transform, screen_x, screen_y
+        )
 
     @Slot(int, result=bool)
     def hasNonIdentityTransform(self, index: int) -> bool:
