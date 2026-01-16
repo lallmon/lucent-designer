@@ -346,7 +346,7 @@ Item {
                 z: 21
                 visible: overlayContainer.canvasRef && overlayContainer.canvasRef.pathEditModeActive
                 pathGeometry: overlayContainer.canvasRef ? overlayContainer.canvasRef.pathEditGeometry : null
-                itemTransform: overlayContainer.canvasRef ? overlayContainer.canvasRef.pathEditTransform : null
+                transformedPoints: overlayContainer.canvasRef ? overlayContainer.canvasRef.pathEditTransformedPoints : null
                 zoomLevel: root.zoomLevel
                 cursorX: overlayContainer.canvasRef ? overlayContainer.canvasRef.cursorX : 0
                 cursorY: overlayContainer.canvasRef ? overlayContainer.canvasRef.cursorY : 0

@@ -9,7 +9,7 @@ Item {
     id: overlay
 
     property var pathGeometry: null
-    property var itemTransform: null
+    property var transformedPoints: null
     property real zoomLevel: 1.0
     property var selectedPointIndices: []
     property color accentColor: Lucent.Themed.editSelector
@@ -19,51 +19,26 @@ Item {
     property int currentModifiers: 0
 
     signal pointClicked(int index, int modifiers)
-    signal pointMoved(int index, real x, real y)
-    signal handleMoved(int index, string handleType, real x, real y, int modifiers)
+    signal pointMoved(int index, real screenX, real screenY)
+    signal handleMoved(int index, string handleType, real screenX, real screenY, int modifiers)
     signal backgroundClicked
     signal dragStarted
     signal dragEnded
 
-    readonly property var points: pathGeometry ? pathGeometry.points : []
+    readonly property var points: transformedPoints || []
     readonly property bool isClosed: pathGeometry ? pathGeometry.closed : false
-
-    readonly property real _translateX: itemTransform ? (itemTransform.translateX || 0) : 0
-    readonly property real _translateY: itemTransform ? (itemTransform.translateY || 0) : 0
-    readonly property real _scaleX: itemTransform ? (itemTransform.scaleX || 1) : 1
-    readonly property real _scaleY: itemTransform ? (itemTransform.scaleY || 1) : 1
-    readonly property real _rotation: itemTransform ? (itemTransform.rotate || 0) : 0
 
     readonly property real handleSize: 10 / zoomLevel
     readonly property real handleLineWidth: 1 / zoomLevel
 
-    visible: pathGeometry !== null
+    visible: points.length > 0
 
     function isPointSelected(index) {
         return selectedPointIndices.indexOf(index) >= 0;
     }
 
-    function transformPoint(px, py) {
-        var x = px * _scaleX + _translateX;
-        var y = py * _scaleY + _translateY;
-        return {
-            x: x,
-            y: y
-        };
-    }
-
-    function inverseTransformPoint(x, y) {
-        var px = (x - _translateX) / _scaleX;
-        var py = (y - _translateY) / _scaleY;
-        return {
-            x: px,
-            y: py
-        };
-    }
-
     Shape {
         id: pathShape
-        anchors.fill: parent
 
         ShapePath {
             id: curvePath
@@ -77,47 +52,6 @@ Item {
         }
     }
 
-    function _buildSvgPath() {
-        if (!points || points.length === 0)
-            return "";
-
-        var svg = "";
-        var first = transformPoint(points[0].x, points[0].y);
-        svg += "M " + first.x + " " + first.y + " ";
-
-        for (var i = 1; i < points.length; i++) {
-            var prev = points[i - 1];
-            var curr = points[i];
-
-            var hasHandles = prev.handleOut || curr.handleIn;
-            var currT = transformPoint(curr.x, curr.y);
-
-            if (hasHandles) {
-                var cp1 = prev.handleOut ? transformPoint(prev.handleOut.x, prev.handleOut.y) : transformPoint(prev.x, prev.y);
-                var cp2 = curr.handleIn ? transformPoint(curr.handleIn.x, curr.handleIn.y) : currT;
-                svg += "C " + cp1.x + " " + cp1.y + " " + cp2.x + " " + cp2.y + " " + currT.x + " " + currT.y + " ";
-            } else {
-                svg += "L " + currT.x + " " + currT.y + " ";
-            }
-        }
-
-        if (isClosed && points.length >= 2) {
-            var last = points[points.length - 1];
-            var firstPt = points[0];
-            var hasClosingHandles = last.handleOut || firstPt.handleIn;
-            var firstT = transformPoint(firstPt.x, firstPt.y);
-
-            if (hasClosingHandles) {
-                var cp1Close = last.handleOut ? transformPoint(last.handleOut.x, last.handleOut.y) : transformPoint(last.x, last.y);
-                var cp2Close = firstPt.handleIn ? transformPoint(firstPt.handleIn.x, firstPt.handleIn.y) : firstT;
-                svg += "C " + cp1Close.x + " " + cp1Close.y + " " + cp2Close.x + " " + cp2Close.y + " " + firstT.x + " " + firstT.y + " ";
-            }
-            svg += "Z";
-        }
-
-        return svg;
-    }
-
     Repeater {
         id: handleRepeater
         model: overlay.points.length
@@ -128,7 +62,6 @@ Item {
 
             readonly property var pointData: overlay.points[index] || {}
             readonly property bool isSelected: overlay.isPointSelected(index)
-            readonly property var anchorPos: overlay.transformPoint(pointData.x || 0, pointData.y || 0)
             readonly property bool hasHandleIn: pointData.handleIn !== undefined && pointData.handleIn !== null
             readonly property bool hasHandleOut: pointData.handleOut !== undefined && pointData.handleOut !== null
 
@@ -140,16 +73,16 @@ Item {
                     strokeWidth: overlay.handleLineWidth
                     fillColor: "transparent"
 
-                    startX: pointItem.hasHandleIn ? overlay.transformPoint(pointItem.pointData.handleIn.x, pointItem.pointData.handleIn.y).x : pointItem.anchorPos.x
-                    startY: pointItem.hasHandleIn ? overlay.transformPoint(pointItem.pointData.handleIn.x, pointItem.pointData.handleIn.y).y : pointItem.anchorPos.y
+                    startX: pointItem.hasHandleIn ? pointItem.pointData.handleIn.x : pointItem.pointData.x
+                    startY: pointItem.hasHandleIn ? pointItem.pointData.handleIn.y : pointItem.pointData.y
 
                     PathLine {
-                        x: pointItem.anchorPos.x
-                        y: pointItem.anchorPos.y
+                        x: pointItem.pointData.x
+                        y: pointItem.pointData.y
                     }
                     PathLine {
-                        x: pointItem.hasHandleOut ? overlay.transformPoint(pointItem.pointData.handleOut.x, pointItem.pointData.handleOut.y).x : pointItem.anchorPos.x
-                        y: pointItem.hasHandleOut ? overlay.transformPoint(pointItem.pointData.handleOut.x, pointItem.pointData.handleOut.y).y : pointItem.anchorPos.y
+                        x: pointItem.hasHandleOut ? pointItem.pointData.handleOut.x : pointItem.pointData.x
+                        y: pointItem.hasHandleOut ? pointItem.pointData.handleOut.y : pointItem.pointData.y
                     }
                 }
             }
@@ -158,32 +91,18 @@ Item {
                 id: handleIn
                 visible: pointItem.hasHandleIn
 
-                property var handlePos: pointItem.hasHandleIn ? overlay.transformPoint(pointItem.pointData.handleIn.x, pointItem.pointData.handleIn.y) : {
-                    x: 0,
-                    y: 0
-                }
-
-                x: handlePos.x - overlay.handleSize / 2
-                y: handlePos.y - overlay.handleSize / 2
+                x: pointItem.pointData.handleIn ? pointItem.pointData.handleIn.x - overlay.handleSize / 2 : 0
+                y: pointItem.pointData.handleIn ? pointItem.pointData.handleIn.y - overlay.handleSize / 2 : 0
                 width: overlay.handleSize
                 height: overlay.handleSize
-                radius: overlay.handleSize / 2
+                radius: width / 2
                 color: overlay.accentColor
                 border.width: 0
-
-                property real startX: 0
-                property real startY: 0
-                property real startHandleX: 0
-                property real startHandleY: 0
 
                 DragHandler {
                     target: null
                     onActiveChanged: {
                         if (active) {
-                            handleIn.startX = overlay.cursorX;
-                            handleIn.startY = overlay.cursorY;
-                            handleIn.startHandleX = pointItem.pointData.handleIn.x;
-                            handleIn.startHandleY = pointItem.pointData.handleIn.y;
                             overlay.dragStarted();
                         } else {
                             overlay.dragEnded();
@@ -192,11 +111,7 @@ Item {
                     onTranslationChanged: {
                         if (!active)
                             return;
-                        var dx = (overlay.cursorX - handleIn.startX) / overlay._scaleX;
-                        var dy = (overlay.cursorY - handleIn.startY) / overlay._scaleY;
-                        var newX = handleIn.startHandleX + dx;
-                        var newY = handleIn.startHandleY + dy;
-                        overlay.handleMoved(pointItem.index, "handleIn", newX, newY, overlay.currentModifiers);
+                        overlay.handleMoved(pointItem.index, "handleIn", overlay.cursorX, overlay.cursorY, overlay.currentModifiers);
                     }
                 }
             }
@@ -205,32 +120,18 @@ Item {
                 id: handleOut
                 visible: pointItem.hasHandleOut
 
-                property var handlePos: pointItem.hasHandleOut ? overlay.transformPoint(pointItem.pointData.handleOut.x, pointItem.pointData.handleOut.y) : {
-                    x: 0,
-                    y: 0
-                }
-
-                x: handlePos.x - overlay.handleSize / 2
-                y: handlePos.y - overlay.handleSize / 2
+                x: pointItem.pointData.handleOut ? pointItem.pointData.handleOut.x - overlay.handleSize / 2 : 0
+                y: pointItem.pointData.handleOut ? pointItem.pointData.handleOut.y - overlay.handleSize / 2 : 0
                 width: overlay.handleSize
                 height: overlay.handleSize
-                radius: overlay.handleSize / 2
+                radius: width / 2
                 color: overlay.accentColor
                 border.width: 0
-
-                property real startX: 0
-                property real startY: 0
-                property real startHandleX: 0
-                property real startHandleY: 0
 
                 DragHandler {
                     target: null
                     onActiveChanged: {
                         if (active) {
-                            handleOut.startX = overlay.cursorX;
-                            handleOut.startY = overlay.cursorY;
-                            handleOut.startHandleX = pointItem.pointData.handleOut.x;
-                            handleOut.startHandleY = pointItem.pointData.handleOut.y;
                             overlay.dragStarted();
                         } else {
                             overlay.dragEnded();
@@ -239,29 +140,20 @@ Item {
                     onTranslationChanged: {
                         if (!active)
                             return;
-                        var dx = (overlay.cursorX - handleOut.startX) / overlay._scaleX;
-                        var dy = (overlay.cursorY - handleOut.startY) / overlay._scaleY;
-                        var newX = handleOut.startHandleX + dx;
-                        var newY = handleOut.startHandleY + dy;
-                        overlay.handleMoved(pointItem.index, "handleOut", newX, newY, overlay.currentModifiers);
+                        overlay.handleMoved(pointItem.index, "handleOut", overlay.cursorX, overlay.cursorY, overlay.currentModifiers);
                     }
                 }
             }
 
             Rectangle {
                 id: anchorPoint
-                x: pointItem.anchorPos.x - overlay.handleSize / 2
-                y: pointItem.anchorPos.y - overlay.handleSize / 2
+                x: pointItem.pointData.x - overlay.handleSize / 2
+                y: pointItem.pointData.y - overlay.handleSize / 2
                 width: overlay.handleSize
                 height: overlay.handleSize
                 color: pointItem.isSelected ? overlay.accentColor : "transparent"
                 border.color: overlay.accentColor
                 border.width: overlay.handleLineWidth
-
-                property real startX: 0
-                property real startY: 0
-                property real startPointX: 0
-                property real startPointY: 0
 
                 MouseArea {
                     anchors.fill: parent
@@ -277,10 +169,6 @@ Item {
                     target: null
                     onActiveChanged: {
                         if (active) {
-                            anchorPoint.startX = overlay.cursorX;
-                            anchorPoint.startY = overlay.cursorY;
-                            anchorPoint.startPointX = pointItem.pointData.x;
-                            anchorPoint.startPointY = pointItem.pointData.y;
                             overlay.dragStarted();
                         } else {
                             overlay.dragEnded();
@@ -289,14 +177,52 @@ Item {
                     onTranslationChanged: {
                         if (!active)
                             return;
-                        var dx = (overlay.cursorX - anchorPoint.startX) / overlay._scaleX;
-                        var dy = (overlay.cursorY - anchorPoint.startY) / overlay._scaleY;
-                        var newX = anchorPoint.startPointX + dx;
-                        var newY = anchorPoint.startPointY + dy;
-                        overlay.pointMoved(pointItem.index, newX, newY);
+                        overlay.pointMoved(pointItem.index, overlay.cursorX, overlay.cursorY);
                     }
                 }
             }
         }
+    }
+
+    function _buildSvgPath() {
+        if (!points || points.length === 0)
+            return "";
+
+        var svg = "";
+        svg += "M " + points[0].x + " " + points[0].y + " ";
+
+        for (var i = 1; i < points.length; i++) {
+            var prev = points[i - 1];
+            var curr = points[i];
+
+            var hasHandles = prev.handleOut || curr.handleIn;
+
+            if (hasHandles) {
+                var cp1x = prev.handleOut ? prev.handleOut.x : prev.x;
+                var cp1y = prev.handleOut ? prev.handleOut.y : prev.y;
+                var cp2x = curr.handleIn ? curr.handleIn.x : curr.x;
+                var cp2y = curr.handleIn ? curr.handleIn.y : curr.y;
+                svg += "C " + cp1x + " " + cp1y + " " + cp2x + " " + cp2y + " " + curr.x + " " + curr.y + " ";
+            } else {
+                svg += "L " + curr.x + " " + curr.y + " ";
+            }
+        }
+
+        if (isClosed && points.length >= 2) {
+            var last = points[points.length - 1];
+            var firstPt = points[0];
+            var hasClosingHandles = last.handleOut || firstPt.handleIn;
+
+            if (hasClosingHandles) {
+                var cp1CloseX = last.handleOut ? last.handleOut.x : last.x;
+                var cp1CloseY = last.handleOut ? last.handleOut.y : last.y;
+                var cp2CloseX = firstPt.handleIn ? firstPt.handleIn.x : firstPt.x;
+                var cp2CloseY = firstPt.handleIn ? firstPt.handleIn.y : firstPt.y;
+                svg += "C " + cp1CloseX + " " + cp1CloseY + " " + cp2CloseX + " " + cp2CloseY + " " + firstPt.x + " " + firstPt.y + " ";
+            }
+            svg += "Z";
+        }
+
+        return svg;
     }
 }

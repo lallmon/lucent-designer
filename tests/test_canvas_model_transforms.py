@@ -598,3 +598,133 @@ class TestBakeTransform:
         # Item should still be an ellipse
         item_after = canvas_model.getItemData(0)
         assert item_after["type"] == "ellipse"
+
+
+class TestTransformedPathPoints:
+    """Tests for getTransformedPathPoints and transformPointToGeometry."""
+
+    def test_get_transformed_path_points_identity(self, canvas_model):
+        """Identity transform returns original points."""
+        path_data = make_path(
+            points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 100, "y": 100}]
+        )
+        canvas_model.addItem(path_data)
+
+        points = canvas_model.getTransformedPathPoints(0)
+        assert points is not None
+        assert len(points) == 3
+        assert points[0]["x"] == 0
+        assert points[0]["y"] == 0
+        assert points[1]["x"] == 100
+        assert points[1]["y"] == 0
+
+    def test_get_transformed_path_points_with_translation(self, canvas_model):
+        """Translation shifts all points."""
+        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}])
+        path_data["transform"] = {
+            "translateX": 50,
+            "translateY": 25,
+        }
+        canvas_model.addItem(path_data)
+
+        points = canvas_model.getTransformedPathPoints(0)
+        assert points is not None
+        assert points[0]["x"] == 50
+        assert points[0]["y"] == 25
+        assert points[1]["x"] == 150
+        assert points[1]["y"] == 25
+
+    def test_get_transformed_path_points_with_scale(self, canvas_model):
+        """Scale factor is applied to points."""
+        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}])
+        path_data["transform"] = {
+            "scaleX": 2.0,
+            "scaleY": 2.0,
+            "originX": 0,
+            "originY": 0,
+        }
+        canvas_model.addItem(path_data)
+
+        points = canvas_model.getTransformedPathPoints(0)
+        assert points is not None
+        assert points[0]["x"] == 0
+        assert points[0]["y"] == 0
+        assert points[1]["x"] == 200
+        assert points[1]["y"] == 0
+
+    def test_get_transformed_path_points_with_handles(self, canvas_model):
+        """Handles are also transformed."""
+        path_data = make_path(
+            points=[
+                {"x": 0, "y": 0, "handleOut": {"x": 50, "y": 0}},
+                {"x": 100, "y": 0, "handleIn": {"x": 50, "y": 0}},
+            ]
+        )
+        path_data["transform"] = {"translateX": 10, "translateY": 20}
+        canvas_model.addItem(path_data)
+
+        points = canvas_model.getTransformedPathPoints(0)
+        assert points is not None
+        assert points[0]["handleOut"]["x"] == 60
+        assert points[0]["handleOut"]["y"] == 20
+        assert points[1]["handleIn"]["x"] == 60
+        assert points[1]["handleIn"]["y"] == 20
+
+    def test_get_transformed_path_points_invalid_index(self, canvas_model):
+        """Invalid index returns None."""
+        assert canvas_model.getTransformedPathPoints(-1) is None
+        assert canvas_model.getTransformedPathPoints(999) is None
+
+    def test_get_transformed_path_points_non_path_item(self, canvas_model):
+        """Non-path items return None."""
+        canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=100))
+        assert canvas_model.getTransformedPathPoints(0) is None
+
+    def test_transform_point_to_geometry_identity(self, canvas_model):
+        """Identity transform returns input point."""
+        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}])
+        canvas_model.addItem(path_data)
+
+        result = canvas_model.transformPointToGeometry(0, 50, 25)
+        assert result is not None
+        assert result["x"] == 50
+        assert result["y"] == 25
+
+    def test_transform_point_to_geometry_with_translation(self, canvas_model):
+        """Inverse transform subtracts translation."""
+        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}])
+        path_data["transform"] = {"translateX": 50, "translateY": 25}
+        canvas_model.addItem(path_data)
+
+        result = canvas_model.transformPointToGeometry(0, 100, 50)
+        assert result is not None
+        assert abs(result["x"] - 50) < 0.001
+        assert abs(result["y"] - 25) < 0.001
+
+    def test_transform_point_round_trip(self, canvas_model):
+        """Forward and inverse transforms are consistent."""
+        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 100}])
+        path_data["transform"] = {
+            "translateX": 20,
+            "translateY": 30,
+            "rotate": 45,
+            "scaleX": 1.5,
+            "scaleY": 0.8,
+            "originX": 0.5,
+            "originY": 0.5,
+        }
+        canvas_model.addItem(path_data)
+
+        transformed = canvas_model.getTransformedPathPoints(0)
+        assert transformed is not None
+
+        for i, tp in enumerate(transformed):
+            geom = canvas_model.transformPointToGeometry(0, tp["x"], tp["y"])
+            orig = path_data["geometry"]["points"][i]
+            assert abs(geom["x"] - orig["x"]) < 0.001
+            assert abs(geom["y"] - orig["y"]) < 0.001
+
+    def test_transform_point_to_geometry_invalid_index(self, canvas_model):
+        """Invalid index returns None."""
+        assert canvas_model.transformPointToGeometry(-1, 0, 0) is None
+        assert canvas_model.transformPointToGeometry(999, 0, 0) is None

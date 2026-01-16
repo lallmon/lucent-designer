@@ -789,7 +789,7 @@ class CanvasModel(QAbstractListModel):
 
         model_index = self.index(index, 0)
         self.dataChanged.emit(model_index, model_index, [])
-        self.itemModified.emit(index, new_props)
+        self.itemModified.emit(index, self._itemToDict(new_item))
 
     @Slot(int, str)
     def renameItem(self, index: int, name: str) -> None:
@@ -1057,6 +1057,106 @@ class CanvasModel(QAbstractListModel):
             "width": bounds["width"] * scale_x,
             "height": bounds["height"] * scale_y,
         }
+
+    @Slot(int, result="QVariant")  # type: ignore[arg-type]
+    def getTransformedPathPoints(self, index: int) -> Optional[List[Dict[str, Any]]]:
+        """Get path points transformed to screen space.
+
+        Uses the same transform logic as rendering to guarantee alignment.
+
+        Args:
+            index: Index of the path item.
+
+        Returns:
+            List of points with x, y, handleIn, handleOut in screen space,
+            or None if not a path item.
+        """
+        from PySide6.QtCore import QPointF
+
+        if not (0 <= index < len(self._items)):
+            return None
+
+        item = self._items[index]
+        if not isinstance(item, PathItem):
+            return None
+
+        geometry = item.geometry
+        points = geometry.points
+
+        if item.transform.is_identity():
+            return [self._point_to_dict(pt) for pt in points]
+
+        bounds = geometry.get_bounds()
+        origin_x = bounds.x() + bounds.width() * item.transform.origin_x
+        origin_y = bounds.y() + bounds.height() * item.transform.origin_y
+        qtransform = item.transform.to_qtransform_centered(origin_x, origin_y)
+
+        transformed = []
+        for pt in points:
+            tp = qtransform.map(QPointF(pt["x"], pt["y"]))
+            new_pt: Dict[str, Any] = {"x": tp.x(), "y": tp.y()}
+            if "handleIn" in pt and pt["handleIn"]:
+                h = qtransform.map(QPointF(pt["handleIn"]["x"], pt["handleIn"]["y"]))
+                new_pt["handleIn"] = {"x": h.x(), "y": h.y()}
+            if "handleOut" in pt and pt["handleOut"]:
+                h = qtransform.map(QPointF(pt["handleOut"]["x"], pt["handleOut"]["y"]))
+                new_pt["handleOut"] = {"x": h.x(), "y": h.y()}
+            transformed.append(new_pt)
+        return transformed
+
+    @staticmethod
+    def _point_to_dict(pt: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert a path point to a simple dict."""
+        result: Dict[str, Any] = {"x": pt["x"], "y": pt["y"]}
+        if "handleIn" in pt and pt["handleIn"]:
+            result["handleIn"] = {"x": pt["handleIn"]["x"], "y": pt["handleIn"]["y"]}
+        if "handleOut" in pt and pt["handleOut"]:
+            result["handleOut"] = {
+                "x": pt["handleOut"]["x"],
+                "y": pt["handleOut"]["y"],
+            }
+        return result
+
+    @Slot(int, float, float, result="QVariant")  # type: ignore[arg-type]
+    def transformPointToGeometry(
+        self, index: int, screen_x: float, screen_y: float
+    ) -> Optional[Dict[str, float]]:
+        """Transform a screen-space point back to geometry space.
+
+        This is the inverse of getTransformedPathPoints, used when dragging
+        handles to convert screen positions to geometry coordinates.
+
+        Args:
+            index: Index of the path item.
+            screen_x: X coordinate in screen space.
+            screen_y: Y coordinate in screen space.
+
+        Returns:
+            Dictionary with x, y in geometry space, or None if failed.
+        """
+        from PySide6.QtCore import QPointF
+
+        if not (0 <= index < len(self._items)):
+            return None
+
+        item = self._items[index]
+        if not hasattr(item, "transform") or not hasattr(item, "geometry"):
+            return None
+
+        if item.transform.is_identity():
+            return {"x": screen_x, "y": screen_y}
+
+        bounds = item.geometry.get_bounds()
+        origin_x = bounds.x() + bounds.width() * item.transform.origin_x
+        origin_y = bounds.y() + bounds.height() * item.transform.origin_y
+        qtransform = item.transform.to_qtransform_centered(origin_x, origin_y)
+
+        inverted, ok = qtransform.inverted()
+        if not ok:
+            return {"x": screen_x, "y": screen_y}
+
+        geom_pt = inverted.map(QPointF(screen_x, screen_y))
+        return {"x": geom_pt.x(), "y": geom_pt.y()}
 
     @Slot(int, result=bool)
     def hasNonIdentityTransform(self, index: int) -> bool:

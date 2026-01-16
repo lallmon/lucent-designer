@@ -4,11 +4,9 @@
 import QtQuick
 import "." as Lucent
 
-// Handles path point and handle editing operations
 QtObject {
     id: controller
 
-    // Path edit mode state (derived from SelectionManager)
     readonly property bool editModeActive: Lucent.SelectionManager.editModeActive
 
     readonly property var geometry: {
@@ -20,26 +18,30 @@ QtObject {
         return null;
     }
 
-    readonly property var transform: {
-        if (!editModeActive)
+    readonly property int selectedItemIndex: Lucent.SelectionManager.selectedItemIndex
+    readonly property var selectedItem: Lucent.SelectionManager.selectedItem
+
+    // Pre-transformed points from Python (screen space)
+    // Depends on selectedItem to re-evaluate when geometry changes
+    readonly property var transformedPoints: {
+        if (!editModeActive || selectedItemIndex < 0)
             return null;
-        var item = Lucent.SelectionManager.selectedItem;
-        if (item && item.transform)
-            return item.transform;
-        return {};
+        // Force re-evaluation when selectedItem changes
+        var item = selectedItem;
+        if (!item)
+            return null;
+        return canvasModel.getTransformedPathPoints(selectedItemIndex);
     }
 
     readonly property var selectedPointIndices: Lucent.SelectionManager.selectedPointIndices
 
-    // Handle point click with optional multi-select
     function handlePointClicked(index, modifiers) {
         var multi = modifiers & Qt.ShiftModifier;
         Lucent.SelectionManager.selectPoint(index, multi);
     }
 
-    // Move a path point (and any selected points if dragged point is selected)
-    function handlePointMoved(index, x, y) {
-        var idx = Lucent.SelectionManager.selectedItemIndex;
+    function handlePointMoved(index, screenX, screenY) {
+        var idx = selectedItemIndex;
         if (idx < 0)
             return;
 
@@ -47,9 +49,14 @@ QtObject {
         if (!item || item.type !== "path")
             return;
 
+        // Convert screen position to geometry space using Python
+        var geomPos = canvasModel.transformPointToGeometry(idx, screenX, screenY);
+        if (!geomPos)
+            return;
+
         var draggedPt = item.geometry.points[index];
-        var dx = x - draggedPt.x;
-        var dy = y - draggedPt.y;
+        var dx = geomPos.x - draggedPt.x;
+        var dy = geomPos.y - draggedPt.y;
 
         var selectedIndices = Lucent.SelectionManager.selectedPointIndices || [];
         var isDraggedSelected = selectedIndices.indexOf(index) >= 0;
@@ -88,9 +95,8 @@ QtObject {
         });
     }
 
-    // Move a bezier handle with symmetric mirroring (both angle and length)
-    function handleHandleMoved(index, handleType, x, y, modifiers) {
-        var idx = Lucent.SelectionManager.selectedItemIndex;
+    function handleHandleMoved(index, handleType, screenX, screenY, modifiers) {
+        var idx = selectedItemIndex;
         if (idx < 0)
             return;
 
@@ -98,6 +104,13 @@ QtObject {
         if (!item || item.type !== "path")
             return;
 
+        // Convert screen position to geometry space using Python
+        var geomPos = canvasModel.transformPointToGeometry(idx, screenX, screenY);
+        if (!geomPos)
+            return;
+
+        var x = geomPos.x;
+        var y = geomPos.y;
         var breakSymmetry = !!(modifiers & Qt.AltModifier);
 
         var newPoints = [];
@@ -121,7 +134,6 @@ QtObject {
                                 y: pt.handleOut.y
                             };
                         } else {
-                            // Mirror both angle and length symmetrically
                             var dx = x - pt.x;
                             var dy = y - pt.y;
                             newPt.handleOut = {
@@ -142,7 +154,6 @@ QtObject {
                                 y: pt.handleIn.y
                             };
                         } else {
-                            // Mirror both angle and length symmetrically
                             var dx = x - pt.x;
                             var dy = y - pt.y;
                             newPt.handleIn = {
@@ -167,9 +178,8 @@ QtObject {
         });
     }
 
-    // Delete selected points from the path
     function deleteSelectedPoints() {
-        var idx = Lucent.SelectionManager.selectedItemIndex;
+        var idx = selectedItemIndex;
         if (idx < 0)
             return;
 
@@ -189,7 +199,6 @@ QtObject {
         }
 
         if (newPoints.length < 2) {
-            // Path too short, remove entire item
             canvasModel.removeItem(idx);
             Lucent.SelectionManager.exitEditMode();
         } else {

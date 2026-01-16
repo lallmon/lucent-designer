@@ -49,7 +49,7 @@ Item {
     // Path edit mode - delegate to PathEditController
     readonly property bool pathEditModeActive: pathEditController.editModeActive
     readonly property var pathEditGeometry: pathEditController.geometry
-    readonly property var pathEditTransform: pathEditController.transform
+    readonly property var pathEditTransformedPoints: pathEditController.transformedPoints
     readonly property var pathSelectedPointIndices: pathEditController.selectedPointIndices
 
     // Path edit controller handles all path point/handle operations

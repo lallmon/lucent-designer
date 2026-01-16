@@ -516,6 +516,17 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
     raise ItemSchemaError(f"Unsupported item type: {parsed.type}")
 
 
+def _geometry_bounds_dict(geom: Any) -> Dict[str, float]:
+    """Get bounds dict from geometry without triggering Qt dependencies."""
+    bounds = geom.get_bounds()
+    return {
+        "x": bounds.x(),
+        "y": bounds.y(),
+        "width": bounds.width(),
+        "height": bounds.height(),
+    }
+
+
 def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
     """Serialize a CanvasItem to dictionary."""
     if isinstance(item, RectangleItem):
@@ -526,6 +537,7 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "visible": item.visible,
             "locked": item.locked,
             "geometry": item.geometry.to_dict(),
+            "bounds": _geometry_bounds_dict(item.geometry),
             "appearances": [a.to_dict() for a in item.appearances],
         }
         if not item.transform.is_identity():
@@ -539,6 +551,7 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "visible": item.visible,
             "locked": item.locked,
             "geometry": item.geometry.to_dict(),
+            "bounds": _geometry_bounds_dict(item.geometry),
             "appearances": [a.to_dict() for a in item.appearances],
         }
         if not item.transform.is_identity():
@@ -552,6 +565,7 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "visible": item.visible,
             "locked": item.locked,
             "geometry": item.geometry.to_dict(),
+            "bounds": _geometry_bounds_dict(item.geometry),
             "appearances": [a.to_dict() for a in item.appearances],
         }
         if not item.transform.is_identity():
@@ -582,6 +596,7 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
             "visible": item.visible,
             "locked": item.locked,
             "geometry": item.geometry.to_dict(),
+            "bounds": _geometry_bounds_dict(item.geometry),
             "text": item.text,
             "fontFamily": item.font_family,
             "fontSize": item.font_size,
