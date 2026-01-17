@@ -86,6 +86,7 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "cap": "butt",
                 "align": "center",
                 "order": "top",
+                "scaleWithObject": False,
             },
         ]
 
@@ -121,6 +122,7 @@ def _parse_appearances(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "cap": cap,
                     "align": align,
                     "order": order,
+                    "scaleWithObject": bool(a.get("scaleWithObject", False)),
                 }
             )
     return result

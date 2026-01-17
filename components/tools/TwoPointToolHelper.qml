@@ -31,6 +31,7 @@ QtObject {
             strokeCap: settings ? (settings.strokeCap !== undefined ? settings.strokeCap : "butt") : "butt",
             strokeAlign: settings ? (settings.strokeAlign !== undefined ? settings.strokeAlign : "center") : "center",
             strokeOrder: settings ? (settings.strokeOrder !== undefined ? settings.strokeOrder : "top") : "top",
+            strokeScaleWithObject: settings ? (settings.strokeScaleWithObject === true) : false,
             fillColor: settings ? settings.fillColor.toString() : "",
             fillOpacity: settings ? settings.fillOpacity : 1.0
         };

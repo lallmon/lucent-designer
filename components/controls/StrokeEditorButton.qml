@@ -15,6 +15,7 @@ Item {
     property string strokeCap: "butt"  // "butt", "square", "round"
     property string strokeAlign: "center"  // "center", "inner", "outer"
     property string strokeOrder: "top"  // "top" or "bottom"
+    property bool strokeScaleWithObject: false
 
     signal widthEdited(real newWidth)
     signal widthCommitted(real newWidth)
@@ -22,6 +23,7 @@ Item {
     signal capChanged(string newCap)
     signal alignChanged(string newAlign)
     signal orderChanged(string newOrder)
+    signal scaleWithObjectChanged(bool newValue)
     signal panelOpened
     signal panelClosed
 
@@ -102,12 +104,14 @@ Item {
             strokeCap: root.strokeCap
             strokeAlign: root.strokeAlign
             strokeOrder: root.strokeOrder
+            strokeScaleWithObject: root.strokeScaleWithObject
             onWidthEdited: newWidth => root.widthEdited(newWidth)
             onWidthCommitted: newWidth => root.widthCommitted(newWidth)
             onStyleChanged: newStyle => root.styleChanged(newStyle)
             onCapChanged: newCap => root.capChanged(newCap)
             onAlignChanged: newAlign => root.alignChanged(newAlign)
             onOrderChanged: newOrder => root.orderChanged(newOrder)
+            onScaleWithObjectChanged: newValue => root.scaleWithObjectChanged(newValue)
         }
     }
 }

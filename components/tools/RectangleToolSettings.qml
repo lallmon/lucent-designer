@@ -21,6 +21,7 @@ RowLayout {
     property string _defaultStrokeCap: "butt"
     property string _defaultStrokeAlign: "center"
     property string _defaultStrokeOrder: "top"
+    property bool _defaultStrokeScaleWithObject: false
     property color _defaultFillColor: Lucent.Themed.defaultFill
     property real _defaultFillOpacity: 1.0
     property real _defaultCornerRadius: 0
@@ -103,6 +104,13 @@ RowLayout {
         }
         return _defaultStrokeOrder;
     }
+    readonly property bool strokeScaleWithObject: {
+        if (editMode) {
+            var stroke = _getStroke();
+            return stroke ? (stroke.scaleWithObject === true) : _defaultStrokeScaleWithObject;
+        }
+        return _defaultStrokeScaleWithObject;
+    }
 
     readonly property color fillColor: {
         if (editMode) {
@@ -179,6 +187,8 @@ RowLayout {
             _defaultStrokeAlign = value;
         else if (propName === "strokeOrder")
             _defaultStrokeOrder = value;
+        else if (propName === "strokeScaleWithObject")
+            _defaultStrokeScaleWithObject = value;
         else if (propName === "fillColor")
             _defaultFillColor = value;
         else if (propName === "fillOpacity")
@@ -201,7 +211,7 @@ RowLayout {
             if (!currentItem)
                 return;
 
-            var updatesAppearance = propName === "fillColor" || propName === "fillOpacity" || propName === "strokeWidth" || propName === "strokeColor" || propName === "strokeOpacity" || propName === "strokeVisible" || propName === "strokeCap" || propName === "strokeAlign" || propName === "strokeOrder";
+            var updatesAppearance = propName === "fillColor" || propName === "fillOpacity" || propName === "strokeWidth" || propName === "strokeColor" || propName === "strokeOpacity" || propName === "strokeVisible" || propName === "strokeCap" || propName === "strokeAlign" || propName === "strokeOrder" || propName === "strokeScaleWithObject";
             var updatesGeometry = propName === "cornerRadius" || propName === "cornerRadiusTL" || propName === "cornerRadiusTR" || propName === "cornerRadiusBR" || propName === "cornerRadiusBL";
 
             var newAppearances = currentItem.appearances;
@@ -230,6 +240,8 @@ RowLayout {
                             updated.align = value;
                         else if (propName === "strokeOrder")
                             updated.order = value;
+                        else if (propName === "strokeScaleWithObject")
+                            updated.scaleWithObject = value;
                     }
                     newAppearances.push(updated);
                 }
@@ -299,12 +311,14 @@ RowLayout {
         strokeCap: root.strokeCap
         strokeAlign: root.strokeAlign
         strokeOrder: root.strokeOrder
+        strokeScaleWithObject: root.strokeScaleWithObject
         onWidthEdited: newWidth => root.updateProperty("strokeWidth", newWidth)
         onWidthCommitted: newWidth => root.updateProperty("strokeWidth", newWidth)
         onStyleChanged: newStyle => root.updateProperty("strokeVisible", newStyle === "solid")
         onCapChanged: newCap => root.updateProperty("strokeCap", newCap)
         onAlignChanged: newAlign => root.updateProperty("strokeAlign", newAlign)
         onOrderChanged: newOrder => root.updateProperty("strokeOrder", newOrder)
+        onScaleWithObjectChanged: newValue => root.updateProperty("strokeScaleWithObject", newValue)
         onPanelOpened: canvasModel.beginTransaction()
         onPanelClosed: canvasModel.endTransaction()
     }

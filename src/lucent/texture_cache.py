@@ -118,7 +118,19 @@ class TextureCache:
             align = getattr(item.stroke, "align", "center")
             cap = getattr(item.stroke, "cap", "butt")
             order = getattr(item.stroke, "order", "top")
-            version ^= hash((item.stroke.color, item.stroke.width, cap, align, order))
+            scale_with_object = getattr(item.stroke, "scale_with_object", False)
+            version ^= hash(
+                (
+                    item.stroke.color,
+                    item.stroke.width,
+                    cap,
+                    align,
+                    order,
+                    scale_with_object,
+                )
+            )
+            if not scale_with_object and hasattr(item, "transform"):
+                version ^= hash((item.transform.scale_x, item.transform.scale_y))
 
         return version
 
@@ -174,6 +186,17 @@ class TextureCache:
         if geometry_bounds.isEmpty():
             return None
 
+        stroke = getattr(item, "stroke", None)
+        stroke_ref = None
+        original_stroke_width = None
+        if stroke and not getattr(stroke, "scale_with_object", False):
+            scale_x = getattr(item.transform, "scale_x", 1.0)
+            scale_y = getattr(item.transform, "scale_y", 1.0)
+            scale_factor = max(abs(scale_x), abs(scale_y), 1e-6)
+            original_stroke_width = stroke.width
+            stroke.width = max(0.0, min(100.0, original_stroke_width / scale_factor))
+            stroke_ref = stroke
+
         # Get accurate bounds including stroke effects
         render_bounds = self._get_render_bounds(item)
 
@@ -201,6 +224,8 @@ class TextureCache:
             item.paint(painter, zoom_level=1.0, offset_x=0.0, offset_y=0.0)
         finally:
             item.transform = original_transform
+            if original_stroke_width is not None and stroke_ref is not None:
+                stroke_ref.width = original_stroke_width
 
         painter.end()
 

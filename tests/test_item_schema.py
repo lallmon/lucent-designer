@@ -93,6 +93,22 @@ def test_validate_path_clamps_appearances():
     assert stroke["opacity"] == 1.0
 
 
+def test_validate_path_defaults_stroke_scale_with_object_false():
+    data = {
+        "type": "path",
+        "geometry": {
+            "points": [{"x": 1, "y": 2}, {"x": -3, "y": 4}],
+            "closed": True,
+        },
+        "appearances": [
+            {"type": "stroke", "color": "#123456", "width": 2.0, "opacity": 0.5},
+        ],
+    }
+    out = validate_path(data)
+    stroke = next(a for a in out["appearances"] if a["type"] == "stroke")
+    assert stroke["scaleWithObject"] is False
+
+
 def test_validate_path_requires_two_points():
     with pytest.raises(ItemSchemaError):
         validate_path(

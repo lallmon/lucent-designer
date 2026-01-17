@@ -162,6 +162,7 @@ class Stroke(Appearance):
         cap: str = "butt",
         align: str = "center",
         order: str = "top",
+        scale_with_object: bool = False,
     ) -> None:
         super().__init__(visible)
         self.color = color
@@ -170,6 +171,7 @@ class Stroke(Appearance):
         self.cap = cap if cap in self.VALID_CAPS else "butt"
         self.align = align if align in self.VALID_ALIGNS else "center"
         self.order = order if order in self.VALID_ORDERS else "top"
+        self.scale_with_object = bool(scale_with_object)
 
     def render(
         self,
@@ -237,6 +239,7 @@ class Stroke(Appearance):
             "cap": self.cap,
             "align": self.align,
             "order": self.order,
+            "scaleWithObject": self.scale_with_object,
         }
 
     @staticmethod
@@ -250,6 +253,7 @@ class Stroke(Appearance):
             cap=data.get("cap", "butt"),
             align=data.get("align", "center"),
             order=data.get("order", "top"),
+            scale_with_object=bool(data.get("scaleWithObject", False)),
         )
 
     def get_sg_color(self) -> Optional[QColor]:

@@ -165,6 +165,7 @@ class TestStroke:
         assert stroke.cap == "butt"
         assert stroke.align == "center"
         assert stroke.order == "top"
+        assert stroke.scale_with_object is False
 
     def test_creation_with_parameters(self):
         """Test creating a stroke with custom parameters."""
@@ -207,6 +208,7 @@ class TestStroke:
             "cap": "butt",
             "align": "center",
             "order": "top",
+            "scaleWithObject": False,
         }
 
     def test_from_dict(self):
@@ -223,6 +225,7 @@ class TestStroke:
         assert stroke.width == 4.0
         assert stroke.opacity == 0.6
         assert stroke.visible is False
+        assert stroke.scale_with_object is False
 
     def test_from_dict_defaults(self):
         """Test from_dict uses defaults for missing fields."""

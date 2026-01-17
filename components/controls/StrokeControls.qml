@@ -14,6 +14,7 @@ ColumnLayout {
     property string strokeCap: "butt"  // "butt", "square", "round"
     property string strokeAlign: "center"  // "center", "inner", "outer"
     property string strokeOrder: "top"  // "top" or "bottom"
+    property bool strokeScaleWithObject: false
 
     signal widthEdited(real newWidth)
     signal widthCommitted(real newWidth)
@@ -21,6 +22,7 @@ ColumnLayout {
     signal capChanged(string newCap)
     signal alignChanged(string newAlign)
     signal orderChanged(string newOrder)
+    signal scaleWithObjectChanged(bool newValue)
 
     readonly property SystemPalette themePalette: Lucent.Themed.palette
 
@@ -278,6 +280,17 @@ ColumnLayout {
                     }
                 }
             }
+        }
+
+        Item {
+            Layout.fillWidth: true
+        }
+
+        CheckBox {
+            text: qsTr("Scale with object")
+            font.pixelSize: 12
+            checked: root.strokeScaleWithObject
+            onToggled: root.scaleWithObjectChanged(checked)
         }
     }
 }

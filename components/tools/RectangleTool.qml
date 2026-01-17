@@ -74,7 +74,8 @@ Item {
                     visible: style.strokeVisible,
                     cap: style.strokeCap,
                     align: style.strokeAlign,
-                    order: style.strokeOrder
+                    order: style.strokeOrder,
+                    scaleWithObject: style.strokeScaleWithObject
                 }
             ]
         });
@@ -161,7 +162,8 @@ Item {
                         visible: style.strokeVisible,
                         cap: style.strokeCap,
                         align: style.strokeAlign,
-                        order: style.strokeOrder
+                        order: style.strokeOrder,
+                        scaleWithObject: style.strokeScaleWithObject
                     }
                 ]
             });
