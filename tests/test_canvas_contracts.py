@@ -18,7 +18,6 @@ from test_helpers import (
     make_ellipse,
     make_path,
     make_text,
-    make_group,
 )
 
 
@@ -331,36 +330,6 @@ class TestTextPositionContract:
         assert result["fontFamily"] == "Arial"
         assert result["fontSize"] == 24
         assert result["textColor"] == "#ff0000"
-
-
-@pytest.mark.contract
-class TestGroupMoveContract:
-    """Contract: Canvas.qml moves groups via canvasModel.moveGroup()."""
-
-    def test_group_move_translates_children(self, canvas_model):
-        """moveGroup translates all descendant shapes."""
-        # Create group with children
-        canvas_model.addItem(make_group(name="Test Group", group_id="grp1"))
-        canvas_model.addItem(
-            make_rectangle(x=0, y=0, width=50, height=50, parent_id="grp1")
-        )
-        canvas_model.addItem(make_ellipse(center_x=100, center_y=100, parent_id="grp1"))
-
-        # Move group (Canvas.qml calls this for groups/layers)
-        canvas_model.moveGroup(0, 10, 20)
-
-        # Verify children moved
-        rect_data = canvas_model.getItemData(1)
-        ellipse_data = canvas_model.getItemData(2)
-
-        assert rect_data["geometry"]["x"] == 0
-        assert rect_data["geometry"]["y"] == 0
-        assert rect_data["transform"]["translateX"] == 10
-        assert rect_data["transform"]["translateY"] == 20
-        assert ellipse_data["geometry"]["centerX"] == 100
-        assert ellipse_data["geometry"]["centerY"] == 100
-        assert ellipse_data["transform"]["translateX"] == 10
-        assert ellipse_data["transform"]["translateY"] == 20
 
 
 @pytest.mark.contract

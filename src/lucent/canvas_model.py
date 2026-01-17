@@ -385,30 +385,6 @@ class CanvasModel(QAbstractListModel):
             return
         self.translateItems([index], dx, dy)
 
-    @Slot(int, float, float)
-    def moveGroup(self, group_index: int, dx: float, dy: float) -> None:
-        """Translate all descendant shapes of a group/layer by dx, dy."""
-        if not (0 <= group_index < len(self._items)):
-            return
-        container = self._items[group_index]
-        if not isinstance(container, (GroupItem, LayerItem)):
-            return
-        # Apply deltas to descendant shapes
-        for idx in self._get_descendant_indices(container.id):
-            item = self._items[idx]
-            if hasattr(item, "geometry"):
-                item_data = self._itemToDict(item)
-                new_transform = (
-                    item.transform.to_dict() if hasattr(item, "transform") else {}
-                )
-                new_transform["translateX"] = item.transform.translate_x + dx
-                new_transform["translateY"] = item.transform.translate_y + dy
-                item_data["transform"] = new_transform
-                self.updateItem(idx, item_data)
-
-        # Refresh container selection overlays that depend on descendant bounds.
-        self.itemModified.emit(group_index, self._itemToDict(container))
-
     @Slot(int)
     def ungroup(self, group_index: int) -> None:
         """Ungroup a group: move its children to the group's parent and remove it."""
@@ -1089,27 +1065,6 @@ class CanvasModel(QAbstractListModel):
             }
         return result
 
-    @Slot(int, float, float, result="QVariant")  # type: ignore[arg-type]
-    def transformPointToGeometry(
-        self, index: int, screen_x: float, screen_y: float
-    ) -> Optional[Dict[str, float]]:
-        """Transform a screen-space point back to geometry space.
-
-        This is the inverse of getTransformedPathPoints, used when dragging
-        handles to convert screen positions to geometry coordinates.
-
-        Args:
-            index: Index of the path item.
-            screen_x: X coordinate in screen space.
-            screen_y: Y coordinate in screen space.
-
-        Returns:
-            Dictionary with x, y in geometry space, or None if failed.
-        """
-        return self._transform_service.transform_point_to_geometry(
-            index, screen_x, screen_y
-        )
-
     @Slot(int)
     def lockEditTransform(self, index: int) -> None:
         """Lock the edit pivot (geometry space) for stable drag mapping."""
@@ -1119,18 +1074,6 @@ class CanvasModel(QAbstractListModel):
     def unlockEditTransform(self, index: int) -> None:
         """Clear the locked edit transform after drag ends."""
         self._transform_service.unlock_edit_transform(index)
-
-    @Slot(int, dict)
-    def updateGeometryWithOriginCompensation(
-        self, index: int, geometry_data: Dict[str, Any]
-    ) -> None:
-        """Update item geometry while keeping the transform pivot stable.
-
-        With absolute pivots, geometry updates do not require compensation.
-        """
-        self._transform_service.update_geometry_with_origin_compensation(
-            index, geometry_data
-        )
 
     @Slot(int, dict)
     def updateGeometryLocked(self, index: int, geometry_data: Dict[str, Any]) -> None:
