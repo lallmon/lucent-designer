@@ -462,7 +462,7 @@ Item {
 
                     // Model normalizes to 0-360° automatically
                     var val = parseInt(text) || 0;
-                    canvasModel.updateTransformProperty(root.selectedIndex, "rotate", val);
+                    canvasModel.rotateItem(root.selectedIndex, val);
                     appController.focusCanvas();
 
                     isCommitting = false;
@@ -487,7 +487,7 @@ Item {
                         canvasModel.endTransaction();
                 }
 
-                onMoved: canvasModel.updateTransformProperty(root.selectedIndex, "rotate", value)
+                onMoved: canvasModel.rotateItem(root.selectedIndex, value)
 
                 handle: Rectangle {
                     x: rotationSlider.leftPadding + rotationSlider.visualPosition * (rotationSlider.availableWidth - width)

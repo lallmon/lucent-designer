@@ -91,14 +91,14 @@ Item {
     onOverlayRotateRequested: function (angle) {
         var idx = Lucent.SelectionManager.selectedItemIndex;
         if (idx >= 0 && canvasModel) {
-            canvasModel.updateTransformProperty(idx, "rotate", angle);
+            canvasModel.rotateItem(idx, angle);
         }
     }
 
     onOverlayScaleResizeRequested: function (scaleX, scaleY, anchorX, anchorY) {
         var idx = Lucent.SelectionManager.selectedItemIndex;
         if (idx >= 0 && canvasModel) {
-            canvasModel.applyScaleResize(idx, scaleX, scaleY, anchorX, anchorY);
+            canvasModel.scaleItem(idx, scaleX, scaleY, anchorX, anchorY);
         }
     }
 
@@ -371,7 +371,7 @@ Item {
         var indices = Lucent.SelectionManager.selectedIndices || [];
         if (indices.length === 0)
             return;
-        canvasModel.moveItems(indices, canvasDx, canvasDy);
+        canvasModel.translateItems(indices, canvasDx, canvasDy);
     }
 
     function deleteSelectedItem() {

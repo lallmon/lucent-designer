@@ -95,7 +95,7 @@ QtObject {
             }
         }
 
-        canvasModel.updateGeometryWithOriginCompensation(idx, {
+        canvasModel.updateGeometryLocked(idx, {
             points: newPoints,
             closed: item.geometry.closed
         });
@@ -175,7 +175,7 @@ QtObject {
             }
         }
 
-        canvasModel.updateGeometryWithOriginCompensation(idx, {
+        canvasModel.updateGeometryLocked(idx, {
             points: newPoints,
             closed: item.geometry.closed
         });
@@ -205,11 +205,9 @@ QtObject {
             canvasModel.removeItem(idx);
             Lucent.SelectionManager.exitEditMode();
         } else {
-            canvasModel.updateItem(idx, {
-                geometry: {
-                    points: newPoints,
-                    closed: item.geometry.closed && newPoints.length >= 3
-                }
+            canvasModel.updateGeometryLocked(idx, {
+                points: newPoints,
+                closed: item.geometry.closed && newPoints.length >= 3
             });
             Lucent.SelectionManager.clearPointSelection();
         }

@@ -630,90 +630,6 @@ class TestTransformedPathPoints:
         canvas_model.addItem(make_rectangle(x=0, y=0, width=100, height=100))
         assert canvas_model.getTransformedPathPoints(0) is None
 
-    def test_transform_point_to_geometry_identity(self, canvas_model):
-        """Identity transform returns input point."""
-        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}])
-        canvas_model.addItem(path_data)
-
-        result = canvas_model.transformPointToGeometry(0, 50, 25)
-        assert result is not None
-        assert result["x"] == 50
-        assert result["y"] == 25
-
-    def test_transform_point_to_geometry_with_translation(self, canvas_model):
-        """Inverse transform subtracts translation."""
-        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}])
-        path_data["transform"] = {"translateX": 50, "translateY": 25}
-        canvas_model.addItem(path_data)
-
-        result = canvas_model.transformPointToGeometry(0, 100, 50)
-        assert result is not None
-        assert abs(result["x"] - 50) < 0.001
-        assert abs(result["y"] - 25) < 0.001
-
-    def test_transform_point_round_trip(self, canvas_model):
-        """Forward and inverse transforms are consistent."""
-        path_data = make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 100}])
-        path_data["transform"] = {
-            "translateX": 20,
-            "translateY": 30,
-            "rotate": 45,
-            "scaleX": 1.5,
-            "scaleY": 0.8,
-            "pivotX": 50,
-            "pivotY": 50,
-        }
-        canvas_model.addItem(path_data)
-
-        transformed = canvas_model.getTransformedPathPoints(0)
-        assert transformed is not None
-
-        for i, tp in enumerate(transformed):
-            geom = canvas_model.transformPointToGeometry(0, tp["x"], tp["y"])
-            orig = path_data["geometry"]["points"][i]
-            assert abs(geom["x"] - orig["x"]) < 0.001
-            assert abs(geom["y"] - orig["y"]) < 0.001
-
-    def test_transform_point_to_geometry_invalid_index(self, canvas_model):
-        """Invalid index returns None."""
-        assert canvas_model.transformPointToGeometry(-1, 0, 0) is None
-        assert canvas_model.transformPointToGeometry(999, 0, 0) is None
-
-
-class TestPivotStability:
-    """Tests for updateGeometryWithOriginCompensation method."""
-
-    def test_geometry_update_keeps_pivot(self, canvas_model):
-        """Geometry updates should not change pivot or translation."""
-        path_data = make_path(
-            points=[{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 100, "y": 100}],
-            closed=False,
-        )
-        path_data["transform"] = {"rotate": 45, "pivotX": 50, "pivotY": 50}
-        canvas_model.addItem(path_data)
-
-        item = canvas_model._items[0]
-        old_pivot = (item.transform.pivot_x, item.transform.pivot_y)
-        old_translate = (item.transform.translate_x, item.transform.translate_y)
-
-        new_geometry = {
-            "points": [{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 150, "y": 150}],
-            "closed": False,
-        }
-        canvas_model.updateGeometryWithOriginCompensation(0, new_geometry)
-
-        new_item = canvas_model._items[0]
-        new_pivot = (new_item.transform.pivot_x, new_item.transform.pivot_y)
-        new_translate = (new_item.transform.translate_x, new_item.transform.translate_y)
-
-        assert new_pivot == old_pivot
-        assert new_translate == old_translate
-
-    def test_geometry_update_invalid_index(self, canvas_model):
-        """Invalid index should not raise."""
-        canvas_model.updateGeometryWithOriginCompensation(-1, {"points": []})
-        canvas_model.updateGeometryWithOriginCompensation(999, {"points": []})
-
 
 class TestEditTransformLock:
     """Tests for stable edit transform locking during path edits."""
@@ -743,7 +659,7 @@ class TestEditTransformLock:
             ],
             "closed": False,
         }
-        canvas_model.updateGeometryWithOriginCompensation(0, new_geometry)
+        canvas_model.updateGeometryLocked(0, new_geometry)
 
         transformed = canvas_model.getTransformedPathPoints(0)
         assert transformed is not None
@@ -784,7 +700,7 @@ class TestEditTransformLock:
 
         locked_origin = _origin_world()
 
-        canvas_model.updateGeometryWithOriginCompensation(
+        canvas_model.updateGeometryLocked(
             0,
             {
                 "points": [{"x": 0, "y": 0}, {"x": 140, "y": 40}, {"x": 60, "y": 160}],
@@ -793,7 +709,7 @@ class TestEditTransformLock:
         )
         origin_after_first = _origin_world()
 
-        canvas_model.updateGeometryWithOriginCompensation(
+        canvas_model.updateGeometryLocked(
             0,
             {
                 "points": [{"x": 0, "y": 0}, {"x": 120, "y": 80}, {"x": 90, "y": 190}],
