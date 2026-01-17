@@ -5,7 +5,7 @@
 Hierarchy helper functions for canvas item parent-child relationships.
 
 This module provides pure functions for working with container hierarchies
-(layers, groups) without Qt dependencies, making them easily testable.
+(artboards, groups) without Qt dependencies, making them easily testable.
 """
 
 from typing import List, Optional, Callable, Any

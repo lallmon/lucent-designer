@@ -3,7 +3,7 @@
 
 import pytest
 
-from lucent.canvas_items import LayerItem
+from lucent.canvas_items import ArtboardItem
 from lucent.item_schema import (
     ItemSchemaError,
     _should_serialize_transform,
@@ -87,5 +87,5 @@ def test_validate_path_rejects_points_not_list():
 
 
 def test_should_serialize_transform_false_without_transform():
-    layer = LayerItem(name="Layer")
+    layer = ArtboardItem(name="Layer")
     assert _should_serialize_transform(layer) is False

@@ -8,7 +8,7 @@ import pytest
 from lucent.canvas_items import (
     RectangleItem,
     EllipseItem,
-    LayerItem,
+    ArtboardItem,
     CanvasItem,
     PathItem,
     TextItem,
@@ -29,7 +29,7 @@ from lucent.item_schema import (
     parse_item_data,
     validate_rectangle,
     validate_ellipse,
-    validate_layer,
+    validate_artboard,
     validate_group,
     validate_path,
     validate_text,
@@ -274,12 +274,12 @@ def test_validate_ellipse_clamps_radius():
     assert out["geometry"]["radiusY"] == 5
 
 
-def test_validate_layer_defaults_and_preserves_id():
-    out = validate_layer({"type": "layer", "name": "Layer", "id": "custom"})
+def test_validate_artboard_defaults_and_preserves_id():
+    out = validate_artboard({"type": "artboard", "name": "Layer", "id": "custom"})
     assert out["name"] == "Layer"
     assert out["id"] == "custom"
 
-    out2 = validate_layer({"type": "layer"})
+    out2 = validate_artboard({"type": "artboard"})
     assert out2["name"] == ""
     assert out2["id"] is None
 
@@ -379,8 +379,8 @@ def test_parse_item_returns_concrete_items():
     )
     assert isinstance(ell, EllipseItem)
 
-    layer = parse_item({"type": "layer"})
-    assert isinstance(layer, LayerItem)
+    layer = parse_item({"type": "artboard"})
+    assert isinstance(layer, ArtboardItem)
 
     path = parse_item(
         {
@@ -442,9 +442,9 @@ def test_item_to_dict_round_trips_ellipse():
 
 
 def test_item_to_dict_round_trips_layer():
-    layer = LayerItem(name="L", layer_id="lid")
+    layer = ArtboardItem(name="L", artboard_id="lid")
     out = item_to_dict(layer)
-    assert out["type"] == ItemType.LAYER.value
+    assert out["type"] == ItemType.ARTBOARD.value
     assert out["name"] == "L"
     assert out["id"] == "lid"
 
@@ -557,7 +557,7 @@ class TestLockedSerialization:
                     "locked": True,
                 },
             ),
-            (validate_layer, {"type": "layer", "name": "Test", "locked": True}),
+            (validate_artboard, {"type": "artboard", "name": "Test", "locked": True}),
             (validate_text, {"type": "text", "text": "Hello", "locked": True}),
         ],
     )
@@ -595,7 +595,7 @@ class TestLockedSerialization:
                 appearances=[Fill("#fff", 0.5), Stroke("#000", 1.0, 1.0)],
                 locked=True,
             ),
-            LayerItem(name="Test", locked=True),
+            ArtboardItem(name="Test", locked=True),
             TextItem(
                 geometry=TextGeometry(x=0, y=0, width=100, height=0),
                 text="Hello",

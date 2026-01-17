@@ -7,7 +7,7 @@ from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage
 
 from lucent.texture_cache import TextureCache, TextureCacheEntry
-from lucent.canvas_items import RectangleItem, EllipseItem, LayerItem, GroupItem
+from lucent.canvas_items import RectangleItem, EllipseItem, ArtboardItem, GroupItem
 from lucent.geometry import RectGeometry, EllipseGeometry
 from lucent.appearances import Fill, Stroke
 from lucent.transforms import Transform
@@ -154,7 +154,7 @@ class TestTextureCacheGetOrCreate:
     def test_returns_none_for_layer_item(self):
         """Layers can't be textured - returns None."""
         cache = TextureCache()
-        layer = LayerItem(name="Layer 1", visible=True, locked=False)
+        layer = ArtboardItem(name="Layer 1", visible=True, locked=False)
 
         entry = cache.get_or_create(layer, "layer-1")
 

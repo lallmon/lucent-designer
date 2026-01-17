@@ -136,16 +136,29 @@ def make_path(
     return data
 
 
-def make_layer(name="", layer_id=None, visible=True, locked=False):
-    """Create layer data."""
+def make_artboard(
+    x=0,
+    y=0,
+    width=100,
+    height=100,
+    name="",
+    artboard_id=None,
+    visible=True,
+    locked=False,
+):
+    """Create artboard data."""
     data = {
-        "type": "layer",
+        "type": "artboard",
+        "x": x,
+        "y": y,
+        "width": width,
+        "height": height,
         "name": name,
         "visible": visible,
         "locked": locked,
     }
-    if layer_id:
-        data["id"] = layer_id
+    if artboard_id:
+        data["id"] = artboard_id
     return data
 
 
@@ -200,19 +213,26 @@ def make_text(
     return data
 
 
-def make_layer_with_children(
-    child_items: list[dict], name: str = "Layer", layer_id: str | None = None
+def make_artboard_with_children(
+    child_items: list[dict],
+    x: float = 0,
+    y: float = 0,
+    width: float = 100,
+    height: float = 100,
+    name: str = "Artboard",
+    artboard_id: str | None = None,
 ) -> list[dict]:
-    """Create a layer plus provided child item dicts with parentId wired."""
-    layer = make_layer(name=name)
-    layer_id = layer_id or name.lower().replace(" ", "-")
-    layer["id"] = layer_id
+    """Create an artboard plus provided child item dicts with parentId wired."""
+    artboard_id = artboard_id or name.lower().replace(" ", "-")
+    artboard = make_artboard(
+        x=x, y=y, width=width, height=height, name=name, artboard_id=artboard_id
+    )
     wired_children = []
     for child in child_items:
         child_copy = dict(child)
-        child_copy["parentId"] = layer_id
+        child_copy["parentId"] = artboard_id
         wired_children.append(child_copy)
-    return [layer, *wired_children]
+    return [artboard, *wired_children]
 
 
 def assert_bounds(

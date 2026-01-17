@@ -17,9 +17,9 @@ from lucent.bounding_box import (
     union_bounds,
 )
 from lucent.canvas_items import (
+    ArtboardItem,
     EllipseItem,
     GroupItem,
-    LayerItem,
     PathItem,
     RectangleItem,
     TextItem,
@@ -110,8 +110,16 @@ def apply_bounding_box(
         current_data["geometry"]["height"] = new_height
         return current_data
 
-    # Layers and groups are non-renderable containers
-    if isinstance(item, (LayerItem, GroupItem)):
+    # Artboards have simple x, y, width, height geometry
+    if isinstance(item, ArtboardItem):
+        current_data["x"] = new_x
+        current_data["y"] = new_y
+        current_data["width"] = new_width
+        current_data["height"] = new_height
+        return current_data
+
+    # Groups are non-renderable containers
+    if isinstance(item, GroupItem):
         return None
 
     return None

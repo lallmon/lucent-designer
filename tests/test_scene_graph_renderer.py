@@ -339,22 +339,22 @@ class TestSceneGraphRendererItemModified:
         from lucent.scene_graph_renderer import SceneGraphRenderer
 
         # Add a layer (which has an id attribute)
-        canvas_model.addItem({"type": "layer", "name": "Test Layer"})
+        canvas_model.addItem({"type": "artboard", "name": "Test Layer"})
         layer = canvas_model.getItem(0)
-        layer_id = layer.id
+        artboard_id = layer.id
 
         renderer = SceneGraphRenderer()
         renderer.setModel(canvas_model)
 
         # Manually add to cache to test invalidation logic
-        renderer._texture_cache._cache[layer_id] = "dummy_entry"
-        assert layer_id in renderer._texture_cache._cache
+        renderer._texture_cache._cache[artboard_id] = "dummy_entry"
+        assert artboard_id in renderer._texture_cache._cache
 
         # Simulate item modification
         renderer._on_item_modified(0, {"visible": False})
 
         # Cache should be invalidated
-        assert layer_id not in renderer._texture_cache._cache
+        assert artboard_id not in renderer._texture_cache._cache
 
     def test_skips_invalidation_for_items_without_id(
         self, qapp, canvas_model, history_manager
@@ -434,13 +434,13 @@ class TestSceneGraphRendererCreateNodeForItem:
         assert result is None
 
     def test_returns_none_for_layer_item(self, qapp):
-        """LayerItem returns None (containers aren't rendered directly)."""
+        """ArtboardItem returns None (containers aren't rendered directly)."""
         from lucent.scene_graph_renderer import SceneGraphRenderer
-        from lucent.canvas_items import LayerItem
+        from lucent.canvas_items import ArtboardItem
         from lucent.texture_cache import TextureCache
 
         renderer = SceneGraphRenderer()
-        layer = LayerItem(name="Layer 1", visible=True, locked=False)
+        layer = ArtboardItem(name="Layer 1", visible=True, locked=False)
 
         result = renderer._create_node_for_item(layer, 0, 0, None, TextureCache())
 

@@ -33,17 +33,17 @@ Item {
     readonly property bool isBeingDragged: panel.draggedIndex === index
     property real dragOffsetY: 0
     readonly property bool hasParent: !!parentId
-    readonly property bool isContainer: itemType === "layer" || itemType === "group"
+    readonly property bool isContainer: itemType === "artboard" || itemType === "group"
 
     // Hide selection highlights during drag so drop hints are visible
     readonly property bool showAsSelected: isSelected && panel.draggedIndex < 0
     readonly property color itemTextColor: showAsSelected ? themePalette.highlightedText : themePalette.text
     readonly property var typeIconInfo: {
         switch (itemType) {
-        case "layer":
+        case "artboard":
             return {
-                name: "stack-fill",
-                weight: "fill"
+                name: "checkerboard",
+                weight: "regular"
             };
         case "group":
             return {
@@ -111,7 +111,7 @@ Item {
     }
     z: isBeingDragged ? 100 : 0
 
-    readonly property bool isDropTarget: isContainer && panel.draggedIndex >= 0 && panel.draggedItemType !== "layer" && panel.dropTargetContainerId === itemId
+    readonly property bool isDropTarget: isContainer && panel.draggedIndex >= 0 && panel.draggedItemType !== "artboard" && panel.dropTargetContainerId === itemId
 
     Rectangle {
         id: background
@@ -210,10 +210,10 @@ Item {
 
                                     let didMove = false;
                                     const draggedParent = panel.draggedItemParentId || "";
-                                    const isLayer = panel.draggedItemType === "layer";
+                                    const isArtboard = panel.draggedItemType === "artboard";
 
-                                    if (isLayer) {
-                                        // Layers can only be reordered at top level, not reparented
+                                    if (isArtboard) {
+                                        // Artboards can only be reordered at top level, not reparented
                                         if (targetModelIndex !== panel.draggedIndex) {
                                             canvasModel.moveItem(panel.draggedIndex, targetModelIndex);
                                             didMove = true;
@@ -246,7 +246,7 @@ Item {
                                 delegateRoot.resetDragState();
                             }
                         } catch (e) {
-                            console.warn("LayerListItem drag error:", e);
+                            console.warn("ListItem drag error:", e);
                             delegateRoot.resetDragState();
                         }
                     }
@@ -282,7 +282,7 @@ Item {
                         const targetModelIndex = panel.modelIndexForDisplay(targetDisplayIndex);
                         const targetItem = repeater.itemAt(targetModelIndex);
 
-                        if (targetItem && targetItem.isContainer && panel.draggedItemType !== "layer" && isContainerCenterZone) {
+                        if (targetItem && targetItem.isContainer && panel.draggedItemType !== "artboard" && isContainerCenterZone) {
                             // Hovering on container center - show as drop target for parenting
                             panel.dropTargetContainerId = targetItem.itemId;
                             panel.dropTargetParentId = null;
@@ -383,9 +383,9 @@ Item {
                         }
 
                         Action {
-                            text: qsTr("Export Layer...")
-                            enabled: delegateRoot.itemType === "layer"
-                            onTriggered: appController.openExportDialog(delegateRoot.itemId, delegateRoot.name || "Layer")
+                            text: qsTr("Export Artboard...")
+                            enabled: delegateRoot.itemType === "artboard"
+                            onTriggered: appController.openExportDialog(delegateRoot.itemId, delegateRoot.name || "Artboard")
                         }
 
                         Action {

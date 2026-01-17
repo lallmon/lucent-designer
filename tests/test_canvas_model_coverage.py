@@ -3,7 +3,7 @@
 
 
 from lucent.commands import Command
-from test_helpers import make_layer, make_rectangle
+from test_helpers import make_artboard, make_rectangle
 
 
 class _DummyCommand(Command):
@@ -40,7 +40,7 @@ def test_data_type_role_unknown(canvas_model):
 
 
 def test_data_parent_id_role_none_for_layer(canvas_model):
-    canvas_model.addItem(make_layer())
+    canvas_model.addItem(make_artboard())
     index = canvas_model.index(0, 0)
     assert canvas_model.data(index, canvas_model.ParentIdRole) is None
 

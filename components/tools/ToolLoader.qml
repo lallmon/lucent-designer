@@ -30,6 +30,7 @@ Item {
 
     // Tool name to QML file mapping
     readonly property var toolMap: ({
+            "artboard": "ArtboardTool.qml",
             "rectangle": "RectangleTool.qml",
             "ellipse": "EllipseTool.qml",
             "pen": "PenTool.qml",

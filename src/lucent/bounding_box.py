@@ -193,22 +193,26 @@ def get_item_bounds(
     """Get bounding box for any canvas item type.
 
     Args:
-        item: A canvas item (Rectangle, Ellipse, Path, Text, Layer, Group).
+        item: A canvas item (Rectangle, Ellipse, Path, Text, Artboard, Group).
         get_descendant_bounds: Optional callback to get bounds for container
             descendants.
 
     Returns:
         Bounding box dictionary, or None if not applicable.
     """
-    # Container (Layer/Group): use callback if provided
-    # Check this first since containers have an 'id' attribute but no geometry
-    if hasattr(item, "id") and not hasattr(item, "geometry") and get_descendant_bounds:
-        return get_descendant_bounds(item.id)
-
-    # Use item's get_bounds() method if available - this applies transforms
+    # Use item's get_bounds() method first - this applies transforms
+    # ArtboardItem and shape items have get_bounds()
     if hasattr(item, "get_bounds") and callable(item.get_bounds):
         bounds = item.get_bounds()
         if bounds is not None:
-            return rect_bounds(bounds.x(), bounds.y(), bounds.width(), bounds.height())
+            is_empty = bounds.isEmpty() if hasattr(bounds, "isEmpty") else False
+            if not is_empty:
+                return rect_bounds(
+                    bounds.x(), bounds.y(), bounds.width(), bounds.height()
+                )
+
+    # Groups have no geometry - use descendant bounds callback
+    if hasattr(item, "id") and not hasattr(item, "geometry") and get_descendant_bounds:
+        return get_descendant_bounds(item.id)
 
     return None

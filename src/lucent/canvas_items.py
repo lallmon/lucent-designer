@@ -10,7 +10,7 @@ This module defines the canvas item hierarchy, including:
 - RectangleItem: Rectangular shapes
 - EllipseItem: Elliptical shapes
 - PathItem: Polyline/path shapes
-- LayerItem: Organizational layers for grouping items
+- ArtboardItem: Visible container with defined bounds for export
 - GroupItem: Grouping container for shapes
 - TextItem: Text rendering
 
@@ -331,20 +331,28 @@ class PathItem(ShapeItem):
         )
 
 
-class LayerItem(CanvasItem):
-    """Layer item for organizing canvas items."""
+class ArtboardItem(CanvasItem):
+    """Artboard - visible container with defined bounds for export."""
 
     def __init__(
         self,
+        x: float = 0,
+        y: float = 0,
+        width: float = 100,
+        height: float = 100,
         name: str = "",
-        layer_id: Optional[str] = None,
+        artboard_id: Optional[str] = None,
         visible: bool = True,
         locked: bool = False,
     ) -> None:
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
         self.name = name
         self.visible = bool(visible)
         self.locked = bool(locked)
-        self.id = layer_id if layer_id else str(uuid.uuid4())
+        self.id = artboard_id if artboard_id else str(uuid.uuid4())
 
     def paint(
         self,
@@ -353,19 +361,33 @@ class LayerItem(CanvasItem):
         offset_x: float = CANVAS_OFFSET_X,
         offset_y: float = CANVAS_OFFSET_Y,
     ) -> None:
-        """Layers don't render directly."""
-        pass
+        """Render artboard as white rectangle."""
+        if not self.visible:
+            return
+        painter.fillRect(
+            QRectF(
+                self.x + offset_x,
+                self.y + offset_y,
+                self.width,
+                self.height,
+            ),
+            QColor("#ffffff"),
+        )
 
     def get_bounds(self) -> QRectF:
-        """Layers have no intrinsic bounds."""
-        return QRectF()
+        """Return artboard bounds."""
+        return QRectF(self.x, self.y, self.width, self.height)
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]) -> "LayerItem":
-        """Create LayerItem from dictionary."""
-        return LayerItem(
+    def from_dict(data: Dict[str, Any]) -> "ArtboardItem":
+        """Create ArtboardItem from dictionary."""
+        return ArtboardItem(
+            x=float(data.get("x", 0)),
+            y=float(data.get("y", 0)),
+            width=float(data.get("width", 100)),
+            height=float(data.get("height", 100)),
             name=data.get("name", ""),
-            layer_id=data.get("id"),
+            artboard_id=data.get("id"),
             visible=data.get("visible", True),
             locked=data.get("locked", False),
         )

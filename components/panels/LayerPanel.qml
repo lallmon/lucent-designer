@@ -44,12 +44,6 @@ Item {
                 spacing: 2
 
                 Lucent.IconButton {
-                    iconName: "stack-plus-fill"
-                    tooltipText: qsTr("Add Layer")
-                    onClicked: canvasModel.addLayer()
-                }
-
-                Lucent.IconButton {
                     iconName: "folder-plus-fill"
                     tooltipText: qsTr("Add Group")
                     onClicked: {

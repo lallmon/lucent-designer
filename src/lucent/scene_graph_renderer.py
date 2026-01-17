@@ -190,12 +190,13 @@ class SceneGraphRenderer(QQuickItem):
         texture_cache: TextureCache,
     ) -> Optional[QSGNode]:
         """Create texture node for item, wrapped in transform node if needed."""
-        from lucent.canvas_items import LayerItem, GroupItem
+        from lucent.canvas_items import GroupItem
 
         if hasattr(item, "visible") and not item.visible:
             return None
 
-        if isinstance(item, (LayerItem, GroupItem)):
+        # Groups don't render directly (they're organizational containers)
+        if isinstance(item, GroupItem):
             return None
 
         item_id = item.id if hasattr(item, "id") else str(id(item))

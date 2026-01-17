@@ -20,7 +20,7 @@ from test_helpers import (
     make_rectangle,
     make_ellipse,
     make_path,
-    make_layer,
+    make_artboard,
     make_group,
     make_text,
 )
@@ -380,7 +380,7 @@ class TestRoundTrip:
         """All item types (rectangle, ellipse, layer, group, path, text) round-trip."""
         file_path = tmp_path / "all_types.lucent"
         original_items = [
-            make_layer(name="Background", layer_id="layer-1"),
+            make_artboard(name="Background", artboard_id="layer-1"),
             make_rectangle(
                 x=0, y=0, width=100, height=100, name="Rect", parent_id="layer-1"
             ),
@@ -421,7 +421,7 @@ class TestRoundTrip:
 
         assert len(result["items"]) == 6
         types = [item["type"] for item in result["items"]]
-        assert "layer" in types
+        assert "artboard" in types
         assert "rectangle" in types
         assert "ellipse" in types
         assert "group" in types

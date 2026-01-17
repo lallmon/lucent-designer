@@ -34,8 +34,8 @@ ApplicationWindow {
     // Handle cross-cutting UI actions from nested components
     Connections {
         target: appController
-        function onExportRequested(layerId, layerName) {
-            root.openExportDialog(layerId, layerName);
+        function onExportRequested(artboardId, artboardName) {
+            root.openExportDialog(artboardId, artboardName);
         }
         function onFocusCanvasRequested() {
             viewport.forceActiveFocus();
@@ -348,9 +348,9 @@ ApplicationWindow {
         anchors.centerIn: parent
     }
 
-    function openExportDialog(layerId, layerName) {
-        exportDialog.layerId = layerId;
-        exportDialog.layerName = layerName;
+    function openExportDialog(artboardId, artboardName) {
+        exportDialog.artboardId = artboardId;
+        exportDialog.artboardName = artboardName;
         exportDialog.open();
     }
 }

@@ -70,7 +70,7 @@ class TextureCache:
     ) -> Optional[TextureCacheEntry]:
         """Get cached texture or create a new one.
 
-        Returns None for items that can't be textured (layers, groups, etc.)
+        Returns None for items that can't be textured (groups, etc.)
         """
         from lucent.canvas_items import ShapeItem, TextItem
 

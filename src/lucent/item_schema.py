@@ -13,7 +13,7 @@ from lucent.canvas_items import (
     CanvasItem,
     RectangleItem,
     EllipseItem,
-    LayerItem,
+    ArtboardItem,
     GroupItem,
     PathItem,
     TextItem,
@@ -35,7 +35,7 @@ class ItemSchemaError(ValueError):
 class ItemType(str, Enum):
     RECTANGLE = "rectangle"
     ELLIPSE = "ellipse"
-    LAYER = "layer"
+    ARTBOARD = "artboard"
     GROUP = "group"
     PATH = "path"
     TEXT = "text"
@@ -328,15 +328,28 @@ def validate_path(data: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def validate_layer(data: Dict[str, Any]) -> Dict[str, Any]:
+def validate_artboard(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate artboard data."""
+    try:
+        x = float(data.get("x", 0))
+        y = float(data.get("y", 0))
+        width = _clamp_min(float(data.get("width", 100)), 1.0)
+        height = _clamp_min(float(data.get("height", 100)), 1.0)
+    except (TypeError, ValueError) as exc:
+        raise ItemSchemaError(f"Invalid artboard numeric field: {exc}") from exc
+
     name = str(data.get("name", ""))
-    layer_id = data.get("id") or None
+    artboard_id = data.get("id") or None
     visible = bool(data.get("visible", True))
     locked = bool(data.get("locked", False))
     return {
-        "type": ItemType.LAYER.value,
-        "id": layer_id,
+        "type": ItemType.ARTBOARD.value,
+        "id": artboard_id,
         "name": name,
+        "x": x,
+        "y": y,
+        "width": width,
+        "height": height,
         "visible": visible,
         "locked": locked,
     }
@@ -405,8 +418,8 @@ def parse_item_data(data: Dict[str, Any]) -> ParsedItem:
         validated = validate_rectangle(data)
     elif item_type is ItemType.ELLIPSE:
         validated = validate_ellipse(data)
-    elif item_type is ItemType.LAYER:
-        validated = validate_layer(data)
+    elif item_type is ItemType.ARTBOARD:
+        validated = validate_artboard(data)
     elif item_type is ItemType.GROUP:
         validated = validate_group(data)
     elif item_type is ItemType.PATH:
@@ -538,10 +551,14 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
             visible=d.get("visible", True),
             locked=d.get("locked", False),
         )
-    if t is ItemType.LAYER:
-        return LayerItem(
+    if t is ItemType.ARTBOARD:
+        return ArtboardItem(
+            x=d["x"],
+            y=d["y"],
+            width=d["width"],
+            height=d["height"],
             name=d["name"],
-            layer_id=d.get("id"),
+            artboard_id=d.get("id"),
             visible=d.get("visible", True),
             locked=d.get("locked", False),
         )
@@ -647,11 +664,15 @@ def item_to_dict(item: CanvasItem) -> Dict[str, Any]:
         if _should_serialize_transform(item):
             result["transform"] = item.transform.to_dict()
         return result
-    if isinstance(item, LayerItem):
+    if isinstance(item, ArtboardItem):
         return {
-            "type": ItemType.LAYER.value,
+            "type": ItemType.ARTBOARD.value,
             "id": item.id,
             "name": item.name,
+            "x": item.x,
+            "y": item.y,
+            "width": item.width,
+            "height": item.height,
             "visible": item.visible,
             "locked": item.locked,
         }

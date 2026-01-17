@@ -4,7 +4,7 @@
 """Integration tests for LayerPanel-related model behaviors.
 
 These tests verify the Python-QML contract that LayerPanel.qml depends on.
-By testing the model methods LayerPanel calls, we ensure refactoring
+By testing the model methods the panel calls, we ensure refactoring
 the QML won't break functionality as long as these contracts hold.
 """
 
@@ -19,24 +19,24 @@ from lucent.history_manager import HistoryManager
 
 
 class TestLayerPanelModelBehaviors:
-    """Tests for model behaviors that LayerPanel.qml relies on."""
+    """Tests for model behaviors that the layer panel relies on."""
 
     @pytest.fixture
     def model(self, qapp):
         return CanvasModel(HistoryManager())
 
-    def test_add_layer_creates_layer_item(self, model):
-        """LayerPanel calls canvasModel.addLayer() on button tap."""
-        model.addLayer()
+    def test_add_artboard_creates_artboard_item(self, model):
+        """Adding an artboard via addItem creates an ArtboardItem."""
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
 
         assert model.count() == 1
         data = model.getItemData(0)
         assert data is not None
-        assert data["type"] == "layer"
-        assert "Layer" in data["name"]
+        assert data["type"] == "artboard"
+        assert "Artboard" in data["name"]
 
     def test_add_group_creates_group_item(self, model):
-        """LayerPanel calls canvasModel.addItem({type: 'group'})."""
+        """Adding a group via addItem creates a GroupItem."""
         model.addItem({"type": "group"})
 
         assert model.count() == 1
@@ -45,8 +45,8 @@ class TestLayerPanelModelBehaviors:
         assert data["type"] == "group"
 
     def test_toggle_visibility_flips_state(self, model):
-        """LayerPanel calls canvasModel.toggleVisibility(index)."""
-        model.addLayer()
+        """toggleVisibility flips the visible state."""
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
         data = model.getItemData(0)
         assert data is not None
         assert data["visible"] is True
@@ -62,8 +62,8 @@ class TestLayerPanelModelBehaviors:
         assert data["visible"] is True
 
     def test_toggle_locked_flips_state(self, model):
-        """LayerPanel calls canvasModel.toggleLocked(index)."""
-        model.addLayer()
+        """toggleLocked flips the locked state."""
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
         data = model.getItemData(0)
         assert data is not None
         assert data["locked"] is False
@@ -74,13 +74,13 @@ class TestLayerPanelModelBehaviors:
         assert data["locked"] is True
 
     def test_rename_item_updates_name(self, model):
-        """LayerPanel calls canvasModel.renameItem(index, name)."""
-        model.addLayer()
-        model.renameItem(0, "My Custom Layer")
+        """renameItem updates the item's name."""
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
+        model.renameItem(0, "My Custom Artboard")
 
         data = model.getItemData(0)
         assert data is not None
-        assert data["name"] == "My Custom Layer"
+        assert data["name"] == "My Custom Artboard"
 
     def test_move_item_up_in_model(self, model):
         """Moving item to higher index (drag up in display, down in model)."""
@@ -146,7 +146,7 @@ class TestLayerPanelModelBehaviors:
         assert model.getItemData(3)["name"] == "C"
 
     def test_group_items_creates_group(self, model):
-        """LayerPanel group button calls canvasModel.groupItems(indices)."""
+        """groupItems creates a group containing the specified items."""
         model.addItem({"type": "rectangle"})
         model.addItem({"type": "ellipse"})
 
@@ -158,16 +158,16 @@ class TestLayerPanelModelBehaviors:
         assert group_data["type"] == "group"
 
     def test_reparent_item_changes_parent(self, model):
-        """LayerPanel drag-into-group calls canvasModel.reparentItem()."""
-        model.addLayer()
-        layer_data = model.getItemData(0)
-        assert layer_data is not None
-        layer_id = layer_data["id"]
+        """reparentItem changes the item's parent."""
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
+        artboard_data = model.getItemData(0)
+        assert artboard_data is not None
+        artboard_id = artboard_data["id"]
 
         model.addItem({"type": "rectangle"})
 
         # reparentItem sets parent and moves item; find rectangle after reparent
-        model.reparentItem(1, layer_id)
+        model.reparentItem(1, artboard_id)
 
         # Find the rectangle after reparenting (indices may have shifted)
         rect_data = None
@@ -178,7 +178,7 @@ class TestLayerPanelModelBehaviors:
                 break
 
         assert rect_data is not None, "Rectangle not found after reparent"
-        assert rect_data["parentId"] == layer_id
+        assert rect_data["parentId"] == artboard_id
 
     def test_reparent_item_default_position_below_container(self, model):
         """Reparenting without explicit position places item below container.
@@ -189,20 +189,20 @@ class TestLayerPanelModelBehaviors:
         # Setup: Items added before layer, so layer is at top of display
         model.addItem({"type": "rectangle", "name": "Square1"})
         model.addItem({"type": "rectangle", "name": "Square2"})
-        model.addLayer()
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
 
         layer_data = model.getItemData(2)
-        layer_id = layer_data["id"]
+        artboard_id = layer_data["id"]
 
         # Reparent without explicit position (simulates dropping onto container center)
-        model.reparentItem(0, layer_id)  # No insert_index
+        model.reparentItem(0, artboard_id)  # No insert_index
 
         # Square1 should now be a child of Layer, positioned right below it
         # Model order should be: [Square2@0, Square1@1, Layer@2]
         # Display (reversed): Layer, Square1, Square2
         sq1_data = model.getItemData(1)
         assert sq1_data["name"] == "Square1"
-        assert sq1_data["parentId"] == layer_id
+        assert sq1_data["parentId"] == artboard_id
 
     def test_reparent_item_with_position_inserts_correctly(self, model):
         """Reparenting with explicit position places item at correct index.
@@ -215,14 +215,14 @@ class TestLayerPanelModelBehaviors:
         model.addItem({"type": "rectangle", "name": "Square3"})
         model.addItem({"type": "rectangle", "name": "Square1"})
         model.addItem({"type": "rectangle", "name": "Square2"})
-        model.addLayer()
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
 
         layer_data = model.getItemData(3)
-        layer_id = layer_data["id"]
+        artboard_id = layer_data["id"]
 
         # Reparent Square1 and Square2 to Layer
-        model.reparentItem(1, layer_id)
-        model.reparentItem(1, layer_id)
+        model.reparentItem(1, artboard_id)
+        model.reparentItem(1, artboard_id)
 
         # Model: [Square3@0, Square1@1, Square2@2, Layer@3]
         assert model.getItemData(0)["name"] == "Square3"
@@ -230,35 +230,36 @@ class TestLayerPanelModelBehaviors:
         assert model.getItemData(2)["name"] == "Square2"
 
         # Reparent Square3 to position 1 (between Square1 and Square2)
-        model.reparentItem(0, layer_id, 1)
+        model.reparentItem(0, artboard_id, 1)
 
         # Expected: [Square1@0, Square3@1, Square2@2, Layer@3]
         assert model.getItemData(0)["name"] == "Square1"
         assert model.getItemData(1)["name"] == "Square3"
         assert model.getItemData(2)["name"] == "Square2"
-        assert model.getItemData(1)["parentId"] == layer_id
+        assert model.getItemData(1)["parentId"] == artboard_id
 
     def test_remove_item_decreases_count(self, model):
-        """LayerPanel delete calls canvasModel.removeItem(index)."""
-        model.addLayer()
+        """removeItem decreases the model count."""
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
         model.addItem({"type": "rectangle"})
         assert model.count() == 2
 
         model.removeItem(1)
         assert model.count() == 1
 
-    def test_container_bounds_fallback_for_selection_overlay(self, model):
-        """Layers/groups need getBoundingBox for selection overlay.
+    def test_artboard_bounds_for_selection_overlay(self, model):
+        """Artboards have their own geometry bounds.
 
-        getGeometryBounds returns None for containers (no geometry attribute),
-        but getBoundingBox computes union of children's bounds. The selection
-        overlay in Canvas.qml relies on this fallback behavior.
+        Unlike groups, artboards have explicit x, y, width, height geometry.
+        getBoundingBox returns the artboard's own bounds, not child union.
         """
-        model.addLayer()
-        layer_data = model.getItemData(0)
-        layer_id = layer_data["id"]
+        model.addItem(
+            {"type": "artboard", "x": 10, "y": 20, "width": 800, "height": 600}
+        )
+        artboard_data = model.getItemData(0)
+        artboard_id = artboard_data["id"]
 
-        # Add a child rectangle
+        # Add a child rectangle that extends beyond artboard
         model.addItem(
             {
                 "type": "rectangle",
@@ -266,25 +267,22 @@ class TestLayerPanelModelBehaviors:
                 "geometry": {"x": 100, "y": 100, "width": 50, "height": 50},
             }
         )
-        model.reparentItem(1, layer_id)
+        model.reparentItem(1, artboard_id)
 
-        # Find the layer's new index after reparent
-        layer_idx = None
+        # Find the artboard's new index after reparent
+        artboard_idx = None
         for i in range(model.count()):
-            if model.getItemData(i)["type"] == "layer":
-                layer_idx = i
+            if model.getItemData(i)["type"] == "artboard":
+                artboard_idx = i
                 break
 
-        # getGeometryBounds returns None for layers (no geometry attribute)
-        assert model.getGeometryBounds(layer_idx) is None
-
-        # getBoundingBox returns union of children's bounds
-        bounds = model.getBoundingBox(layer_idx)
+        # getBoundingBox returns the artboard's own geometry bounds
+        bounds = model.getBoundingBox(artboard_idx)
         assert bounds is not None
-        assert bounds["x"] == 100
-        assert bounds["y"] == 100
-        assert bounds["width"] == 50
-        assert bounds["height"] == 50
+        assert bounds["x"] == 10
+        assert bounds["y"] == 20
+        assert bounds["width"] == 800
+        assert bounds["height"] == 600
 
     def test_union_bounding_box_for_multiselection(self, model):
         """Multi-selection needs getUnionBoundingBox for selection overlay."""
@@ -312,11 +310,11 @@ class TestLayerPanelModelBehaviors:
         assert union["height"] == 150
 
     def test_model_roles_match_qml_expectations(self, model):
-        """Verify model exposes roles that LayerPanel.qml binds to."""
-        model.addLayer()
+        """Verify model exposes roles that the panel binds to."""
+        model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
         model.addItem({"type": "rectangle", "parent_id": ""})
 
-        # Check role names exist (LayerPanel binds to these)
+        # Check role names exist (the panel binds to these)
         role_names = model.roleNames()
         expected_roles = [
             b"name",
@@ -334,7 +332,7 @@ class TestLayerPanelModelBehaviors:
 class TestLayerPanelQmlLoads:
     """Smoke test: verify LayerPanel.qml compiles without errors."""
 
-    def test_layer_panel_loads(self, qml_engine, canvas_model):
+    def test_panel_loads(self, qml_engine, canvas_model):
         """Verify LayerPanel.qml compiles and instantiates."""
         # Register model as context property (same as main.py)
         qml_engine.rootContext().setContextProperty("canvasModel", canvas_model)
@@ -352,6 +350,6 @@ class TestLayerPanelQmlLoads:
             pytest.fail(f"LayerPanel.qml failed to load:\n{errors}")
 
         obj = component.create()
-        assert obj is not None, "Failed to instantiate LayerPanel"
+        assert obj is not None, "Failed to instantiate panel"
 
         obj.deleteLater()

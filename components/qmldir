@@ -17,11 +17,13 @@ SelectionOverlay 1.0 SelectionOverlay.qml
 PathEditOverlay 1.0 PathEditOverlay.qml
 ToolPalette 1.0 tools/ToolPalette.qml
 ToolSettings 1.0 tools/ToolSettings.qml
+ArtboardTool 1.0 tools/ArtboardTool.qml
 RectangleTool 1.0 tools/RectangleTool.qml
 EllipseTool 1.0 tools/EllipseTool.qml
 PenTool 1.0 tools/PenTool.qml
 TextTool 1.0 tools/TextTool.qml
 SelectTool 1.0 tools/SelectTool.qml
+ArtboardToolSettings 1.0 tools/ArtboardToolSettings.qml
 RectangleToolSettings 1.0 tools/RectangleToolSettings.qml
 EllipseToolSettings 1.0 tools/EllipseToolSettings.qml
 PenToolSettings 1.0 tools/PenToolSettings.qml

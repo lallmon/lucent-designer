@@ -14,15 +14,15 @@ class AppController(QObject):
     """Handles application-level actions that span multiple UI components."""
 
     # Emitted when a component requests the export dialog
-    exportRequested = Signal(str, str, arguments=["layerId", "layerName"])
+    exportRequested = Signal(str, str, arguments=["artboardId", "artboardName"])
 
     # Emitted when a component requests focus return to the canvas
     focusCanvasRequested = Signal()
 
     @Slot(str, str)
-    def openExportDialog(self, layer_id: str, layer_name: str) -> None:
-        """Request the export dialog to open for a specific layer."""
-        self.exportRequested.emit(layer_id, layer_name)
+    def openExportDialog(self, artboard_id: str, artboard_name: str) -> None:
+        """Request the export dialog to open for a specific artboard."""
+        self.exportRequested.emit(artboard_id, artboard_name)
 
     @Slot()
     def focusCanvas(self) -> None:
