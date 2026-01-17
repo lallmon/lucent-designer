@@ -37,7 +37,7 @@ Item {
         if (!setPreviewCallback)
             return;
 
-        // Preview artboard as white rectangle
+        // Preview artboard with border
         setPreviewCallback({
             type: "artboard",
             x: currentRect.x,

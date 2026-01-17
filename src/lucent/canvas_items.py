@@ -361,18 +361,8 @@ class ArtboardItem(CanvasItem):
         offset_x: float = CANVAS_OFFSET_X,
         offset_y: float = CANVAS_OFFSET_Y,
     ) -> None:
-        """Render artboard as white rectangle."""
-        if not self.visible:
-            return
-        painter.fillRect(
-            QRectF(
-                self.x + offset_x,
-                self.y + offset_y,
-                self.width,
-                self.height,
-            ),
-            QColor("#ffffff"),
-        )
+        """Artboards render via texture cache with border only, not via paint()."""
+        pass
 
     def get_bounds(self) -> QRectF:
         """Return artboard bounds."""

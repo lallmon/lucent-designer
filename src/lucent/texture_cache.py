@@ -256,8 +256,18 @@ class TextureCache:
         item: "CanvasItem",
         version: int,
     ) -> TextureCacheEntry:
-        """Rasterize artboard as simple white rectangle."""
-        render_bounds = QRectF(item.x, item.y, item.width, item.height)
+        """Rasterize artboard as transparent rectangle with 2pt outer border."""
+        from PySide6.QtGui import QPen
+        from PySide6.QtCore import Qt
+
+        stroke_width = 2.0
+        # Expand bounds to include outer stroke (stroke is outside the artboard)
+        render_bounds = QRectF(
+            item.x - stroke_width,
+            item.y - stroke_width,
+            item.width + stroke_width * 2,
+            item.height + stroke_width * 2,
+        )
         padding = float(self.PADDING)
         scale = self.RENDER_SCALE
 
@@ -270,10 +280,19 @@ class TextureCache:
         painter = QPainter(image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.scale(scale, scale)
-        painter.translate(padding, padding)
+        # Translate to account for stroke expansion + padding
+        painter.translate(padding + stroke_width, padding + stroke_width)
 
-        # Fill with white
-        painter.fillRect(QRectF(0, 0, item.width, item.height), QColor("#ffffff"))
+        # Draw 2pt outer border using themed editSelector color
+        pen = QPen(QColor("#fc03d2"))
+        pen.setWidthF(stroke_width)
+        pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        half = stroke_width / 2
+        painter.drawRect(
+            QRectF(-half, -half, item.width + stroke_width, item.height + stroke_width)
+        )
 
         painter.end()
 

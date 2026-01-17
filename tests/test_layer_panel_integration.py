@@ -186,20 +186,20 @@ class TestLayerPanelModelBehaviors:
         When dropping onto a container center (not between children), the
         item should appear as the first child below the container in display.
         """
-        # Setup: Items added before layer, so layer is at top of display
+        # Setup: Items added before artboard, so artboard is at top of display
         model.addItem({"type": "rectangle", "name": "Square1"})
         model.addItem({"type": "rectangle", "name": "Square2"})
         model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
 
-        layer_data = model.getItemData(2)
-        artboard_id = layer_data["id"]
+        artboard_data = model.getItemData(2)
+        artboard_id = artboard_data["id"]
 
         # Reparent without explicit position (simulates dropping onto container center)
         model.reparentItem(0, artboard_id)  # No insert_index
 
-        # Square1 should now be a child of Layer, positioned right below it
-        # Model order should be: [Square2@0, Square1@1, Layer@2]
-        # Display (reversed): Layer, Square1, Square2
+        # Square1 should now be a child of Artboard, positioned right below it
+        # Model order should be: [Square2@0, Square1@1, Artboard@2]
+        # Display (reversed): Artboard, Square1, Square2
         sq1_data = model.getItemData(1)
         assert sq1_data["name"] == "Square1"
         assert sq1_data["parentId"] == artboard_id
@@ -211,20 +211,20 @@ class TestLayerPanelModelBehaviors:
         when dropping between Square1 and Square2, the item should end up
         between them, not at the bottom of the container.
         """
-        # Setup: Square3 (top-level), Square1, Square2 (children of Layer)
+        # Setup: Square3 (top-level), Square1, Square2 (children of Artboard)
         model.addItem({"type": "rectangle", "name": "Square3"})
         model.addItem({"type": "rectangle", "name": "Square1"})
         model.addItem({"type": "rectangle", "name": "Square2"})
         model.addItem({"type": "artboard", "x": 0, "y": 0, "width": 100, "height": 100})
 
-        layer_data = model.getItemData(3)
-        artboard_id = layer_data["id"]
+        artboard_data = model.getItemData(3)
+        artboard_id = artboard_data["id"]
 
-        # Reparent Square1 and Square2 to Layer
+        # Reparent Square1 and Square2 to Artboard
         model.reparentItem(1, artboard_id)
         model.reparentItem(1, artboard_id)
 
-        # Model: [Square3@0, Square1@1, Square2@2, Layer@3]
+        # Model: [Square3@0, Square1@1, Square2@2, Artboard@3]
         assert model.getItemData(0)["name"] == "Square3"
         assert model.getItemData(1)["name"] == "Square1"
         assert model.getItemData(2)["name"] == "Square2"
@@ -232,7 +232,7 @@ class TestLayerPanelModelBehaviors:
         # Reparent Square3 to position 1 (between Square1 and Square2)
         model.reparentItem(0, artboard_id, 1)
 
-        # Expected: [Square1@0, Square3@1, Square2@2, Layer@3]
+        # Expected: [Square1@0, Square3@1, Square2@2, Artboard@3]
         assert model.getItemData(0)["name"] == "Square1"
         assert model.getItemData(1)["name"] == "Square3"
         assert model.getItemData(2)["name"] == "Square2"

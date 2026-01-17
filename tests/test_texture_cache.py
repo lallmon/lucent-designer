@@ -152,7 +152,7 @@ class TestTextureCacheGetOrCreate:
         assert entry1 is entry2
 
     def test_creates_entry_for_artboard(self):
-        """Artboards render as white rectangles."""
+        """Artboards render with a border (transparent background)."""
         cache = TextureCache()
         artboard = ArtboardItem(
             x=0, y=0, width=100, height=80, name="Artboard 1", visible=True
@@ -161,8 +161,9 @@ class TestTextureCacheGetOrCreate:
         entry = cache.get_or_create(artboard, "artboard-1")
 
         assert entry is not None
-        assert entry.bounds.width() == 100
-        assert entry.bounds.height() == 80
+        # Bounds are expanded by 2pt stroke on each side
+        assert entry.bounds.width() == 104  # 100 + 2*2
+        assert entry.bounds.height() == 84  # 80 + 2*2
 
     def test_returns_none_for_group_item(self):
         """Groups can't be textured - returns None."""

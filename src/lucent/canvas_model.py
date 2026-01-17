@@ -741,11 +741,10 @@ class CanvasModel(QAbstractListModel):
             ):
                 target_index = item_index
             elif insert_index >= 0:
-                # Explicit insert position - use as final position (post-removal)
-                # Clamp to valid range within parent's children
+                # Explicit insert position - clamp to valid range
                 target_index = max(0, min(insert_index, parent_index))
             else:
-                # Default: place at parent's position (top of children in display)
+                # Default: place at parent's position (below parent in display)
                 target_index = parent_index
                 if item_index < target_index:
                     target_index -= 1
@@ -780,9 +779,8 @@ class CanvasModel(QAbstractListModel):
             self._execute_command(transaction)
 
         # Emit signals for UI update
-        model_index = self.index(
-            target_index if target_index != item_index else item_index, 0
-        )
+        final_index = target_index if target_index != item_index else item_index
+        model_index = self.index(final_index, 0)
         self.dataChanged.emit(model_index, model_index, [])
 
     @Slot(int, dict)

@@ -434,7 +434,7 @@ class TestSceneGraphRendererCreateNodeForItem:
         assert result is None
 
     def test_artboard_creates_texture_cache_entry(self, qapp):
-        """ArtboardItem creates a texture cache entry (renders as white rect)."""
+        """ArtboardItem creates a texture cache entry (renders with border)."""
         from lucent.canvas_items import ArtboardItem
         from lucent.texture_cache import TextureCache
 
@@ -445,10 +445,10 @@ class TestSceneGraphRendererCreateNodeForItem:
 
         entry = cache.get_or_create(artboard, "artboard-1")
 
-        # Artboards now render, so they create cache entries
+        # Artboards render with a border, bounds expanded by 2pt stroke
         assert entry is not None
-        assert entry.bounds.width() == 100
-        assert entry.bounds.height() == 80
+        assert entry.bounds.width() == 104  # 100 + 2*2
+        assert entry.bounds.height() == 84  # 80 + 2*2
 
     def test_returns_none_for_group_item(self, qapp):
         """GroupItem returns None (containers aren't rendered directly)."""

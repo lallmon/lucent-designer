@@ -354,8 +354,8 @@ class DocumentManager(QObject):
         # Get child items for rendering
         items = self._canvas_model.getArtboardItems(artboard_id)
 
-        # Artboard provides white background by default
-        effective_bg = background if background else "#ffffff"
+        # Empty string means transparent, otherwise use specified color
+        effective_bg = background if background else None
 
         options = ExportOptions(
             document_dpi=self._document_dpi,
