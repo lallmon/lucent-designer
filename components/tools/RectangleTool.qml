@@ -40,14 +40,25 @@ Item {
             return;
 
         var style = helper.extractStyle(settings);
+        var geom = {
+            x: currentRect.x,
+            y: currentRect.y,
+            width: currentRect.width,
+            height: currentRect.height
+        };
+        if (settings) {
+            if (settings.singleRadiusMode) {
+                geom.cornerRadius = settings.cornerRadius || 0;
+            } else {
+                geom.cornerRadiusTL = settings.cornerRadiusTL || 0;
+                geom.cornerRadiusTR = settings.cornerRadiusTR || 0;
+                geom.cornerRadiusBR = settings.cornerRadiusBR || 0;
+                geom.cornerRadiusBL = settings.cornerRadiusBL || 0;
+            }
+        }
         setPreviewCallback({
             type: "rectangle",
-            geometry: {
-                x: currentRect.x,
-                y: currentRect.y,
-                width: currentRect.width,
-                height: currentRect.height
-            },
+            geometry: geom,
             appearances: [
                 {
                     type: "fill",
@@ -116,14 +127,25 @@ Item {
 
         if (helper.hasSize(currentRect)) {
             var style = helper.extractStyle(settings);
+            var geom = {
+                x: currentRect.x,
+                y: currentRect.y,
+                width: currentRect.width,
+                height: currentRect.height
+            };
+            if (settings) {
+                if (settings.singleRadiusMode) {
+                    geom.cornerRadius = settings.cornerRadius || 0;
+                } else {
+                    geom.cornerRadiusTL = settings.cornerRadiusTL || 0;
+                    geom.cornerRadiusTR = settings.cornerRadiusTR || 0;
+                    geom.cornerRadiusBR = settings.cornerRadiusBR || 0;
+                    geom.cornerRadiusBL = settings.cornerRadiusBL || 0;
+                }
+            }
             itemCompleted({
                 type: "rectangle",
-                geometry: {
-                    x: currentRect.x,
-                    y: currentRect.y,
-                    width: currentRect.width,
-                    height: currentRect.height
-                },
+                geometry: geom,
                 appearances: [
                     {
                         type: "fill",

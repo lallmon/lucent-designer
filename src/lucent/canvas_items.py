@@ -202,6 +202,19 @@ class RectangleItem(ShapeItem):
             y=float(geom.get("y", 0)),
             width=float(geom.get("width", 0)),
             height=float(geom.get("height", 0)),
+            corner_radius=float(geom.get("cornerRadius", 0)),
+            corner_radius_tl=(
+                float(geom["cornerRadiusTL"]) if "cornerRadiusTL" in geom else None
+            ),
+            corner_radius_tr=(
+                float(geom["cornerRadiusTR"]) if "cornerRadiusTR" in geom else None
+            ),
+            corner_radius_br=(
+                float(geom["cornerRadiusBR"]) if "cornerRadiusBR" in geom else None
+            ),
+            corner_radius_bl=(
+                float(geom["cornerRadiusBL"]) if "cornerRadiusBL" in geom else None
+            ),
         )
         appearances = [Appearance.from_dict(a) for a in data.get("appearances", [])]
         transform = (

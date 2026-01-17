@@ -122,13 +122,41 @@ def _item_to_svg_element(item: "CanvasItem") -> Optional[ET.Element]:
     )
 
     if isinstance(item, RectangleItem):
-        elem = ET.Element("rect")
-        elem.set("x", str(item.geometry.x))
-        elem.set("y", str(item.geometry.y))
-        elem.set("width", str(item.geometry.width))
-        elem.set("height", str(item.geometry.height))
+        geom = item.geometry
+        tl, tr, br, bl = geom.effective_corner_radii_pixels
         stroke = item.stroke
         fill = item.fill
+
+        if tl == tr == br == bl:
+            # Uniform corners - use rect element
+            elem = ET.Element("rect")
+            elem.set("x", str(geom.x))
+            elem.set("y", str(geom.y))
+            elem.set("width", str(geom.width))
+            elem.set("height", str(geom.height))
+            if tl > 0:
+                elem.set("rx", str(tl))
+                elem.set("ry", str(tl))
+        else:
+            # Per-corner radii - use path element
+            elem = ET.Element("path")
+            x, y, w, h = geom.x, geom.y, geom.width, geom.height
+            d_parts = [f"M {x + tl} {y}"]
+            d_parts.append(f"L {x + w - tr} {y}")
+            if tr > 0:
+                d_parts.append(f"A {tr} {tr} 0 0 1 {x + w} {y + tr}")
+            d_parts.append(f"L {x + w} {y + h - br}")
+            if br > 0:
+                d_parts.append(f"A {br} {br} 0 0 1 {x + w - br} {y + h}")
+            d_parts.append(f"L {x + bl} {y + h}")
+            if bl > 0:
+                d_parts.append(f"A {bl} {bl} 0 0 1 {x} {y + h - bl}")
+            d_parts.append(f"L {x} {y + tl}")
+            if tl > 0:
+                d_parts.append(f"A {tl} {tl} 0 0 1 {x + tl} {y}")
+            d_parts.append("Z")
+            elem.set("d", " ".join(d_parts))
+
         elem.set("stroke", stroke.color if stroke else "none")
         elem.set("stroke-width", str(stroke.width if stroke else 0))
         elem.set("stroke-opacity", str(stroke.opacity if stroke else 0))

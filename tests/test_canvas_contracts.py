@@ -353,10 +353,14 @@ class TestGroupMoveContract:
         rect_data = canvas_model.getItemData(1)
         ellipse_data = canvas_model.getItemData(2)
 
-        assert rect_data["geometry"]["x"] == 10
-        assert rect_data["geometry"]["y"] == 20
-        assert ellipse_data["geometry"]["centerX"] == 110
-        assert ellipse_data["geometry"]["centerY"] == 120
+        assert rect_data["geometry"]["x"] == 0
+        assert rect_data["geometry"]["y"] == 0
+        assert rect_data["transform"]["translateX"] == 10
+        assert rect_data["transform"]["translateY"] == 20
+        assert ellipse_data["geometry"]["centerX"] == 100
+        assert ellipse_data["geometry"]["centerY"] == 100
+        assert ellipse_data["transform"]["translateX"] == 10
+        assert ellipse_data["transform"]["translateY"] == 20
 
 
 @pytest.mark.contract

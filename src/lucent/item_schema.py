@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from lucent.canvas_items import (
     CanvasItem,
@@ -167,6 +167,16 @@ def _parse_transform(data: Dict[str, Any]) -> Dict[str, Any] | None:
     return result
 
 
+def _parse_optional_corner_radius(geom: Dict[str, Any], key: str) -> Optional[float]:
+    """Parse an optional per-corner radius value."""
+    if key not in geom or geom[key] is None:
+        return None
+    val = geom[key]
+    if val == 0:
+        return None
+    return max(0.0, min(50.0, float(val)))
+
+
 def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
     """Validate rectangle data."""
     try:
@@ -175,6 +185,11 @@ def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
         y = float(geom.get("y", 0))
         width = _clamp_min(float(geom.get("width", 0)), 0.0)
         height = _clamp_min(float(geom.get("height", 0)), 0.0)
+        corner_radius = max(0.0, min(50.0, float(geom.get("cornerRadius", 0))))
+        corner_radius_tl = _parse_optional_corner_radius(geom, "cornerRadiusTL")
+        corner_radius_tr = _parse_optional_corner_radius(geom, "cornerRadiusTR")
+        corner_radius_br = _parse_optional_corner_radius(geom, "cornerRadiusBR")
+        corner_radius_bl = _parse_optional_corner_radius(geom, "cornerRadiusBL")
     except (TypeError, ValueError) as exc:
         raise ItemSchemaError(f"Invalid rectangle numeric field: {exc}") from exc
 
@@ -185,13 +200,29 @@ def validate_rectangle(data: Dict[str, Any]) -> Dict[str, Any]:
     visible = bool(data.get("visible", True))
     locked = bool(data.get("locked", False))
 
+    geometry: Dict[str, Any] = {
+        "x": x,
+        "y": y,
+        "width": width,
+        "height": height,
+        "cornerRadius": corner_radius,
+    }
+    if corner_radius_tl is not None:
+        geometry["cornerRadiusTL"] = corner_radius_tl
+    if corner_radius_tr is not None:
+        geometry["cornerRadiusTR"] = corner_radius_tr
+    if corner_radius_br is not None:
+        geometry["cornerRadiusBR"] = corner_radius_br
+    if corner_radius_bl is not None:
+        geometry["cornerRadiusBL"] = corner_radius_bl
+
     result: Dict[str, Any] = {
         "type": ItemType.RECTANGLE.value,
         "name": name,
         "parentId": parent_id,
         "visible": visible,
         "locked": locked,
-        "geometry": {"x": x, "y": y, "width": width, "height": height},
+        "geometry": geometry,
         "appearances": appearances,
     }
     if transform is not None:
@@ -418,7 +449,15 @@ def parse_item(data: Dict[str, Any]) -> CanvasItem:
     if t is ItemType.RECTANGLE:
         geom = d["geometry"]
         geometry = RectGeometry(
-            x=geom["x"], y=geom["y"], width=geom["width"], height=geom["height"]
+            x=geom["x"],
+            y=geom["y"],
+            width=geom["width"],
+            height=geom["height"],
+            corner_radius=geom.get("cornerRadius", 0),
+            corner_radius_tl=geom.get("cornerRadiusTL"),
+            corner_radius_tr=geom.get("cornerRadiusTR"),
+            corner_radius_br=geom.get("cornerRadiusBR"),
+            corner_radius_bl=geom.get("cornerRadiusBL"),
         )
         return RectangleItem(
             geometry=geometry,

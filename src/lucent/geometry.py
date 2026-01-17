@@ -9,7 +9,7 @@ of their visual appearance (fill, stroke, etc.).
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import math
 
 from PySide6.QtCore import QRectF, QPointF
@@ -71,16 +71,115 @@ class Geometry(ABC):
 class RectGeometry(Geometry):
     """Rectangle geometry defined by position and dimensions."""
 
-    def __init__(self, x: float, y: float, width: float, height: float) -> None:
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        corner_radius: float = 0.0,
+        corner_radius_tl: Optional[float] = None,
+        corner_radius_tr: Optional[float] = None,
+        corner_radius_br: Optional[float] = None,
+        corner_radius_bl: Optional[float] = None,
+    ) -> None:
         self.x = float(x)
         self.y = float(y)
         self.width = max(0.0, float(width))
         self.height = max(0.0, float(height))
+        self.corner_radius = max(0.0, min(50.0, float(corner_radius)))
+        self.corner_radius_tl = (
+            max(0.0, min(50.0, float(corner_radius_tl)))
+            if corner_radius_tl is not None
+            else None
+        )
+        self.corner_radius_tr = (
+            max(0.0, min(50.0, float(corner_radius_tr)))
+            if corner_radius_tr is not None
+            else None
+        )
+        self.corner_radius_br = (
+            max(0.0, min(50.0, float(corner_radius_br)))
+            if corner_radius_br is not None
+            else None
+        )
+        self.corner_radius_bl = (
+            max(0.0, min(50.0, float(corner_radius_bl)))
+            if corner_radius_bl is not None
+            else None
+        )
+
+    @property
+    def has_per_corner_radius(self) -> bool:
+        """Return True if any per-corner radius is set."""
+        return any(
+            r is not None
+            for r in [
+                self.corner_radius_tl,
+                self.corner_radius_tr,
+                self.corner_radius_br,
+                self.corner_radius_bl,
+            ]
+        )
+
+    @property
+    def corner_radius_pixels(self) -> float:
+        """Return uniform corner radius in pixels (percentage of smaller dimension)."""
+        return (self.corner_radius / 100.0) * min(self.width, self.height)
+
+    @property
+    def effective_corner_radii_pixels(self) -> Tuple[float, float, float, float]:
+        """Return (tl, tr, br, bl) corner radii in pixels."""
+        min_dim = min(self.width, self.height)
+        tl = (
+            (self.corner_radius_tl / 100.0) * min_dim
+            if self.corner_radius_tl is not None
+            else self.corner_radius_pixels
+        )
+        tr = (
+            (self.corner_radius_tr / 100.0) * min_dim
+            if self.corner_radius_tr is not None
+            else self.corner_radius_pixels
+        )
+        br = (
+            (self.corner_radius_br / 100.0) * min_dim
+            if self.corner_radius_br is not None
+            else self.corner_radius_pixels
+        )
+        bl = (
+            (self.corner_radius_bl / 100.0) * min_dim
+            if self.corner_radius_bl is not None
+            else self.corner_radius_pixels
+        )
+        return (tl, tr, br, bl)
 
     def to_painter_path(self) -> QPainterPath:
         """Convert to QPainterPath."""
         path = QPainterPath()
-        path.addRect(self.x, self.y, self.width, self.height)
+        tl, tr, br, bl = self.effective_corner_radii_pixels
+
+        if tl == tr == br == bl:
+            if tl > 0:
+                path.addRoundedRect(self.x, self.y, self.width, self.height, tl, tl)
+            else:
+                path.addRect(self.x, self.y, self.width, self.height)
+        else:
+            # Per-corner radii: build path manually
+            x, y, w, h = self.x, self.y, self.width, self.height
+            path.moveTo(x + tl, y)
+            path.lineTo(x + w - tr, y)
+            if tr > 0:
+                path.arcTo(x + w - 2 * tr, y, 2 * tr, 2 * tr, 90, -90)
+            path.lineTo(x + w, y + h - br)
+            if br > 0:
+                path.arcTo(x + w - 2 * br, y + h - 2 * br, 2 * br, 2 * br, 0, -90)
+            path.lineTo(x + bl, y + h)
+            if bl > 0:
+                path.arcTo(x, y + h - 2 * bl, 2 * bl, 2 * bl, -90, -90)
+            path.lineTo(x, y + tl)
+            if tl > 0:
+                path.arcTo(x, y, 2 * tl, 2 * tl, 180, -90)
+            path.closeSubpath()
         return path
 
     def get_bounds(self) -> QRectF:
@@ -89,12 +188,22 @@ class RectGeometry(Geometry):
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary."""
-        return {
+        result: Dict[str, Any] = {
             "x": self.x,
             "y": self.y,
             "width": self.width,
             "height": self.height,
+            "cornerRadius": self.corner_radius,
         }
+        if self.corner_radius_tl is not None:
+            result["cornerRadiusTL"] = self.corner_radius_tl
+        if self.corner_radius_tr is not None:
+            result["cornerRadiusTR"] = self.corner_radius_tr
+        if self.corner_radius_br is not None:
+            result["cornerRadiusBR"] = self.corner_radius_br
+        if self.corner_radius_bl is not None:
+            result["cornerRadiusBL"] = self.corner_radius_bl
+        return result
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "RectGeometry":
@@ -104,6 +213,19 @@ class RectGeometry(Geometry):
             y=float(data.get("y", 0)),
             width=float(data.get("width", 0)),
             height=float(data.get("height", 0)),
+            corner_radius=float(data.get("cornerRadius", 0)),
+            corner_radius_tl=(
+                float(data["cornerRadiusTL"]) if "cornerRadiusTL" in data else None
+            ),
+            corner_radius_tr=(
+                float(data["cornerRadiusTR"]) if "cornerRadiusTR" in data else None
+            ),
+            corner_radius_br=(
+                float(data["cornerRadiusBR"]) if "cornerRadiusBR" in data else None
+            ),
+            corner_radius_bl=(
+                float(data["cornerRadiusBL"]) if "cornerRadiusBL" in data else None
+            ),
         )
 
     def to_fill_vertices(self) -> VertexList:
@@ -146,7 +268,17 @@ class RectGeometry(Geometry):
 
     def translated(self, dx: float, dy: float) -> "RectGeometry":
         """Return a new rectangle translated by dx, dy."""
-        return RectGeometry(self.x + dx, self.y + dy, self.width, self.height)
+        return RectGeometry(
+            self.x + dx,
+            self.y + dy,
+            self.width,
+            self.height,
+            self.corner_radius,
+            self.corner_radius_tl,
+            self.corner_radius_tr,
+            self.corner_radius_br,
+            self.corner_radius_bl,
+        )
 
 
 class EllipseGeometry(Geometry):

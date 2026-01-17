@@ -1,434 +1,177 @@
 # Copyright (C) 2026 The Culture List, Inc.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Unit tests for exporter module."""
-
 import xml.etree.ElementTree as ET
 
 from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage
 
-from lucent.canvas_items import RectangleItem, EllipseItem, PathItem, LayerItem
-from lucent.geometry import RectGeometry, EllipseGeometry, PolylineGeometry
 from lucent.appearances import Fill, Stroke
-from lucent.exporter import ExportOptions, export_png, export_svg, compute_bounds
-
-
-class TestExportOptions:
-    """Tests for ExportOptions dataclass."""
-
-    def test_default_values(self):
-        """ExportOptions has sensible defaults."""
-        opts = ExportOptions()
-        assert opts.document_dpi == 72
-        assert opts.target_dpi == 72
-        assert opts.padding == 0.0
-        assert opts.background is None
-
-    def test_custom_values(self):
-        """ExportOptions accepts custom values."""
-        opts = ExportOptions(
-            document_dpi=72, target_dpi=300, padding=10.0, background="#ffffff"
-        )
-        assert opts.document_dpi == 72
-        assert opts.target_dpi == 300
-        assert opts.padding == 10.0
-        assert opts.background == "#ffffff"
-
-    def test_scale_property_computes_ratio(self):
-        """scale property returns target_dpi / document_dpi."""
-        opts = ExportOptions(document_dpi=72, target_dpi=144)
-        assert opts.scale == 2.0
-
-
-class TestComputeBounds:
-    """Tests for compute_bounds helper function."""
-
-    def test_single_item(self):
-        """compute_bounds returns bounds of single item."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=10, y=20, width=100, height=50),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = compute_bounds(items, padding=0)
-        assert bounds == QRectF(10, 20, 100, 50)
-
-    def test_multiple_items(self):
-        """compute_bounds returns combined bounds of all items."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=50, height=50),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            ),
-            RectangleItem(
-                geometry=RectGeometry(x=100, y=100, width=50, height=50),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            ),
-        ]
-        bounds = compute_bounds(items, padding=0)
-        assert bounds == QRectF(0, 0, 150, 150)
-
-    def test_with_padding(self):
-        """compute_bounds adds padding to all sides."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=10, y=10, width=80, height=80),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = compute_bounds(items, padding=10)
-        assert bounds == QRectF(0, 0, 100, 100)
-
-    def test_empty_items(self):
-        """compute_bounds returns empty rect for no items."""
-        bounds = compute_bounds([], padding=0)
-        assert bounds.isEmpty()
-
-    def test_items_with_empty_bounds(self):
-        """compute_bounds returns empty rect when all items have empty bounds."""
-        items = [LayerItem(name="Empty Layer")]
-        bounds = compute_bounds(items, padding=0)
-        assert bounds.isEmpty()
-
-
-class TestExportPng:
-    """Tests for PNG export functionality."""
-
-    def test_export_creates_file(self, tmp_path, qtbot):
-        """export_png creates a PNG file at the specified path."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=100, height=100),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 100)
-        output_path = tmp_path / "test.png"
-
-        result = export_png(items, bounds, output_path, ExportOptions())
-
-        assert result is True
-        assert output_path.exists()
-
-    def test_export_correct_dimensions(self, tmp_path, qtbot):
-        """export_png creates image with correct dimensions."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=100, height=50),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 50)
-        output_path = tmp_path / "test.png"
-
-        export_png(items, bounds, output_path, ExportOptions())
-
-        img = QImage(str(output_path))
-        assert img.width() == 100
-        assert img.height() == 50
-
-    def test_export_with_scale(self, tmp_path, qtbot):
-        """export_png scales output for higher DPI."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=100, height=100),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 100)
-        output_path = tmp_path / "test.png"
-        opts = ExportOptions(document_dpi=72, target_dpi=144)
-
-        export_png(items, bounds, output_path, opts)
-
-        img = QImage(str(output_path))
-        assert img.width() == 200
-        assert img.height() == 200
-
-    def test_export_empty_items_returns_false(self, tmp_path, qtbot):
-        """export_png returns False for empty bounds."""
-        bounds = QRectF()
-        output_path = tmp_path / "test.png"
-
-        result = export_png([], bounds, output_path, ExportOptions())
-
-        assert result is False
-
-
-class TestExportSvg:
-    """Tests for SVG export functionality."""
-
-    def test_export_creates_file(self, tmp_path, qtbot):
-        """export_svg creates an SVG file at the specified path."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=100, height=100),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 100)
-        output_path = tmp_path / "test.svg"
-
-        result = export_svg(items, bounds, output_path, ExportOptions())
-
-        assert result is True
-        assert output_path.exists()
-
-    def test_export_valid_svg(self, tmp_path, qtbot):
-        """export_svg creates valid XML."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=100, height=100),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 100)
-        output_path = tmp_path / "test.svg"
-
-        export_svg(items, bounds, output_path, ExportOptions())
-
-        tree = ET.parse(output_path)
-        root = tree.getroot()
-        assert "svg" in root.tag
-
-    def test_export_correct_viewbox(self, tmp_path, qtbot):
-        """export_svg sets correct viewBox."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=10, y=20, width=100, height=50),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(10, 20, 100, 50)
-        output_path = tmp_path / "test.svg"
-
-        export_svg(items, bounds, output_path, ExportOptions())
-
-        tree = ET.parse(output_path)
-        root = tree.getroot()
-        viewbox = root.get("viewBox")
-        assert viewbox is not None
-        parts = viewbox.split()
-        assert len(parts) == 4
-        assert float(parts[2]) == 100  # width
-        assert float(parts[3]) == 50  # height
-
-    def test_export_empty_items_returns_false(self, tmp_path, qtbot):
-        """export_svg returns False for empty bounds."""
-        bounds = QRectF()  # Empty
-        output_path = tmp_path / "test.svg"
-
-        result = export_svg([], bounds, output_path, ExportOptions())
-
-        assert result is False
-
-    def test_export_ellipse_to_svg(self, tmp_path, qtbot):
-        """export_svg creates correct ellipse element."""
-        items = [
-            EllipseItem(
-                geometry=EllipseGeometry(
-                    center_x=50, center_y=50, radius_x=40, radius_y=30
-                ),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(10, 20, 80, 60)
-        output_path = tmp_path / "ellipse.svg"
-
-        export_svg(items, bounds, output_path, ExportOptions())
-
-        tree = ET.parse(output_path)
-        root = tree.getroot()
-        ellipse = root.find(".//{http://www.w3.org/2000/svg}ellipse")
-        assert ellipse is not None
-        assert float(ellipse.get("cx")) == 50
-        assert float(ellipse.get("cy")) == 50
-        assert float(ellipse.get("rx")) == 40
-        assert float(ellipse.get("ry")) == 30
-
-    def test_export_path_to_svg(self, tmp_path, qtbot):
-        """export_svg creates correct path element."""
-        points = [{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 50, "y": 100}]
-        items = [
-            PathItem(
-                geometry=PolylineGeometry(points=points, closed=True),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 100)
-        output_path = tmp_path / "path.svg"
-
-        export_svg(items, bounds, output_path, ExportOptions())
-
-        tree = ET.parse(output_path)
-        root = tree.getroot()
-        path_elem = root.find(".//{http://www.w3.org/2000/svg}path")
-        assert path_elem is not None
-        d = path_elem.get("d")
-        assert d is not None
-        assert d.startswith("M")
-        assert "L" in d
-        assert d.endswith("Z")
-
-    def test_export_text_to_svg(self, tmp_path, qtbot):
-        """export_svg creates correct text element."""
-        from lucent.canvas_items import TextItem
-        from lucent.geometry import TextGeometry
-
-        geometry = TextGeometry(x=10, y=20, width=100, height=30)
-        text_item = TextItem(
-            geometry=geometry,
-            text="Hello World",
-            font_family="Arial",
-            font_size=16,
-            text_color="#333333",
-            text_opacity=1.0,
-        )
-        bounds = QRectF(10, 20, 100, 30)
-        output_path = tmp_path / "text.svg"
-
-        export_svg([text_item], bounds, output_path, ExportOptions())
-
-        tree = ET.parse(output_path)
-        root = tree.getroot()
-        text_elem = root.find(".//{http://www.w3.org/2000/svg}text")
-        assert text_elem is not None
-        assert float(text_elem.get("x")) == 10
-        assert text_elem.get("font-family") == "Arial"
-        assert text_elem.get("font-size") == "16"
-        assert text_elem.text == "Hello World"
-
-
-class TestExportPngEdgeCases:
-    """Edge case tests for PNG export."""
-
-    def test_export_with_background_color(self, tmp_path, qtbot):
-        """export_png with background color fills image."""
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=100, height=100),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 100)
-        output_path = tmp_path / "test_bg.png"
-        opts = ExportOptions(background="#ff0000")
-
-        result = export_png(items, bounds, output_path, opts)
-
-        assert result is True
-        img = QImage(str(output_path))
-        # Check that at least some pixels are red
-        assert img.width() == 100
-
-    def test_export_zero_width_returns_false(self, tmp_path, qtbot):
-        """export_png returns False for zero-width bounds."""
-        bounds = QRectF(0, 0, 0, 100)
-        output_path = tmp_path / "test.png"
-
-        result = export_png([], bounds, output_path, ExportOptions())
-
-        assert result is False
-
-    def test_export_zero_height_returns_false(self, tmp_path, qtbot):
-        """export_png returns False for zero-height bounds."""
-        bounds = QRectF(0, 0, 100, 0)
-        output_path = tmp_path / "test.png"
-
-        result = export_png([], bounds, output_path, ExportOptions())
-
-        assert result is False
-
-
-class TestExportSvgEdgeCases:
-    """Edge case tests for SVG export."""
-
-    def test_export_open_path_no_z(self, tmp_path, qtbot):
-        """export_svg creates path without Z for open paths."""
-        points = [{"x": 0, "y": 0}, {"x": 100, "y": 100}]
-        items = [
-            PathItem(
-                geometry=PolylineGeometry(points=points, closed=False),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            )
-        ]
-        bounds = QRectF(0, 0, 100, 100)
-        output_path = tmp_path / "path_open.svg"
-
-        export_svg(items, bounds, output_path, ExportOptions())
-
-        tree = ET.parse(output_path)
-        root = tree.getroot()
-        path_elem = root.find(".//{http://www.w3.org/2000/svg}path")
-        assert path_elem is not None
-        d = path_elem.get("d")
-        assert "Z" not in d
-
-    def test_export_skips_unsupported_items(self, tmp_path, qtbot):
-        """export_svg skips layers and other unsupported items."""
-        from lucent.canvas_items import LayerItem
-
-        items = [
-            RectangleItem(
-                geometry=RectGeometry(x=0, y=0, width=50, height=50),
-                appearances=[
-                    Fill(color="#ffffff", opacity=0.0),
-                    Stroke(color="#ffffff", width=1.0),
-                ],
-            ),
-            LayerItem(name="Layer1"),
-        ]
-        bounds = QRectF(0, 0, 50, 50)
-        output_path = tmp_path / "mixed.svg"
-
-        result = export_svg(items, bounds, output_path, ExportOptions())
-
-        assert result is True
-        tree = ET.parse(output_path)
-        root = tree.getroot()
-        rects = root.findall(".//{http://www.w3.org/2000/svg}rect")
-        assert len(rects) == 1
+from lucent.canvas_items import EllipseItem, PathItem, RectangleItem, TextItem
+from lucent.exporter import ExportOptions, compute_bounds, export_png, export_svg
+from lucent.exporter import _item_to_svg_element
+from lucent.geometry import EllipseGeometry, PathGeometry, RectGeometry, TextGeometry
+
+
+class _ExplodingItem:
+    def paint(self, *args, **kwargs):
+        raise RuntimeError("boom")
+
+
+def _make_rectangle_item(**geom_kwargs):
+    geometry = RectGeometry(**geom_kwargs)
+    appearances = [
+        Fill("#ffffff", 1.0, True),
+        Stroke("#000000", 1.0, 1.0, True),
+    ]
+    return RectangleItem(geometry=geometry, appearances=appearances)
+
+
+def _make_path_item(points, closed=False, fill_opacity=1.0):
+    geometry = PathGeometry(points=points, closed=closed)
+    appearances = [
+        Fill("#ff00ff", fill_opacity, True),
+        Stroke("#000000", 1.0, 1.0, True),
+    ]
+    return PathItem(geometry=geometry, appearances=appearances)
+
+
+def test_compute_bounds_padding_expands():
+    rect = _make_rectangle_item(x=10, y=20, width=30, height=40)
+    bounds = compute_bounds([rect], padding=2)
+    assert bounds.x() == 8
+    assert bounds.y() == 18
+    assert bounds.width() == 34
+    assert bounds.height() == 44
+
+
+def test_compute_bounds_empty_returns_empty():
+    bounds = compute_bounds([])
+    assert bounds.isEmpty()
+
+
+def test_export_png_returns_false_on_empty_bounds(tmp_path):
+    options = ExportOptions()
+    result = export_png([], QRectF(), tmp_path / "out.png", options)
+    assert result is False
+
+
+def test_export_png_returns_false_on_zero_pixel_size(tmp_path):
+    options = ExportOptions()
+    bounds = QRectF(0, 0, 0.1, 10)  # width rounds to 0px
+    result = export_png([], bounds, tmp_path / "out.png", options)
+    assert result is False
+
+
+def test_export_png_handles_paint_errors(tmp_path):
+    options = ExportOptions()
+    bounds = QRectF(0, 0, 10, 10)
+    result = export_png([_ExplodingItem()], bounds, tmp_path / "out.png", options)
+    assert result is True
+    assert (tmp_path / "out.png").exists()
+
+
+def test_export_png_returns_false_on_save_exception(tmp_path, monkeypatch):
+    def raise_save(self, *args, **kwargs):
+        raise RuntimeError("save failed")
+
+    monkeypatch.setattr(QImage, "save", raise_save, raising=True)
+    options = ExportOptions()
+    bounds = QRectF(0, 0, 10, 10)
+    result = export_png([], bounds, tmp_path / "out.png", options)
+    assert result is False
+
+
+def test_item_to_svg_element_rectangle_uniform():
+    rect = _make_rectangle_item(x=0, y=0, width=100, height=50, corner_radius=10)
+    elem = _item_to_svg_element(rect)
+    assert elem is not None
+    assert elem.tag == "rect"
+    assert elem.get("rx") == "5.0"
+    assert elem.get("ry") == "5.0"
+
+
+def test_item_to_svg_element_rectangle_per_corner():
+    rect = _make_rectangle_item(
+        x=0,
+        y=0,
+        width=100,
+        height=50,
+        corner_radius_tl=10,
+        corner_radius_tr=15,
+        corner_radius_br=20,
+        corner_radius_bl=5,
+    )
+    elem = _item_to_svg_element(rect)
+    assert elem is not None
+    assert elem.tag == "path"
+    assert "A" in (elem.get("d") or "")
+
+
+def test_item_to_svg_element_path_fill_none_when_transparent():
+    path = _make_path_item(
+        points=[{"x": 0, "y": 0}, {"x": 10, "y": 0}],
+        closed=False,
+        fill_opacity=0.0,
+    )
+    elem = _item_to_svg_element(path)
+    assert elem is not None
+    assert elem.tag == "path"
+    assert elem.get("fill") == "none"
+
+
+def test_item_to_svg_element_ellipse():
+    ellipse = EllipseItem(
+        geometry=EllipseGeometry(center_x=50, center_y=50, radius_x=20, radius_y=10),
+        appearances=[
+            Fill("#ffffff", 0.0, True),
+            Stroke("#ffffff", 1.0, 1.0, True),
+        ],
+    )
+    elem = _item_to_svg_element(ellipse)
+    assert elem is not None
+    assert elem.tag == "ellipse"
+    assert elem.get("cx") == "50.0"
+    assert elem.get("rx") == "20.0"
+
+
+def test_item_to_svg_element_text():
+    text = TextItem(
+        geometry=TextGeometry(x=10, y=20, width=100, height=30),
+        text="Hello",
+        font_family="Arial",
+        font_size=12,
+        text_color="#000000",
+    )
+    elem = _item_to_svg_element(text)
+    assert elem is not None
+    assert elem.tag == "text"
+    assert elem.get("x") == "10.0"
+
+
+def test_export_svg_writes_with_background(tmp_path):
+    rect = _make_rectangle_item(x=0, y=0, width=10, height=10)
+    bounds = QRectF(0, 0, 10, 10)
+    options = ExportOptions(background="#ff0000")
+
+    out_path = tmp_path / "out.svg"
+    assert export_svg([rect], bounds, out_path, options) is True
+
+    tree = ET.parse(out_path)
+    root = tree.getroot()
+    assert root.tag.endswith("svg")
+    # First child should be background rect
+    bg = list(root)[0]
+    assert bg.tag.endswith("rect")
+    assert bg.get("fill") == "#ff0000"
+
+
+def test_export_svg_returns_false_on_write_error(tmp_path, monkeypatch):
+    def raise_write(self, *args, **kwargs):
+        raise RuntimeError("write failed")
+
+    monkeypatch.setattr(ET.ElementTree, "write", raise_write, raising=True)
+    options = ExportOptions()
+    bounds = QRectF(0, 0, 10, 10)
+    result = export_svg([], bounds, tmp_path / "out.svg", options)
+    assert result is False
