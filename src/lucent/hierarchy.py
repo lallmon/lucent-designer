@@ -10,6 +10,8 @@ This module provides pure functions for working with container hierarchies
 
 from typing import List, Optional, Callable, Any
 
+from lucent.canvas_items import ArtboardItem
+
 
 def get_container_by_id(
     items: List[Any],
@@ -173,6 +175,8 @@ def is_effectively_locked(
         return False
     parent = get_container_by_id(items, parent_id, is_container)
     if not parent:
+        return False
+    if isinstance(parent, ArtboardItem):
         return False
     try:
         parent_index = items.index(parent)
