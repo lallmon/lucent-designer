@@ -23,7 +23,7 @@ from test_helpers import (
     make_rectangle,
     make_ellipse,
     make_path,
-    make_layer,
+    make_artboard,
     make_group,
     make_text,
 )
@@ -553,7 +553,7 @@ class TestRemoveItemCommandWithContainers:
 
     def test_remove_layer_removes_children(self, canvas_model):
         """Test removing a layer also removes its children."""
-        layer_data = make_layer(name="Layer1", layer_id="layer-1")
+        layer_data = make_artboard(name="Layer1", artboard_id="layer-1")
         canvas_model.addItem(layer_data)
         canvas_model.addItem(make_rectangle(name="Child1", parent_id="layer-1"))
         canvas_model.addItem(make_rectangle(name="Child2", parent_id="layer-1"))
@@ -565,7 +565,7 @@ class TestRemoveItemCommandWithContainers:
 
     def test_undo_restores_layer_and_children(self, canvas_model):
         """Test undo restores the layer and all children."""
-        layer_data = make_layer(name="Layer1", layer_id="layer-1")
+        layer_data = make_artboard(name="Layer1", artboard_id="layer-1")
         canvas_model.addItem(layer_data)
         canvas_model.addItem(make_rectangle(name="Child1", parent_id="layer-1"))
         canvas_model.addItem(make_rectangle(name="Child2", parent_id="layer-1"))

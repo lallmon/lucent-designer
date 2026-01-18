@@ -11,7 +11,7 @@ from test_helpers import (
     make_rectangle,
     make_ellipse,
     make_path,
-    make_layer,
+    make_artboard,
     make_text,
 )
 
@@ -154,7 +154,7 @@ class TestCanvasModelDataRoles:
             (make_rectangle, "rectangle"),
             (make_ellipse, "ellipse"),
             (lambda: make_path(points=[{"x": 0, "y": 0}, {"x": 1, "y": 1}]), "path"),
-            (make_layer, "layer"),
+            (make_artboard, "artboard"),
             (make_text, "text"),
         ],
     )
@@ -198,7 +198,7 @@ class TestCanvasModelDataRolesExtended:
         "setup_items, index, role, expectation",
         [
             (
-                lambda: [make_layer(name="Test Layer")],
+                lambda: [make_artboard(name="Test Layer")],
                 0,
                 "item_id",
                 lambda model, idx: isinstance(
@@ -225,7 +225,7 @@ class TestCanvasModelDataRolesExtended:
             ),
             (
                 lambda: [
-                    make_layer(name="Parent Layer"),
+                    make_artboard(name="Parent Layer"),
                     {**make_rectangle(x=0, y=0, width=50, height=50), "parentId": None},
                 ],
                 1,

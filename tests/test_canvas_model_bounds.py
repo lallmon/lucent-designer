@@ -5,7 +5,13 @@
 
 import pytest
 
-from test_helpers import make_rectangle, make_ellipse, make_path, make_layer, make_text
+from test_helpers import (
+    make_rectangle,
+    make_ellipse,
+    make_path,
+    make_artboard,
+    make_text,
+)
 
 
 @pytest.mark.parametrize(
@@ -99,13 +105,19 @@ class TestCanvasModelSetBoundingBox:
         )
         assert result is False
 
-    def test_set_bounding_box_layer_returns_false(self, canvas_model):
-        canvas_model.addItem(make_layer())
+    def test_set_bounding_box_artboard_succeeds(self, canvas_model):
+        """Artboards can have their bounds set since they have geometry."""
+        canvas_model.addItem(make_artboard(x=0, y=0, width=100, height=100))
 
         result = canvas_model.setBoundingBox(
-            0, {"x": 0, "y": 0, "width": 10, "height": 10}
+            0, {"x": 50, "y": 50, "width": 200, "height": 150}
         )
-        assert result is False
+        assert result is True
+        item = canvas_model.getItems()[0]
+        assert item.x == 50
+        assert item.y == 50
+        assert item.width == 200
+        assert item.height == 150
 
     def test_set_path_bounding_box_empty_points(self, canvas_model):
         canvas_model.addItem(make_path(points=[]))
@@ -218,8 +230,9 @@ class TestCanvasModelGetGeometryBounds:
         assert canvas_model.getGeometryBounds(-1) is None
         assert canvas_model.getGeometryBounds(999) is None
 
-    def test_get_geometry_bounds_layer_returns_none(self, canvas_model):
-        canvas_model.addItem(make_layer(name="Layer"))
+    def test_get_geometry_bounds_group_returns_none(self, canvas_model):
+        """Groups have no geometry, so getGeometryBounds returns None."""
+        canvas_model.addItem({"type": "group", "name": "Test Group"})
         assert canvas_model.getGeometryBounds(0) is None
 
 

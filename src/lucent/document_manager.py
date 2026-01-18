@@ -316,18 +316,18 @@ class DocumentManager(QObject):
         }
 
     @Slot(str, str, int, float, str, result=bool)
-    def exportLayer(
+    def exportArtboard(
         self,
-        layer_id: str,
+        artboard_id: str,
         path: str,
         target_dpi: int,
         padding: float,
         background: str,
     ) -> bool:
-        """Export a layer to PNG or SVG.
+        """Export an artboard to PNG or SVG.
 
         Args:
-            layer_id: ID of the layer to export
+            artboard_id: ID of the artboard to export
             path: Output file path (format determined by extension)
             target_dpi: Target DPI for export (e.g., 72, 144, 300)
             padding: Padding in canvas units
@@ -336,29 +336,41 @@ class DocumentManager(QObject):
         Returns:
             True if export succeeded, False on error
         """
+        from PySide6.QtCore import QRectF
+
         from lucent.exporter import (
             ExportOptions,
             export_png,
             export_svg,
-            compute_bounds,
         )
 
         local_path = self._url_to_path(path)
-        items = self._canvas_model.getLayerItems(layer_id)
 
-        if not items:
+        # Get artboard bounds from its geometry
+        artboard_bounds = self._canvas_model.getArtboardBounds(artboard_id)
+        if artboard_bounds["width"] <= 0 or artboard_bounds["height"] <= 0:
             return False
+
+        # Get child items for rendering
+        items = self._canvas_model.getArtboardItems(artboard_id)
+
+        # Empty string means transparent, otherwise use specified color
+        effective_bg = background if background else None
 
         options = ExportOptions(
             document_dpi=self._document_dpi,
             target_dpi=target_dpi,
             padding=padding,
-            background=background if background else None,
+            background=effective_bg,
         )
 
-        bounds = compute_bounds(items, padding)
-        if bounds.isEmpty():
-            return False
+        # Use artboard's defined bounds (not computed from children)
+        bounds = QRectF(
+            artboard_bounds["x"] - padding,
+            artboard_bounds["y"] - padding,
+            artboard_bounds["width"] + 2 * padding,
+            artboard_bounds["height"] + 2 * padding,
+        )
 
         # Determine format from extension
         if local_path.lower().endswith(".svg"):

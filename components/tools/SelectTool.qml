@@ -186,12 +186,21 @@ Item {
             if (!nearAnyHandle && hitTestCallback && viewportToCanvasCallback && Lucent.SelectionManager.selectedItemIndex >= 0) {
                 var canvasCoords = viewportToCanvasCallback(screenX, screenY);
                 var hitIndex = hitTestCallback(canvasCoords.x, canvasCoords.y);
+
+                // If hit returns the same selected item, prepare for drag
                 if (hitIndex === Lucent.SelectionManager.selectedItemIndex) {
                     clickedOnSelectedObject = true;
-                }
+                } else
+                // If hit returns a different item (e.g., child inside artboard), don't drag
+                // Let the click pass through to select the child instead
+                if (hitIndex >= 0) {
+                    clickedOnSelectedObject = false;
+                } else
+                // If no hit but inside bounds of selected non-group, allow drag
                 if (!clickedOnSelectedObject && getBoundsCallback) {
                     var selectedItem = Lucent.SelectionManager.selectedItem;
-                    if (selectedItem) {
+                    // Only allow bounds-based drag for non-group items
+                    if (selectedItem && selectedItem.type !== "group") {
                         var bounds = getBoundsCallback(Lucent.SelectionManager.selectedItemIndex);
                         if (bounds && bounds.width >= 0 && bounds.height >= 0) {
                             if (canvasCoords.x >= bounds.x && canvasCoords.x <= bounds.x + bounds.width && canvasCoords.y >= bounds.y && canvasCoords.y <= bounds.y + bounds.height) {

@@ -22,14 +22,16 @@ QtObject {
         if (!items)
             return -1;
 
+        var artboardHitIndex = -1;
+
         // Iterate backwards so topmost items hit first.
         for (var i = items.length - 1; i >= 0; i--) {
             var item = items[i];
             if (!item || !item.type)
                 continue;
 
-            // Skip containers - they're selectable via LayerPanel, not canvas clicks
-            if (item.type === "layer" || item.type === "group")
+            // Skip groups - they're selectable via LayerPanel, not canvas clicks
+            if (item.type === "group")
                 continue;
 
             // Use modelIndex from item if available, otherwise fall back to array index
@@ -53,10 +55,16 @@ QtObject {
             }
 
             if (canvasX >= bounds.x - expand && canvasX <= bounds.x + bounds.width + expand && canvasY >= bounds.y - expand && canvasY <= bounds.y + bounds.height + expand) {
+                // Prefer selecting non-artboard items inside artboards.
+                if (item.type === "artboard") {
+                    if (artboardHitIndex < 0)
+                        artboardHitIndex = resultIndex;
+                    continue;
+                }
                 return resultIndex;
             }
         }
-        return -1;
+        return artboardHitIndex;
     }
 
     function applySelection(selectionManager, canvasModel, index) {

@@ -48,7 +48,7 @@ ToolBar {
 
     readonly property bool hasEditableSelection: {
         var t = currentSelectionType;
-        return t === "rectangle" || t === "ellipse" || t === "path" || t === "text";
+        return t === "rectangle" || t === "ellipse" || t === "path" || t === "text" || t === "artboard";
     }
 
     // Determine which settings to display: selected item type takes priority over active tool
@@ -56,6 +56,7 @@ ToolBar {
 
     // Expose tool settings components directly for reactive binding
     readonly property var toolSettings: ({
+            "artboard": artboardSettings,
             "rectangle": rectangleSettings,
             "ellipse": ellipseSettings,
             "pen": penSettings,
@@ -67,6 +68,13 @@ ToolBar {
         anchors.leftMargin: 8
         anchors.rightMargin: 8
         spacing: 4
+
+        Lucent.ArtboardToolSettings {
+            id: artboardSettings
+            visible: root.displayType === "artboard"
+            editMode: root.hasEditableSelection && root.currentSelectionType === "artboard"
+            selectedItem: root.hasEditableSelection ? root.currentSelection : null
+        }
 
         Lucent.RectangleToolSettings {
             id: rectangleSettings

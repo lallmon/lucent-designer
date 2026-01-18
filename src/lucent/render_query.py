@@ -25,7 +25,7 @@ def get_render_items(
 
     Args:
         items: List of all canvas items.
-        is_container: Predicate to identify container items (Layer, Group).
+        is_container: Predicate to identify container items (Artboard, Group).
         is_renderable: Predicate to identify renderable items.
         is_visible: Predicate to check if item at index is effectively visible.
 

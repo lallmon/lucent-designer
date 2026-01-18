@@ -8,7 +8,7 @@ from test_helpers import (
     make_ellipse,
     make_text,
     make_group,
-    make_layer,
+    make_artboard,
 )
 
 
@@ -89,14 +89,16 @@ class TestDeleteItemsLocked:
         assert canvas_model.count() == 1
 
     def test_effectively_locked_item_not_deleted(self, canvas_model):
-        """Items in locked containers should not be deleted."""
-        canvas_model.addItem(make_layer(name="Layer", layer_id="layer1", locked=True))
+        """Items in locked artboards should still be deleted."""
+        canvas_model.addItem(
+            make_artboard(name="Layer", artboard_id="layer1", locked=True)
+        )
         canvas_model.addItem(make_rectangle(parent_id="layer1"))
 
         deleted = canvas_model.deleteItems([1])
 
-        assert deleted == 0
-        assert canvas_model.count() == 2
+        assert deleted == 1
+        assert canvas_model.count() == 1
 
     def test_mixed_locked_unlocked(self, canvas_model):
         """Only unlocked items are deleted from mixed selection."""
@@ -128,7 +130,7 @@ class TestDeleteItemsContainers:
 
     def test_delete_layer_removes_children(self, canvas_model):
         """Deleting a layer should remove its children too."""
-        canvas_model.addItem(make_layer(name="Layer", layer_id="layer1"))
+        canvas_model.addItem(make_artboard(name="Layer", artboard_id="layer1"))
         canvas_model.addItem(make_rectangle(parent_id="layer1"))
         assert canvas_model.count() == 2
 

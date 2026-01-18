@@ -3,7 +3,7 @@
 
 """Tests for transform panel model methods - position, size, and origin control."""
 
-from test_helpers import make_rectangle, make_layer
+from test_helpers import make_rectangle, make_artboard
 
 
 class TestGetDisplayedPosition:
@@ -69,7 +69,7 @@ class TestGetDisplayedPosition:
 
     def test_displayed_position_layer_returns_none(self, canvas_model):
         """Layers have no displayed position."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+        canvas_model.addItem(make_artboard(name="Test Layer"))
         assert canvas_model.getDisplayedPosition(0) is None
 
 
@@ -135,7 +135,7 @@ class TestSetItemPosition:
 
     def test_set_position_layer_no_op(self, canvas_model):
         """Setting position on layer should do nothing."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+        canvas_model.addItem(make_artboard(name="Test Layer"))
         canvas_model.setItemPosition(0, "x", 50)
 
 
@@ -240,7 +240,7 @@ class TestSetDisplayedSize:
 
     def test_set_displayed_size_layer_no_op(self, canvas_model):
         """Setting size on layer should do nothing."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+        canvas_model.addItem(make_artboard(name="Test Layer"))
         canvas_model.setDisplayedSize(0, "width", 200, False)
 
     def test_set_displayed_size_zero_geometry_no_op(self, canvas_model):
@@ -292,7 +292,7 @@ class TestGetDisplayedSize:
 
     def test_displayed_size_layer_returns_none(self, canvas_model):
         """Layers have no displayed size."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+        canvas_model.addItem(make_artboard(name="Test Layer"))
         assert canvas_model.getDisplayedSize(0) is None
 
 
@@ -366,7 +366,7 @@ class TestHasNonIdentityTransform:
 
     def test_layer_returns_false(self, canvas_model):
         """Layers have no transform, return False."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+        canvas_model.addItem(make_artboard(name="Test Layer"))
         assert canvas_model.hasNonIdentityTransform(0) is False
 
 
@@ -483,7 +483,7 @@ class TestSetItemOrigin:
 
     def test_set_origin_layer_no_op(self, canvas_model):
         """setItemOrigin on layer should do nothing."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+        canvas_model.addItem(make_artboard(name="Test Layer"))
         canvas_model.setItemOrigin(0, 0.5, 0.5)
 
     def test_set_origin_emits_transform_changed(self, canvas_model, qtbot):

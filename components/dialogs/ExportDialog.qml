@@ -9,12 +9,12 @@ import ".." as Lucent
 
 Dialog {
     id: root
-    title: qsTr("Export Layer")
+    title: qsTr("Export Artboard")
     modal: true
     standardButtons: Dialog.Cancel
 
-    property string layerId: ""
-    property string layerName: "Layer"
+    property string artboardId: ""
+    property string artboardName: "Artboard"
 
     // Document DPI is always 72 (points = pixels at 1:1)
     readonly property int documentDPI: 72
@@ -27,17 +27,17 @@ Dialog {
     }
 
     readonly property real computedWidth: {
-        if (!canvasModel || !layerId)
+        if (!canvasModel || !artboardId)
             return 0;
-        var bounds = canvasModel.getLayerBounds(layerId);
+        var bounds = canvasModel.getArtboardBounds(artboardId);
         var scale = selectedDPI / documentDPI;
         return (bounds.width + paddingInput.value * 2) * scale;
     }
 
     readonly property real computedHeight: {
-        if (!canvasModel || !layerId)
+        if (!canvasModel || !artboardId)
             return 0;
-        var bounds = canvasModel.getLayerBounds(layerId);
+        var bounds = canvasModel.getArtboardBounds(artboardId);
         var scale = selectedDPI / documentDPI;
         return (bounds.height + paddingInput.value * 2) * scale;
     }
@@ -56,7 +56,7 @@ Dialog {
                 var bg = transparentCheck.checked ? "" : bgColorPicker.color.toString();
                 var filePath = saveDialog.file.toString();
                 console.log("Exporting to:", filePath, "DPI:", root.selectedDPI);
-                var result = documentManager.exportLayer(root.layerId, filePath, root.selectedDPI, paddingInput.value, bg);
+                var result = documentManager.exportArtboard(root.artboardId, filePath, root.selectedDPI, paddingInput.value, bg);
                 console.log("Export result:", result);
             }
             root.close();
@@ -69,7 +69,7 @@ Dialog {
         spacing: 12
 
         Label {
-            text: qsTr("Exporting: %1").arg(root.layerName)
+            text: qsTr("Exporting: %1").arg(root.artboardName)
             font.bold: true
         }
 

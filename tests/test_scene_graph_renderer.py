@@ -339,22 +339,22 @@ class TestSceneGraphRendererItemModified:
         from lucent.scene_graph_renderer import SceneGraphRenderer
 
         # Add a layer (which has an id attribute)
-        canvas_model.addItem({"type": "layer", "name": "Test Layer"})
+        canvas_model.addItem({"type": "artboard", "name": "Test Layer"})
         layer = canvas_model.getItem(0)
-        layer_id = layer.id
+        artboard_id = layer.id
 
         renderer = SceneGraphRenderer()
         renderer.setModel(canvas_model)
 
         # Manually add to cache to test invalidation logic
-        renderer._texture_cache._cache[layer_id] = "dummy_entry"
-        assert layer_id in renderer._texture_cache._cache
+        renderer._texture_cache._cache[artboard_id] = "dummy_entry"
+        assert artboard_id in renderer._texture_cache._cache
 
         # Simulate item modification
         renderer._on_item_modified(0, {"visible": False})
 
         # Cache should be invalidated
-        assert layer_id not in renderer._texture_cache._cache
+        assert artboard_id not in renderer._texture_cache._cache
 
     def test_skips_invalidation_for_items_without_id(
         self, qapp, canvas_model, history_manager
@@ -433,18 +433,22 @@ class TestSceneGraphRendererCreateNodeForItem:
 
         assert result is None
 
-    def test_returns_none_for_layer_item(self, qapp):
-        """LayerItem returns None (containers aren't rendered directly)."""
-        from lucent.scene_graph_renderer import SceneGraphRenderer
-        from lucent.canvas_items import LayerItem
+    def test_artboard_creates_texture_cache_entry(self, qapp):
+        """ArtboardItem creates a texture cache entry (renders with border)."""
+        from lucent.canvas_items import ArtboardItem
         from lucent.texture_cache import TextureCache
 
-        renderer = SceneGraphRenderer()
-        layer = LayerItem(name="Layer 1", visible=True, locked=False)
+        cache = TextureCache()
+        artboard = ArtboardItem(
+            x=0, y=0, width=100, height=80, name="Artboard 1", visible=True
+        )
 
-        result = renderer._create_node_for_item(layer, 0, 0, None, TextureCache())
+        entry = cache.get_or_create(artboard, "artboard-1")
 
-        assert result is None
+        # Artboards render with a border, bounds expanded by 2pt stroke
+        assert entry is not None
+        assert entry.bounds.width() == 104  # 100 + 2*2
+        assert entry.bounds.height() == 84  # 80 + 2*2
 
     def test_returns_none_for_group_item(self, qapp):
         """GroupItem returns None (containers aren't rendered directly)."""
@@ -481,6 +485,78 @@ class TestSceneGraphRendererCreateNodeForItem:
         )
 
         result = renderer._create_node_for_item(item, 0, 0, None, TextureCache())
+
+        assert result is None
+
+
+class TestSceneGraphRendererArtboardBackground:
+    """Tests for artboard background rendering path."""
+
+    def test_background_node_none_for_non_artboard(self, qapp):
+        """Non-artboard items do not create background nodes."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+        from lucent.canvas_items import RectangleItem
+        from lucent.geometry import RectGeometry
+        from lucent.appearances import Fill
+        from lucent.transforms import Transform
+
+        renderer = SceneGraphRenderer()
+        rect = RectangleItem(
+            name="Rect",
+            geometry=RectGeometry(0, 0, 10, 10),
+            appearances=[Fill(color="#ff0000")],
+            transform=Transform(),
+            visible=True,
+            locked=False,
+        )
+
+        result = renderer._create_artboard_background_node(rect, 0, 0, object())
+
+        assert result is None
+
+    def test_background_node_none_for_empty_color(self, qapp):
+        """Empty background color skips node creation."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+        from lucent.canvas_items import ArtboardItem
+
+        renderer = SceneGraphRenderer()
+        artboard = ArtboardItem(
+            x=0,
+            y=0,
+            width=100,
+            height=80,
+            name="Artboard",
+            background_color="",
+            visible=True,
+        )
+
+        result = renderer._create_artboard_background_node(artboard, 0, 0, object())
+
+        assert result is None
+
+    def test_background_node_none_when_texture_creation_fails(self, qapp):
+        """Returns None if texture creation fails."""
+        from lucent.scene_graph_renderer import SceneGraphRenderer
+        from lucent.canvas_items import ArtboardItem
+
+        class DummyWindow:
+            def createTextureFromImage(self, image):
+                return None
+
+        renderer = SceneGraphRenderer()
+        artboard = ArtboardItem(
+            x=0,
+            y=0,
+            width=100,
+            height=80,
+            name="Artboard",
+            background_color="#ffffff",
+            visible=True,
+        )
+
+        result = renderer._create_artboard_background_node(
+            artboard, 0, 0, DummyWindow()
+        )
 
         assert result is None
 

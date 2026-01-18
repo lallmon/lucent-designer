@@ -9,7 +9,7 @@ from test_helpers import (
     make_path,
     make_text,
     make_group,
-    make_layer,
+    make_artboard,
 )
 
 
@@ -121,7 +121,7 @@ class TestMoveItemsPath:
 
 
 class TestMoveItemsGroup:
-    """Test moving group/layer containers."""
+    """Test moving group/artboard containers."""
 
     def test_move_group_moves_children(self, canvas_model):
         """Moving a group updates translation for all its child items."""
@@ -143,10 +143,10 @@ class TestMoveItemsGroup:
         assert ellipse_data["geometry"]["centerY"] == 100
         _assert_transform_translation(ellipse_data, 20, 30)
 
-    def test_move_layer_moves_children(self, canvas_model):
-        """Moving a layer updates translation for all its child items."""
-        canvas_model.addItem(make_layer(name="Layer", layer_id="layer1"))
-        canvas_model.addItem(make_rectangle(x=10, y=10, parent_id="layer1"))
+    def test_move_artboard_moves_children(self, canvas_model):
+        """Moving an artboard updates translation for all its child items."""
+        canvas_model.addItem(make_artboard(name="Artboard", artboard_id="artboard1"))
+        canvas_model.addItem(make_rectangle(x=10, y=10, parent_id="artboard1"))
 
         canvas_model.moveItems([0], 5, 5)
 
@@ -191,8 +191,10 @@ class TestMoveItemsLocked:
         _assert_transform_translation(data, 0, 0)
 
     def test_effectively_locked_item_not_moved(self, canvas_model):
-        """Items in locked containers should not be moved."""
-        canvas_model.addItem(make_layer(name="Layer", layer_id="layer1", locked=True))
+        """Items in locked artboards should still be moved."""
+        canvas_model.addItem(
+            make_artboard(name="Layer", artboard_id="layer1", locked=True)
+        )
         canvas_model.addItem(make_rectangle(x=0, y=0, parent_id="layer1"))
 
         canvas_model.moveItems([1], 10, 10)
@@ -200,7 +202,7 @@ class TestMoveItemsLocked:
         data = canvas_model.getItemData(1)
         assert data["geometry"]["x"] == 0
         assert data["geometry"]["y"] == 0
-        _assert_transform_translation(data, 0, 0)
+        _assert_transform_translation(data, 10, 10)
 
 
 class TestMoveItemsMixedTypes:

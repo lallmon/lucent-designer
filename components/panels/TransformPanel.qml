@@ -15,30 +15,42 @@ Item {
     readonly property int selectedIndex: Lucent.SelectionManager.selectedItemIndex
     readonly property bool hasValidSelection: selectedIndex >= 0 && canvasModel
 
-    readonly property bool hasEditableBounds: selectedItem && ["rectangle", "ellipse", "path", "text"].includes(selectedItem.type)
+    readonly property bool hasEditableBounds: selectedItem && ["rectangle", "ellipse", "path", "text", "artboard"].includes(selectedItem.type)
+    readonly property bool isArtboard: selectedItem && selectedItem.type === "artboard"
 
     readonly property bool isLocked: hasValidSelection && canvasModel.isEffectivelyLocked(selectedIndex)
 
     property var currentTransform: null
     readonly property bool hasUnitSettings: typeof unitSettings !== "undefined" && unitSettings !== null
     property bool hasFlattenableTransform: false
+    readonly property bool hasTransformControls: !isArtboard && currentTransform !== null
 
     function refreshTransform() {
-        currentTransform = hasValidSelection ? canvasModel.getItemTransform(selectedIndex) : null;
         if (hasValidSelection) {
-            var pos = canvasModel.getDisplayedPosition(selectedIndex);
-            displayedX = pos ? pos.x : 0;
-            displayedY = pos ? pos.y : 0;
-            var size = canvasModel.getDisplayedSize(selectedIndex);
-            displayedWidth = size ? size.width : 0;
-            displayedHeight = size ? size.height : 0;
+            if (isArtboard) {
+                currentTransform = null;
+                var bounds = canvasModel.getBoundingBox(selectedIndex);
+                displayedX = bounds ? bounds.x : 0;
+                displayedY = bounds ? bounds.y : 0;
+                displayedWidth = bounds ? bounds.width : 0;
+                displayedHeight = bounds ? bounds.height : 0;
+            } else {
+                currentTransform = canvasModel.getItemTransform(selectedIndex);
+                var pos = canvasModel.getDisplayedPosition(selectedIndex);
+                displayedX = pos ? pos.x : 0;
+                displayedY = pos ? pos.y : 0;
+                var size = canvasModel.getDisplayedSize(selectedIndex);
+                displayedWidth = size ? size.width : 0;
+                displayedHeight = size ? size.height : 0;
+            }
         } else {
+            currentTransform = null;
             displayedX = 0;
             displayedY = 0;
             displayedWidth = 0;
             displayedHeight = 0;
         }
-        hasFlattenableTransform = root.controlsEnabled && root.hasValidSelection && canvasModel && canvasModel.hasNonIdentityTransform(root.selectedIndex);
+        hasFlattenableTransform = root.controlsEnabled && root.hasTransformControls && canvasModel && canvasModel.hasNonIdentityTransform(root.selectedIndex);
         if (widthField && !widthField.activeFocus) {
             widthField.text = (hasUnitSettings ? unitSettings.canvasToDisplay(displayedWidth) : displayedWidth).toFixed(unitPrecision);
         }
@@ -72,6 +84,9 @@ Item {
     Connections {
         target: Lucent.SelectionManager
         function onSelectedItemIndexChanged() {
+            root.refreshTransform();
+        }
+        function onSelectedItemChanged() {
             root.refreshTransform();
         }
     }
@@ -177,6 +192,8 @@ Item {
             Grid {
                 columns: 3
                 spacing: 2
+                enabled: root.hasTransformControls
+                opacity: root.hasTransformControls ? 1.0 : 0.4
 
                 Repeater {
                     // Generate 3x3 origin grid: (0, 0.5, 1) × (0, 0.5, 1)
@@ -243,7 +260,19 @@ Item {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
                                 var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
-                                canvasModel.setItemPosition(root.selectedIndex, "x", target);
+                                if (root.isArtboard) {
+                                    var bounds = canvasModel.getBoundingBox(root.selectedIndex);
+                                    if (bounds) {
+                                        canvasModel.setBoundingBox(root.selectedIndex, {
+                                            x: target,
+                                            y: bounds.y,
+                                            width: bounds.width,
+                                            height: bounds.height
+                                        });
+                                    }
+                                } else {
+                                    canvasModel.setItemPosition(root.selectedIndex, "x", target);
+                                }
                                 appController.focusCanvas();
                             }
                             text = (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedX) : root.displayedX).toFixed(root.unitPrecision);
@@ -275,7 +304,19 @@ Item {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
                                 var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
-                                canvasModel.setItemPosition(root.selectedIndex, "y", target);
+                                if (root.isArtboard) {
+                                    var bounds = canvasModel.getBoundingBox(root.selectedIndex);
+                                    if (bounds) {
+                                        canvasModel.setBoundingBox(root.selectedIndex, {
+                                            x: bounds.x,
+                                            y: target,
+                                            width: bounds.width,
+                                            height: bounds.height
+                                        });
+                                    }
+                                } else {
+                                    canvasModel.setItemPosition(root.selectedIndex, "y", target);
+                                }
                                 appController.focusCanvas();
                             }
                             text = (root.hasUnitSettings ? unitSettings.canvasToDisplay(root.displayedY) : root.displayedY).toFixed(root.unitPrecision);
@@ -314,7 +355,24 @@ Item {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
                                 var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
-                                canvasModel.setDisplayedSize(root.selectedIndex, "width", target, root.proportionalScale);
+                                if (root.isArtboard) {
+                                    var bounds = canvasModel.getBoundingBox(root.selectedIndex);
+                                    if (bounds) {
+                                        var newWidth = Math.max(1, target);
+                                        var newHeight = bounds.height;
+                                        if (root.proportionalScale && bounds.width > 0) {
+                                            newHeight = bounds.height * (newWidth / bounds.width);
+                                        }
+                                        canvasModel.setBoundingBox(root.selectedIndex, {
+                                            x: bounds.x,
+                                            y: bounds.y,
+                                            width: newWidth,
+                                            height: newHeight
+                                        });
+                                    }
+                                } else {
+                                    canvasModel.setDisplayedSize(root.selectedIndex, "width", target, root.proportionalScale);
+                                }
                                 appController.focusCanvas();
                             }
                             text = root.unitWidth.toFixed(root.unitPrecision);
@@ -346,7 +404,24 @@ Item {
                             var val = parseFloat(text);
                             if (isFinite(val)) {
                                 var target = root.hasUnitSettings ? unitSettings.displayToCanvas(val) : val;
-                                canvasModel.setDisplayedSize(root.selectedIndex, "height", target, root.proportionalScale);
+                                if (root.isArtboard) {
+                                    var bounds = canvasModel.getBoundingBox(root.selectedIndex);
+                                    if (bounds) {
+                                        var newHeight = Math.max(1, target);
+                                        var newWidth = bounds.width;
+                                        if (root.proportionalScale && bounds.height > 0) {
+                                            newWidth = bounds.width * (newHeight / bounds.height);
+                                        }
+                                        canvasModel.setBoundingBox(root.selectedIndex, {
+                                            x: bounds.x,
+                                            y: bounds.y,
+                                            width: newWidth,
+                                            height: newHeight
+                                        });
+                                    }
+                                } else {
+                                    canvasModel.setDisplayedSize(root.selectedIndex, "height", target, root.proportionalScale);
+                                }
                                 appController.focusCanvas();
                             }
                             text = root.unitHeight.toFixed(root.unitPrecision);
@@ -422,8 +497,8 @@ Item {
             Layout.leftMargin: Lucent.Styles.pad.xsm
             Layout.rightMargin: Lucent.Styles.pad.xsm
             spacing: 8
-            enabled: root.controlsEnabled
-            opacity: root.controlsEnabled ? 1.0 : 0.5
+            enabled: root.controlsEnabled && root.hasTransformControls
+            opacity: (root.controlsEnabled && root.hasTransformControls) ? 1.0 : 0.5
 
             Label {
                 text: qsTr("Rotate:")

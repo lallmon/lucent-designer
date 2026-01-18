@@ -10,7 +10,7 @@ from PySide6.QtCore import QModelIndex
 if TYPE_CHECKING:
     from lucent.canvas_model import CanvasModel
 
-from lucent.canvas_items import CanvasItem, GroupItem, LayerItem
+from lucent.canvas_items import ArtboardItem, CanvasItem, GroupItem
 from lucent.item_schema import (
     item_to_dict,
     parse_item,
@@ -102,7 +102,7 @@ class RemoveItemCommand(Command):
             self._item_data = self._model._itemToDict(item)
 
             # If removing a container, also remove its descendants
-            if isinstance(item, (LayerItem, GroupItem)):
+            if isinstance(item, (ArtboardItem, GroupItem)):
                 container_id = item.id
                 self._removed_children = []
                 descendant_indices = self._model._get_descendant_indices(container_id)
@@ -141,7 +141,7 @@ class RemoveItemCommand(Command):
             self._model.itemAdded.emit(insert_at)
 
             # Reinsert previously removed children, preserving order
-            # Insert children after the layer to keep grouping reasonable
+            # Insert children after the container to keep grouping reasonable
             for child_index, child_data in sorted(
                 self._removed_children, key=lambda x: x[0]
             ):
@@ -433,7 +433,7 @@ class DuplicateItemCommand(Command):
             else self._model._generate_name(str(item_type))
         )
 
-        if item_type in ("group", "layer"):
+        if item_type in ("group", "artboard"):
             new_id = str(uuid.uuid4())
             old_id = clone.get("id")
             if old_id:
@@ -482,7 +482,7 @@ class DuplicateItemCommand(Command):
             return
         self._source_item_ref = source_item
         indices = [self._source_index]
-        if isinstance(source_item, (LayerItem, GroupItem)):
+        if isinstance(source_item, (ArtboardItem, GroupItem)):
             indices.extend(sorted(self._model._get_descendant_indices(source_item.id)))
             self._source_container_id = source_item.id
 
@@ -494,7 +494,7 @@ class DuplicateItemCommand(Command):
             data = self._model._itemToDict(items[idx])
             clone = self._clone_item_data(data)
             if clone:
-                is_container = clone.get("type") in ("group", "layer")
+                is_container = clone.get("type") in ("group", "artboard")
                 if idx == self._source_index and is_container:
                     parent_clone = clone
                     new_parent_id = clone.get("id")

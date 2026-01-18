@@ -5,7 +5,7 @@
 
 import math
 from lucent.model_geometry import shape_to_path_data
-from lucent.canvas_items import RectangleItem, EllipseItem, PathItem, LayerItem
+from lucent.canvas_items import RectangleItem, EllipseItem, PathItem, ArtboardItem
 from lucent.geometry import RectGeometry, EllipseGeometry, PolylineGeometry
 from lucent.transforms import Transform
 from lucent.item_schema import item_to_dict
@@ -75,8 +75,8 @@ class TestShapeToPathData:
 
     def test_item_without_transform_returns_none(self):
         """Item without transform attribute should return None."""
-        # LayerItem has no transform
-        item = LayerItem(name="Test Layer")
+        # ArtboardItem has no transform
+        item = ArtboardItem(name="Test Layer")
 
         result = shape_to_path_data(item, item_to_dict)
 

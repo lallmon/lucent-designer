@@ -8,8 +8,8 @@ from PySide6.QtGui import QPainter
 from lucent.canvas_items import (
     CanvasItem,
     RectangleItem,
+    ArtboardItem,
     EllipseItem,
-    LayerItem,
     GroupItem,
     PathItem,
     TextItem,
@@ -356,67 +356,101 @@ class TestCanvasPainting:
         painter.end()
 
 
-class TestLayerItem:
-    """Tests for LayerItem class."""
+class TestArtboardItem:
+    """Tests for ArtboardItem class."""
 
     def test_basic_creation(self):
-        """Test creating a basic layer with a name."""
-        layer = LayerItem(name="Layer 1")
-        assert layer.name == "Layer 1"
+        """Test creating a basic artboard with a name."""
+        artboard = ArtboardItem(name="Artboard 1")
+        assert artboard.name == "Artboard 1"
+
+    def test_creation_with_geometry(self):
+        """Test creating an artboard with geometry."""
+        artboard = ArtboardItem(x=100, y=50, width=800, height=600)
+        assert artboard.x == 100
+        assert artboard.y == 50
+        assert artboard.width == 800
+        assert artboard.height == 600
+
+    def test_background_color_defaults_and_custom(self):
+        """Artboards should default to white background and accept custom colors."""
+        artboard = ArtboardItem()
+        assert artboard.background_color == "#ffffff"
+        custom = ArtboardItem(background_color="#112233")
+        assert custom.background_color == "#112233"
 
     def test_creation_empty_name(self):
-        """Test creating a layer with empty name."""
-        layer = LayerItem()
-        assert layer.name == ""
+        """Test creating an artboard with empty name."""
+        artboard = ArtboardItem()
+        assert artboard.name == ""
 
-    def test_layer_has_unique_id(self):
-        """LayerItem should have an auto-generated unique ID."""
-        layer = LayerItem(name="Test")
-        assert layer.id is not None
-        assert len(layer.id) > 0
+    def test_artboard_has_unique_id(self):
+        """ArtboardItem should have an auto-generated unique ID."""
+        artboard = ArtboardItem(name="Test")
+        assert artboard.id is not None
+        assert len(artboard.id) > 0
 
-    def test_multiple_layers_have_different_ids(self):
-        """Multiple LayerItems should have different IDs."""
-        layer1 = LayerItem(name="Layer 1")
-        layer2 = LayerItem(name="Layer 2")
-        assert layer1.id != layer2.id
+    def test_multiple_artboards_have_different_ids(self):
+        """Multiple ArtboardItems should have different IDs."""
+        artboard1 = ArtboardItem(name="Artboard 1")
+        artboard2 = ArtboardItem(name="Artboard 2")
+        assert artboard1.id != artboard2.id
 
-    def test_layer_id_preserved_when_provided(self):
-        """LayerItem should use provided ID if given."""
-        layer = LayerItem(name="Test", layer_id="custom-id-123")
-        assert layer.id == "custom-id-123"
+    def test_artboard_id_preserved_when_provided(self):
+        """ArtboardItem should use provided ID if given."""
+        artboard = ArtboardItem(name="Test", artboard_id="custom-id-123")
+        assert artboard.id == "custom-id-123"
 
     def test_from_dict_with_name(self):
-        """Test creating layer from dictionary with name."""
-        data = {"type": "layer", "name": "Background"}
-        layer = LayerItem.from_dict(data)
-        assert layer.name == "Background"
+        """Test creating artboard from dictionary with name."""
+        data = {
+            "type": "artboard",
+            "name": "Background",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 100,
+        }
+        artboard = ArtboardItem.from_dict(data)
+        assert artboard.name == "Background"
 
     def test_from_dict_with_id(self):
-        """Test creating layer from dictionary with id."""
-        data = {"type": "layer", "name": "Background", "id": "layer-abc-123"}
-        layer = LayerItem.from_dict(data)
-        assert layer.id == "layer-abc-123"
+        """Test creating artboard from dictionary with id."""
+        data = {
+            "type": "artboard",
+            "name": "Background",
+            "id": "artboard-abc-123",
+            "x": 0,
+            "y": 0,
+            "width": 100,
+            "height": 100,
+        }
+        artboard = ArtboardItem.from_dict(data)
+        assert artboard.id == "artboard-abc-123"
 
-    def test_layer_is_canvas_item(self):
-        """LayerItem should be a CanvasItem subclass."""
-        layer = LayerItem(name="Test Layer")
-        assert isinstance(layer, CanvasItem)
+    def test_artboard_is_canvas_item(self):
+        """ArtboardItem should be a CanvasItem subclass."""
+        artboard = ArtboardItem(name="Test Artboard")
+        assert isinstance(artboard, CanvasItem)
 
-    def test_paint_does_nothing(self):
-        """Layer paint method should be a no-op (doesn't raise)."""
-        layer = LayerItem(name="Test Layer")
-        layer.paint(None, 1.0, 0, 0)
+    def test_get_bounds(self):
+        """Artboard get_bounds should return its geometry."""
+        artboard = ArtboardItem(x=10, y=20, width=200, height=150)
+        bounds = artboard.get_bounds()
+        assert bounds.x() == 10
+        assert bounds.y() == 20
+        assert bounds.width() == 200
+        assert bounds.height() == 150
 
     def test_locked_property(self):
         """Test locked property."""
-        layer = LayerItem(name="Test", locked=True)
-        assert layer.locked is True
+        artboard = ArtboardItem(name="Test", locked=True)
+        assert artboard.locked is True
 
     def test_visible_property(self):
         """Test visible property."""
-        layer = LayerItem(name="Test", visible=False)
-        assert layer.visible is False
+        artboard = ArtboardItem(name="Test", visible=False)
+        assert artboard.visible is False
 
 
 class TestGroupItem:

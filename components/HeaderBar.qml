@@ -75,13 +75,13 @@ ToolBar {
                 MenuSeparator {}
 
                 Action {
-                    text: qsTr("Export &Layer...")
+                    text: qsTr("Export &Artboard...")
                     shortcut: "Ctrl+E"
-                    enabled: Lucent.SelectionManager.selectedItem && Lucent.SelectionManager.selectedItem.type === "layer"
+                    enabled: Lucent.SelectionManager.selectedItem && Lucent.SelectionManager.selectedItem.type === "artboard"
                     onTriggered: {
                         var item = Lucent.SelectionManager.selectedItem;
-                        if (item && item.type === "layer") {
-                            appController.openExportDialog(item.id, item.name || "Layer");
+                        if (item && item.type === "artboard") {
+                            appController.openExportDialog(item.id, item.name || "Artboard");
                         }
                     }
                 }

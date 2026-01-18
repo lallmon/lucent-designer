@@ -17,7 +17,7 @@ from test_helpers import (
     make_ellipse,
     make_path,
     make_text,
-    make_layer,
+    make_artboard,
     make_group,
 )
 
@@ -32,7 +32,7 @@ class TestSmokeCreateShapes:
         canvas_model.addItem(make_ellipse(center_x=200, center_y=200))
         canvas_model.addItem(make_path(points=[{"x": 0, "y": 0}, {"x": 100, "y": 100}]))
         canvas_model.addItem(make_text(x=300, y=300, text="Hello"))
-        canvas_model.addItem(make_layer(name="Layer 1"))
+        canvas_model.addItem(make_artboard(name="Layer 1"))
         canvas_model.addItem(make_group(name="Group 1"))
 
         assert canvas_model.count() == 6
@@ -224,7 +224,7 @@ class TestSmokeStress:
             make_ellipse(center_x=100, center_y=100),
             make_path(points=[{"x": 0, "y": 0}, {"x": 50, "y": 50}]),
             make_text(x=200, y=200, text="Test"),
-            make_layer(name="Layer"),
+            make_artboard(name="Layer"),
             make_rectangle(x=300, y=300),
         ]
 

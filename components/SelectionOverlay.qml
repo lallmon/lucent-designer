@@ -38,6 +38,8 @@ Shape {
     readonly property real _originX: itemTransform ? (itemTransform.originX || 0) : 0
     readonly property real _originY: itemTransform ? (itemTransform.originY || 0) : 0
 
+    readonly property bool _hasTransform: itemTransform !== null && itemTransform !== undefined
+
     // Displayed size (geometry × scale) - what the user sees
     readonly property real _displayedWidth: _geomWidth * _scaleX
     readonly property real _displayedHeight: _geomHeight * _scaleY
@@ -90,8 +92,8 @@ Shape {
 
     // Rotation arm line from center-top upward
     ShapePath {
-        strokeColor: selectionOverlay.accentColor
-        strokeWidth: selectionOverlay.zoomLevel > 0 ? 1 / selectionOverlay.zoomLevel : 0
+        strokeColor: selectionOverlay._hasTransform ? selectionOverlay.accentColor : "transparent"
+        strokeWidth: selectionOverlay._hasTransform && selectionOverlay.zoomLevel > 0 ? 1 / selectionOverlay.zoomLevel : 0
         fillColor: "transparent"
 
         startX: selectionOverlay.width / 2
@@ -105,6 +107,7 @@ Shape {
     // Rotation handle: stem + grip as a single interactive area
     Item {
         id: rotationHandle
+        visible: selectionOverlay._hasTransform
         x: selectionOverlay.width / 2 - selectionOverlay.handleSize / 2
         y: -selectionOverlay.rotationArmLength - selectionOverlay.handleSize / 2
         width: selectionOverlay.handleSize
@@ -324,6 +327,22 @@ Shape {
                         var avgRatio = (Math.abs(scaleRatioX - 1) > Math.abs(scaleRatioY - 1)) ? scaleRatioX : scaleRatioY;
                         newScaleX = st.scaleX * avgRatio;
                         newScaleY = st.scaleY * avgRatio;
+                    }
+
+                    // Artboards resize via absolute bounds (no transform system)
+                    var selectedItem = Lucent.SelectionManager.selectedItem;
+                    if (selectedItem && selectedItem.type === "artboard") {
+                        var newWidth = b.width * newScaleX;
+                        var newHeight = b.height * newScaleY;
+                        var newX = b.x + b.width * handle.anchorX - newWidth * handle.anchorX;
+                        var newY = b.y + b.height * handle.anchorY - newHeight * handle.anchorY;
+                        selectionOverlay.resizeRequested({
+                            x: newX,
+                            y: newY,
+                            width: newWidth,
+                            height: newHeight
+                        });
+                        return;
                     }
 
                     selectionOverlay.scaleResizeRequested(newScaleX, newScaleY, handle.anchorX, handle.anchorY);

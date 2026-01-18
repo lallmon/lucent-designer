@@ -3,7 +3,7 @@
 
 """CanvasModel transform getters/setters."""
 
-from test_helpers import make_rectangle, make_ellipse, make_path, make_layer
+from test_helpers import make_rectangle, make_ellipse, make_path, make_artboard
 
 
 class TestCanvasModelTransforms:
@@ -32,8 +32,9 @@ class TestCanvasModelTransforms:
         assert canvas_model.getItemTransform(-1) is None
         assert canvas_model.getItemTransform(999) is None
 
-    def test_get_item_transform_layer_returns_none(self, canvas_model):
-        canvas_model.addItem(make_layer(name="Test Layer"))
+    def test_get_item_transform_artboard_returns_none(self, canvas_model):
+        """Artboards don't support transforms."""
+        canvas_model.addItem(make_artboard(name="Test Artboard"))
         assert canvas_model.getItemTransform(0) is None
 
     def test_set_item_transform(self, canvas_model, qtbot):
@@ -63,8 +64,9 @@ class TestCanvasModelTransforms:
         canvas_model.setItemTransform(-1, {"rotate": 45})
         canvas_model.setItemTransform(999, {"rotate": 45})
 
-    def test_set_item_transform_layer_no_op(self, canvas_model):
-        canvas_model.addItem(make_layer(name="Test Layer"))
+    def test_set_item_transform_artboard_no_op(self, canvas_model):
+        """Setting transform on artboard is a no-op."""
+        canvas_model.addItem(make_artboard(name="Test Artboard"))
         canvas_model.setItemTransform(0, {"rotate": 45})
 
     def test_set_item_transform_preserves_pivot_when_missing(self, canvas_model):
@@ -288,9 +290,9 @@ class TestApplyScaleResize:
         assert abs(after[0] - before[0]) < 0.001
         assert abs(after[1] - before[1]) < 0.001
 
-    def test_apply_scale_resize_layer_no_op(self, canvas_model):
-        """applyScaleResize on layer (no transform attr) should do nothing."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+    def test_apply_scale_resize_artboard_no_op(self, canvas_model):
+        """applyScaleResize on artboard (no transform attr) should do nothing."""
+        canvas_model.addItem(make_artboard(name="Test Artboard"))
         # Should not raise
         canvas_model.applyScaleResize(0, 2.0, 2.0, 0.0, 0.0)
 
@@ -426,9 +428,9 @@ class TestBakeTransform:
         assert restored_transform["scaleX"] == original_transform["scaleX"]
         assert restored_bounds["width"] == original_bounds["width"]
 
-    def test_bake_transform_layer_no_op(self, canvas_model):
-        """bakeTransform on layer should do nothing."""
-        canvas_model.addItem(make_layer(name="Test Layer"))
+    def test_bake_transform_artboard_no_op(self, canvas_model):
+        """bakeTransform on artboard should do nothing."""
+        canvas_model.addItem(make_artboard(name="Test Artboard"))
         # Should not raise
         canvas_model.bakeTransform(0)
 

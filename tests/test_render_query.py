@@ -16,7 +16,7 @@ class MockItem:
 
 def is_container(item):
     """Check if item is a container."""
-    return item.type in ("layer", "group")
+    return item.type in ("artboard", "group")
 
 
 def is_renderable(item):
@@ -44,7 +44,7 @@ class TestGetRenderItems:
 
     def test_excludes_containers(self):
         items = [
-            MockItem("layer"),
+            MockItem("artboard"),
             MockItem("rectangle"),
             MockItem("group"),
             MockItem("ellipse"),
@@ -122,7 +122,7 @@ class TestGetHitTestItems:
     def test_includes_all_item_types(self):
         """Hit test includes all types, not just renderable ones."""
         items = [
-            MockItem("layer"),
+            MockItem("artboard"),
             MockItem("group"),
             MockItem("rectangle"),
         ]
@@ -133,6 +133,6 @@ class TestGetHitTestItems:
         result = get_hit_test_items(items, lambda i: True, item_to_dict)
         assert len(result) == 3
         types = [r["type"] for r in result]
-        assert "layer" in types
+        assert "artboard" in types
         assert "group" in types
         assert "rectangle" in types

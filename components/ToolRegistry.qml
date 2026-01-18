@@ -13,6 +13,13 @@ QtObject {
                 iconWeight: "fill",
                 instruction: "<b>Click</b> to select • <b>Drag</b> to move • <b>Shift + click</b> to multi-select • <b>Double-click</b> to edit shapes"
             },
+            "artboard": {
+                name: "Artboard Tool",
+                shortcut: "A",
+                icon: "checkerboard",
+                iconWeight: "regular",
+                instruction: "<b>Click</b> and <b>Drag</b> to draw artboard • <b>Shift</b>: Draw square • <b>Ctrl</b>: Draw from center"
+            },
             "rectangle": {
                 name: "Rectangle Tool",
                 shortcut: "R",
@@ -47,7 +54,7 @@ QtObject {
             }
         })
 
-    readonly property var toolOrder: ["select", "rectangle", "ellipse", "pen", "text"]
+    readonly property var toolOrder: ["select", "artboard", "rectangle", "ellipse", "pen", "text"]
 
     function getTooltip(toolName) {
         var t = tools[toolName];

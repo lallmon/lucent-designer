@@ -7,7 +7,7 @@ from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage
 
 from lucent.texture_cache import TextureCache, TextureCacheEntry
-from lucent.canvas_items import RectangleItem, EllipseItem, LayerItem, GroupItem
+from lucent.canvas_items import RectangleItem, EllipseItem, ArtboardItem, GroupItem
 from lucent.geometry import RectGeometry, EllipseGeometry
 from lucent.appearances import Fill, Stroke
 from lucent.transforms import Transform
@@ -151,14 +151,19 @@ class TestTextureCacheGetOrCreate:
 
         assert entry1 is entry2
 
-    def test_returns_none_for_layer_item(self):
-        """Layers can't be textured - returns None."""
+    def test_creates_entry_for_artboard(self):
+        """Artboards render with a border (transparent background)."""
         cache = TextureCache()
-        layer = LayerItem(name="Layer 1", visible=True, locked=False)
+        artboard = ArtboardItem(
+            x=0, y=0, width=100, height=80, name="Artboard 1", visible=True
+        )
 
-        entry = cache.get_or_create(layer, "layer-1")
+        entry = cache.get_or_create(artboard, "artboard-1")
 
-        assert entry is None
+        assert entry is not None
+        # Bounds are expanded by 2pt stroke on each side
+        assert entry.bounds.width() == 104  # 100 + 2*2
+        assert entry.bounds.height() == 84  # 80 + 2*2
 
     def test_returns_none_for_group_item(self):
         """Groups can't be textured - returns None."""
@@ -249,6 +254,25 @@ class TestTextureCacheVersioning:
         entry2 = cache.get_or_create(item, "rect-1")
 
         # Same entry because transform changes don't affect rasterized texture
+        assert entry1 is entry2
+
+    def test_artboard_background_change_does_not_invalidate_cache(self):
+        """Changing artboard background does not alter outline texture."""
+        cache = TextureCache()
+        artboard = ArtboardItem(
+            x=0,
+            y=0,
+            width=100,
+            height=80,
+            name="Artboard 1",
+            background_color="#ffffff",
+            visible=True,
+        )
+
+        entry1 = cache.get_or_create(artboard, "artboard-1")
+        artboard.background_color = "#112233"
+        entry2 = cache.get_or_create(artboard, "artboard-1")
+
         assert entry1 is entry2
 
 

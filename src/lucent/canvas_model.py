@@ -18,7 +18,7 @@ from lucent.canvas_items import (
     CanvasItem,
     RectangleItem,
     EllipseItem,
-    LayerItem,
+    ArtboardItem,
     GroupItem,
     PathItem,
     TextItem,
@@ -144,8 +144,8 @@ class CanvasModel(QAbstractListModel):
                 return "ellipse"
             elif isinstance(item, PathItem):
                 return "path"
-            elif isinstance(item, LayerItem):
-                return "layer"
+            elif isinstance(item, ArtboardItem):
+                return "artboard"
             elif isinstance(item, GroupItem):
                 return "group"
             elif isinstance(item, TextItem):
@@ -154,7 +154,7 @@ class CanvasModel(QAbstractListModel):
         elif role == self.IndexRole:
             return index.row()
         elif role == self.ItemIdRole:
-            if isinstance(item, (LayerItem, GroupItem)):
+            if isinstance(item, (ArtboardItem, GroupItem)):
                 return item.id
             return None
         elif role == self.ParentIdRole:
@@ -232,23 +232,25 @@ class CanvasModel(QAbstractListModel):
 
     @staticmethod
     def _is_container(item: CanvasItem) -> bool:
-        """Check if an item is a container (Layer or Group)."""
-        return isinstance(item, (LayerItem, GroupItem))
+        """Check if an item is a container (Artboard or Group)."""
+        return isinstance(item, (ArtboardItem, GroupItem))
 
     @staticmethod
     def _is_renderable(item: CanvasItem) -> bool:
-        """Check if an item is renderable (not a container)."""
-        return isinstance(item, (RectangleItem, EllipseItem, PathItem, TextItem))
+        """Check if an item is renderable."""
+        return isinstance(
+            item, (RectangleItem, EllipseItem, PathItem, TextItem, ArtboardItem)
+        )
 
     def _get_container_by_id(self, container_id: Optional[str]) -> Optional[CanvasItem]:
         return get_container_by_id(self._items, container_id, self._is_container)
 
-    def _is_layer_visible(self, layer_id: str) -> bool:
-        container = self._get_container_by_id(layer_id)
+    def _is_container_visible(self, container_id: str) -> bool:
+        container = self._get_container_by_id(container_id)
         return getattr(container, "visible", True) if container else True
 
-    def _is_layer_locked(self, layer_id: str) -> bool:
-        container = self._get_container_by_id(layer_id)
+    def _is_container_locked(self, container_id: str) -> bool:
+        container = self._get_container_by_id(container_id)
         return getattr(container, "locked", False) if container else False
 
     def _is_descendant_of(self, candidate_id: Optional[str], ancestor_id: str) -> bool:
@@ -274,6 +276,14 @@ class CanvasModel(QAbstractListModel):
 
         item = self._items[idx]
 
+        # Artboards have direct x, y properties (no geometry/transform)
+        if isinstance(item, ArtboardItem):
+            old_data = self._itemToDict(item)
+            new_data = dict(old_data)
+            new_data["x"] = item.x + dx
+            new_data["y"] = item.y + dy
+            return UpdateItemCommand(self, idx, old_data, new_data)
+
         # Only shapes with geometry can be moved
         if not hasattr(item, "geometry"):
             return None
@@ -294,7 +304,7 @@ class CanvasModel(QAbstractListModel):
 
         This method:
         - Moves all selected items by the given delta
-        - When a group/layer is selected, moves all its descendants
+        - When a group/artboard is selected, moves all its descendants
         - Avoids moving items twice when both container and child are selected
         - Skips locked or effectively locked items
         - Bundles all moves into a single undoable transaction
@@ -313,7 +323,7 @@ class CanvasModel(QAbstractListModel):
         selected_container_ids: set[str] = set()
         for idx in valid_indices:
             item = self._items[idx]
-            if isinstance(item, (GroupItem, LayerItem)):
+            if isinstance(item, (GroupItem, ArtboardItem)):
                 selected_container_ids.add(item.id)
 
         # Track which items we've already processed
@@ -329,7 +339,7 @@ class CanvasModel(QAbstractListModel):
 
             item = self._items[idx]
 
-            if isinstance(item, (GroupItem, LayerItem)):
+            if isinstance(item, (GroupItem, ArtboardItem)):
                 # Move all descendants of this container
                 descendant_indices = self._get_descendant_indices(item.id)
                 for desc_idx in descendant_indices:
@@ -339,6 +349,11 @@ class CanvasModel(QAbstractListModel):
                     if cmd:
                         commands.append(cmd)
                     already_moved.add(desc_idx)
+                # Also move the container itself (artboards have geometry)
+                cmd = self._move_single_item(idx, dx, dy)
+                if cmd:
+                    commands.append(cmd)
+                already_moved.add(idx)
                 moved_container_indices.add(idx)
             else:
                 # Regular shape - skip if parent container is in selection
@@ -412,7 +427,7 @@ class CanvasModel(QAbstractListModel):
         if item_type not in (
             ItemType.RECTANGLE.value,
             ItemType.ELLIPSE.value,
-            ItemType.LAYER.value,
+            ItemType.ARTBOARD.value,
             ItemType.GROUP.value,
             ItemType.PATH.value,
             ItemType.TEXT.value,
@@ -470,7 +485,7 @@ class CanvasModel(QAbstractListModel):
         selected_containers = {
             getattr(self._items[i], "id", None)
             for i in unlocked_indices
-            if isinstance(self._items[i], (LayerItem, GroupItem))
+            if isinstance(self._items[i], (ArtboardItem, GroupItem))
         }
         descendant_skip: set[int] = set()
         for container_id in selected_containers:
@@ -506,11 +521,6 @@ class CanvasModel(QAbstractListModel):
                 new_indices.append(parent_idx)
         return new_indices
 
-    @Slot()
-    def addLayer(self) -> None:
-        """Create a new layer with an auto-generated name."""
-        self.addItem({"type": "layer"})
-
     @Slot(int)
     def removeItem(self, index: int) -> None:
         if not (0 <= index < len(self._items)):
@@ -525,7 +535,7 @@ class CanvasModel(QAbstractListModel):
         """Delete multiple items, skipping locked items and removing container children.
 
         Items are deleted in reverse index order to maintain valid indices.
-        Containers (groups/layers) have their descendants deleted automatically.
+        Containers (groups/artboards) have their descendants deleted automatically.
         All deletions are bundled into a single undoable transaction.
 
         Args:
@@ -555,7 +565,7 @@ class CanvasModel(QAbstractListModel):
             indices_to_delete.add(idx)
 
             # If it's a container, include all descendants
-            if isinstance(item, (GroupItem, LayerItem)):
+            if isinstance(item, (GroupItem, ArtboardItem)):
                 descendant_indices = self._get_descendant_indices(item.id)
                 for desc_idx in descendant_indices:
                     if not self._is_effectively_locked(desc_idx):
@@ -600,7 +610,7 @@ class CanvasModel(QAbstractListModel):
         item = self._items[from_index]
 
         # If moving a container, move its descendants together to keep grouping tidy
-        if isinstance(item, (LayerItem, GroupItem)):
+        if isinstance(item, (ArtboardItem, GroupItem)):
             descendants = self._get_descendant_indices(item.id)
             if descendants:
                 self._moveContainerWithChildren(from_index, to_index, descendants)
@@ -611,11 +621,11 @@ class CanvasModel(QAbstractListModel):
 
     @Slot(int, str)
     def setParent(self, item_index: int, parent_id: str) -> None:  # type: ignore[override]
-        """Set the parent layer for a shape item.
+        """Set the parent artboard for a shape item.
 
         Args:
             item_index: Index of the shape item to reparent
-            parent_id: ID of the layer to set as parent, or empty string to make
+            parent_id: ID of the artboard to set as parent, or empty string to make
                 top-level
         """
         if not (0 <= item_index < len(self._items)):
@@ -633,9 +643,9 @@ class CanvasModel(QAbstractListModel):
         self.updateItem(item_index, {"parentId": new_parent_id})
 
     @Slot(str, result=int)
-    def getLayerIndex(self, layer_id: str) -> int:
-        """Get the index of a layer by its ID."""
-        return self._get_container_index(layer_id, LayerItem)
+    def getArtboardIndex(self, artboard_id: str) -> int:
+        """Get the index of an artboard by its ID."""
+        return self._get_container_index(artboard_id, ArtboardItem)
 
     def _get_container_index(
         self, container_id: str, container_type: Optional[type] = None
@@ -643,7 +653,7 @@ class CanvasModel(QAbstractListModel):
         for i, item in enumerate(self._items):
             if container_type and not isinstance(item, container_type):
                 continue
-            if isinstance(item, (LayerItem, GroupItem)) and item.id == container_id:
+            if isinstance(item, (ArtboardItem, GroupItem)) and item.id == container_id:
                 return i
         return -1
 
@@ -657,12 +667,12 @@ class CanvasModel(QAbstractListModel):
             return container_index + 1
         return max(descendants) + 1
 
-    def _getLayerChildrenIndices(self, layer_id: str) -> List[int]:
-        """Backwards-compatible helper to get direct children indices of a layer."""
+    def _getContainerChildrenIndices(self, container_id: str) -> List[int]:
+        """Get direct children indices of a container."""
         return [
             i
             for i, item in enumerate(self._items)
-            if getattr(item, "parent_id", None) == layer_id
+            if getattr(item, "parent_id", None) == container_id
         ]
 
     def _moveContainerWithChildren(
@@ -699,26 +709,26 @@ class CanvasModel(QAbstractListModel):
     def reparentItem(
         self, item_index: int, parent_id: str, insert_index: int = -1
     ) -> None:
-        """Set parent and move item to be last child of that layer.
+        """Set parent and move item to be last child of that artboard.
 
         This combines setParent + moveItem into a single undoable operation.
-        The item is moved to the requested insert position. For layers, the
-        default insert position is directly below the layer (top of its child
+        The item is moved to the requested insert position. For artboards, the
+        default insert position is directly below the artboard (top of its child
         list in the UI).
 
         Args:
             item_index: Index of the shape item to reparent
-            parent_id: ID of the layer to set as parent, or empty string to unparent
+            parent_id: ID of the artboard to set as parent, or empty string to unparent
             insert_index: Optional target model index to place the item. Defaults
-                to directly below the layer for a new parent, or to current
+                to directly below the artboard for a new parent, or to current
                 position when unparenting.
         """
         if not (0 <= item_index < len(self._items)):
             return
 
         item = self._items[item_index]
-        # Shapes and groups can have parents; layers cannot
-        if isinstance(item, LayerItem):
+        # Shapes and groups can have parents; artboards cannot
+        if isinstance(item, ArtboardItem):
             return
 
         # Convert empty string to None for top-level items
@@ -744,11 +754,10 @@ class CanvasModel(QAbstractListModel):
             ):
                 target_index = item_index
             elif insert_index >= 0:
-                # Explicit insert position - use as final position (post-removal)
-                # Clamp to valid range within parent's children
+                # Explicit insert position - clamp to valid range
                 target_index = max(0, min(insert_index, parent_index))
             else:
-                # Default: place at parent's position (top of children in display)
+                # Default: place at parent's position (below parent in display)
                 target_index = parent_index
                 if item_index < target_index:
                     target_index -= 1
@@ -783,9 +792,8 @@ class CanvasModel(QAbstractListModel):
             self._execute_command(transaction)
 
         # Emit signals for UI update
-        model_index = self.index(
-            target_index if target_index != item_index else item_index, 0
-        )
+        final_index = target_index if target_index != item_index else item_index
+        model_index = self.index(final_index, 0)
         self.dataChanged.emit(model_index, model_index, [])
 
     @Slot(int, dict)
@@ -853,7 +861,7 @@ class CanvasModel(QAbstractListModel):
 
     @Slot(int, result=bool)
     def isEffectivelyLocked(self, index: int) -> bool:
-        """Check if item is effectively locked (own state or parent layer locked)."""
+        """Check if item is effectively locked (own state or locked ancestors)."""
         return self._is_effectively_locked(index)
 
     @Slot(result=int)
@@ -884,36 +892,26 @@ class CanvasModel(QAbstractListModel):
         return self._items
 
     @Slot(str, result="QVariant")  # type: ignore[arg-type]
-    def getLayerItems(self, layer_id: str) -> List[CanvasItem]:
-        """Get all items belonging to a layer (for export)."""
+    def getArtboardItems(self, artboard_id: str) -> List[CanvasItem]:
+        """Get all items belonging to an artboard (for export)."""
         return [
-            item for item in self._items if getattr(item, "parent_id", None) == layer_id
+            item
+            for item in self._items
+            if getattr(item, "parent_id", None) == artboard_id
         ]
 
     @Slot(str, result="QVariant")  # type: ignore[arg-type]
-    def getLayerBounds(self, layer_id: str) -> Dict[str, float]:
-        """Compute combined bounding box of all items in a layer."""
-        from PySide6.QtCore import QRectF
-
-        children = self.getLayerItems(layer_id)
-        if not children:
-            return {"x": 0, "y": 0, "width": 0, "height": 0}
-
-        combined = QRectF()
-        for child in children:
-            child_bounds = child.get_bounds()
-            if not child_bounds.isEmpty():
-                if combined.isEmpty():
-                    combined = child_bounds
-                else:
-                    combined = combined.united(child_bounds)
-
-        return {
-            "x": combined.x(),
-            "y": combined.y(),
-            "width": combined.width(),
-            "height": combined.height(),
-        }
+    def getArtboardBounds(self, artboard_id: str) -> Dict[str, float]:
+        """Get artboard bounds from its geometry (for export)."""
+        for item in self._items:
+            if isinstance(item, ArtboardItem) and item.id == artboard_id:
+                return {
+                    "x": item.x,
+                    "y": item.y,
+                    "width": item.width,
+                    "height": item.height,
+                }
+        return {"x": 0, "y": 0, "width": 0, "height": 0}
 
     @Slot(int, result="QVariant")  # type: ignore[arg-type]
     def getItemData(self, index: int) -> Optional[Dict[str, Any]]:
@@ -1158,6 +1156,29 @@ class CanvasModel(QAbstractListModel):
         anchor_y: float,
     ) -> None:
         """Scale an item while keeping the anchor point fixed."""
+        if not (0 <= index < len(self._items)):
+            return
+
+        item = self._items[index]
+
+        # Artboards resize by updating width/height directly (no transform)
+        if isinstance(item, ArtboardItem):
+            new_width = item.width * new_scale_x
+            new_height = item.height * new_scale_y
+            # Calculate new position based on anchor point
+            new_x = item.x + item.width * anchor_x - new_width * anchor_x
+            new_y = item.y + item.height * anchor_y - new_height * anchor_y
+            self.setBoundingBox(
+                index,
+                {
+                    "x": new_x,
+                    "y": new_y,
+                    "width": new_width,
+                    "height": new_height,
+                },
+            )
+            return
+
         self._transform_service.scale_item(
             index, new_scale_x, new_scale_y, anchor_x, anchor_y
         )
@@ -1324,7 +1345,7 @@ class CanvasModel(QAbstractListModel):
         For rectangles and text: updates x, y, width, height directly.
         For ellipses: converts to centerX, centerY, radiusX, radiusY.
         For paths: translates all points to match the new position.
-        For layers/groups: returns False (non-renderable containers).
+        For groups: returns False (non-renderable containers).
 
         Args:
             index: Index of the item to update.
@@ -1342,13 +1363,12 @@ class CanvasModel(QAbstractListModel):
         return True
 
     def getRenderItems(self) -> List[CanvasItem]:
-        """Return items in model order (bottom to top) skipping layers.
+        """Return items in model order (bottom to top) for rendering.
 
         Model order is treated as bottom-to-top z-order: lower indices are
         beneath higher indices. Rendering should therefore iterate this list in
-        order so later items naturally paint over earlier ones. Layers are not
-        rendered, so they are skipped but the relative order of shapes is
-        preserved exactly as in the model.
+        order so later items naturally paint over earlier ones. Groups are
+        skipped (they don't render directly) but the relative order is preserved.
         """
         return get_render_items(
             self._items,
