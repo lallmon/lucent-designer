@@ -13,6 +13,7 @@ from lucent.exporter import (
     export_jpg,
     export_pdf,
     export_png,
+    export_svg,
 )
 from lucent.geometry import RectGeometry
 
@@ -94,9 +95,37 @@ def test_export_jpg_writes_file(tmp_path):
     assert (tmp_path / "out.jpg").exists()
 
 
+def test_export_jpg_returns_false_on_empty_bounds(tmp_path):
+    options = ExportOptions(background="#ffffff")
+    result = export_jpg([], QRectF(), tmp_path / "out.jpg", options)
+    assert result is False
+
+
 def test_export_pdf_writes_file(tmp_path):
     options = ExportOptions()
     bounds = QRectF(0, 0, 10, 10)
     result = export_pdf([], bounds, tmp_path / "out.pdf", options)
     assert result is True
     assert (tmp_path / "out.pdf").exists()
+
+
+def test_export_pdf_returns_false_on_empty_bounds(tmp_path):
+    options = ExportOptions()
+    result = export_pdf([], QRectF(), tmp_path / "out.pdf", options)
+    assert result is False
+
+
+def test_export_svg_writes_file_with_background(tmp_path):
+    rect = _make_rectangle_item(x=0, y=0, width=10, height=10)
+    bounds = QRectF(0, 0, 10, 10)
+    options = ExportOptions(background="#ff0000")
+    out_path = tmp_path / "out.svg"
+    assert export_svg([rect], bounds, out_path, options) is True
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0
+
+
+def test_export_svg_returns_false_on_empty_bounds(tmp_path):
+    options = ExportOptions()
+    result = export_svg([], QRectF(), tmp_path / "out.svg", options)
+    assert result is False
