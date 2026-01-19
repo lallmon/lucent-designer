@@ -5,18 +5,24 @@
 
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING, Union
 
-from PySide6.QtCore import QRectF
-from PySide6.QtGui import QImage, QPainter, QColor
+from PySide6.QtCore import QMarginsF, QRect, QRectF, QSize, QSizeF
+from PySide6.QtGui import (
+    QImage,
+    QPainter,
+    QColor,
+    QPdfWriter,
+    QPageSize,
+    QPageLayout,
+    QImageWriter,
+)
+from PySide6.QtSvg import QSvgGenerator
 
 if TYPE_CHECKING:
     from lucent.canvas_items import CanvasItem
-
-SVG_NS = "http://www.w3.org/2000/svg"
 
 
 @dataclass
@@ -112,105 +118,83 @@ def export_png(
         return False
 
 
-def _item_to_svg_element(item: "CanvasItem") -> Optional[ET.Element]:
-    """Convert a canvas item to an SVG element."""
-    from lucent.canvas_items import (
-        RectangleItem,
-        EllipseItem,
-        PathItem,
-        TextItem,
-    )
+def export_jpg(
+    items: List["CanvasItem"],
+    bounds: QRectF,
+    path: Union[str, Path],
+    options: ExportOptions,
+) -> bool:
+    """Export items to a JPG file (opaque)."""
+    if bounds.isEmpty():
+        return False
 
-    if isinstance(item, RectangleItem):
-        geom = item.geometry
-        tl, tr, br, bl = geom.effective_corner_radii_pixels
-        stroke = item.stroke
-        fill = item.fill
+    width = int(bounds.width() * options.scale)
+    height = int(bounds.height() * options.scale)
+    if width <= 0 or height <= 0:
+        return False
 
-        if tl == tr == br == bl:
-            # Uniform corners - use rect element
-            elem = ET.Element("rect")
-            elem.set("x", str(geom.x))
-            elem.set("y", str(geom.y))
-            elem.set("width", str(geom.width))
-            elem.set("height", str(geom.height))
-            if tl > 0:
-                elem.set("rx", str(tl))
-                elem.set("ry", str(tl))
-        else:
-            # Per-corner radii - use path element
-            elem = ET.Element("path")
-            x, y, w, h = geom.x, geom.y, geom.width, geom.height
-            d_parts = [f"M {x + tl} {y}"]
-            d_parts.append(f"L {x + w - tr} {y}")
-            if tr > 0:
-                d_parts.append(f"A {tr} {tr} 0 0 1 {x + w} {y + tr}")
-            d_parts.append(f"L {x + w} {y + h - br}")
-            if br > 0:
-                d_parts.append(f"A {br} {br} 0 0 1 {x + w - br} {y + h}")
-            d_parts.append(f"L {x + bl} {y + h}")
-            if bl > 0:
-                d_parts.append(f"A {bl} {bl} 0 0 1 {x} {y + h - bl}")
-            d_parts.append(f"L {x} {y + tl}")
-            if tl > 0:
-                d_parts.append(f"A {tl} {tl} 0 0 1 {x + tl} {y}")
-            d_parts.append("Z")
-            elem.set("d", " ".join(d_parts))
+    image = QImage(width, height, QImage.Format.Format_RGB32)
+    image.fill(QColor(options.background or "#ffffff"))
 
-        elem.set("stroke", stroke.color if stroke else "none")
-        elem.set("stroke-width", str(stroke.width if stroke else 0))
-        elem.set("stroke-opacity", str(stroke.opacity if stroke else 0))
-        elem.set("fill", fill.color if fill else "none")
-        elem.set("fill-opacity", str(fill.opacity if fill else 0))
-        return elem
+    painter = QPainter(image)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    painter.scale(options.scale, options.scale)
+    painter.translate(-bounds.x(), -bounds.y())
 
-    if isinstance(item, EllipseItem):
-        elem = ET.Element("ellipse")
-        elem.set("cx", str(item.geometry.center_x))
-        elem.set("cy", str(item.geometry.center_y))
-        elem.set("rx", str(item.geometry.radius_x))
-        elem.set("ry", str(item.geometry.radius_y))
-        stroke = item.stroke
-        fill = item.fill
-        elem.set("stroke", stroke.color if stroke else "none")
-        elem.set("stroke-width", str(stroke.width if stroke else 0))
-        elem.set("stroke-opacity", str(stroke.opacity if stroke else 0))
-        elem.set("fill", fill.color if fill else "none")
-        elem.set("fill-opacity", str(fill.opacity if fill else 0))
-        return elem
+    for item in items:
+        try:
+            item.paint(painter, zoom_level=1.0, offset_x=0, offset_y=0)
+        except Exception:
+            pass
 
-    if isinstance(item, PathItem):
-        elem = ET.Element("path")
-        points = item.geometry.points
-        if points:
-            d_parts = [f"M {points[0]['x']} {points[0]['y']}"]
-            for p in points[1:]:
-                d_parts.append(f"L {p['x']} {p['y']}")
-            if item.geometry.closed:
-                d_parts.append("Z")
-            elem.set("d", " ".join(d_parts))
-        stroke = item.stroke
-        fill = item.fill
-        fill_opacity = fill.opacity if fill else 0
-        elem.set("stroke", stroke.color if stroke else "none")
-        elem.set("stroke-width", str(stroke.width if stroke else 0))
-        elem.set("stroke-opacity", str(stroke.opacity if stroke else 0))
-        elem.set("fill", fill.color if fill and fill_opacity > 0 else "none")
-        elem.set("fill-opacity", str(fill_opacity))
-        return elem
+    painter.end()
 
-    if isinstance(item, TextItem):
-        elem = ET.Element("text")
-        elem.set("x", str(item.x))
-        elem.set("y", str(item.y + item.font_size))  # SVG text y is baseline
-        elem.set("font-family", item.font_family)
-        elem.set("font-size", str(item.font_size))
-        elem.set("fill", item.text_color)
-        elem.set("fill-opacity", str(item.text_opacity))
-        elem.text = item.text
-        return elem
+    try:
+        writer = QImageWriter(str(path), b"jpg")
+        return writer.write(image)
+    except Exception:
+        return False
 
-    return None
+
+def export_pdf(
+    items: List["CanvasItem"],
+    bounds: QRectF,
+    path: Union[str, Path],
+    options: ExportOptions,
+) -> bool:
+    """Export items to a PDF file."""
+    if bounds.isEmpty():
+        return False
+
+    width = int(bounds.width() * options.scale)
+    height = int(bounds.height() * options.scale)
+    if width <= 0 or height <= 0:
+        return False
+
+    writer = QPdfWriter(str(path))
+    writer.setResolution(int(options.target_dpi))
+    width_points = width * 72.0 / options.target_dpi
+    height_points = height * 72.0 / options.target_dpi
+    page_size = QPageSize(QSizeF(width_points, height_points), QPageSize.Unit.Point)
+    writer.setPageSize(page_size)
+    writer.setPageMargins(QMarginsF(0, 0, 0, 0), QPageLayout.Unit.Point)
+
+    painter = QPainter(writer)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    painter.scale(options.scale, options.scale)
+    painter.translate(-bounds.x(), -bounds.y())
+
+    if options.background:
+        painter.fillRect(bounds, QColor(options.background))
+
+    for item in items:
+        try:
+            item.paint(painter, zoom_level=1.0, offset_x=0, offset_y=0)
+        except Exception:
+            pass
+
+    painter.end()
+    return True
 
 
 def export_svg(
@@ -233,34 +217,29 @@ def export_svg(
     if bounds.isEmpty():
         return False
 
-    ET.register_namespace("", SVG_NS)
-    svg = ET.Element("svg")
-    svg.set("xmlns", SVG_NS)
-    viewbox = (
-        f"{int(bounds.x())} {int(bounds.y())} "
-        f"{int(bounds.width())} {int(bounds.height())}"
-    )
-    svg.set("viewBox", viewbox)
-    svg.set("width", str(bounds.width()))
-    svg.set("height", str(bounds.height()))
+    width = int(bounds.width())
+    height = int(bounds.height())
+    if width <= 0 or height <= 0:
+        return False
+
+    generator = QSvgGenerator()
+    generator.setFileName(str(path))
+    generator.setResolution(int(options.target_dpi))
+    generator.setSize(QSize(width, height))
+    generator.setViewBox(QRect(0, 0, width, height))
+
+    painter = QPainter(generator)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    painter.translate(-bounds.x(), -bounds.y())
 
     if options.background:
-        bg = ET.Element("rect")
-        bg.set("x", str(bounds.x()))
-        bg.set("y", str(bounds.y()))
-        bg.set("width", str(bounds.width()))
-        bg.set("height", str(bounds.height()))
-        bg.set("fill", options.background)
-        svg.append(bg)
+        painter.fillRect(bounds, QColor(options.background))
 
     for item in items:
-        elem = _item_to_svg_element(item)
-        if elem is not None:
-            svg.append(elem)
+        try:
+            item.paint(painter, zoom_level=1.0, offset_x=0, offset_y=0)
+        except Exception:
+            pass
 
-    try:
-        tree = ET.ElementTree(svg)
-        tree.write(str(path), encoding="unicode", xml_declaration=True)
-        return True
-    except Exception:
-        return False
+    painter.end()
+    return True

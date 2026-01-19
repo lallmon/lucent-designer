@@ -11,7 +11,8 @@ from lucent.document_manager import DocumentManager
 from lucent.canvas_model import CanvasModel
 from lucent.history_manager import HistoryManager
 from lucent.file_io import LUCENT_VERSION
-from test_helpers import make_rectangle
+from lucent.unit_settings import UnitSettings
+from test_helpers import make_artboard, make_rectangle
 
 
 @pytest.fixture
@@ -261,6 +262,69 @@ class TestOpenDocument:
         doc_manager.openDocument(str(file_path))
 
         assert doc_manager.dirty is False
+
+
+class TestExportArtboard:
+    """Tests for artboard export scaling behavior."""
+
+    def test_export_artboard_uses_preview_dpi_for_physical_units(
+        self, canvas_model: CanvasModel, monkeypatch, tmp_path: Path
+    ) -> None:
+        unit_settings = UnitSettings(display_unit="in", preview_dpi=100.0)
+        doc_manager = DocumentManager(canvas_model, unit_settings)
+        artboard_id = "artboard-1"
+        canvas_model.addItem(
+            make_artboard(artboard_id=artboard_id, width=100, height=50)
+        )
+
+        captured = {}
+
+        def fake_export_png(items, bounds, path, options):
+            captured["document_dpi"] = options.document_dpi
+            captured["target_dpi"] = options.target_dpi
+            return True
+
+        import lucent.exporter as exporter
+
+        monkeypatch.setattr(exporter, "export_png", fake_export_png)
+
+        result = doc_manager.exportArtboard(
+            artboard_id, str(tmp_path / "out.png"), 200, 0, ""
+        )
+
+        assert result is True
+        assert captured["document_dpi"] == 100
+        assert captured["target_dpi"] == 200
+
+    def test_export_artboard_uses_document_dpi_for_pixel_units(
+        self, canvas_model: CanvasModel, monkeypatch, tmp_path: Path
+    ) -> None:
+        unit_settings = UnitSettings(display_unit="px", preview_dpi=96.0)
+        doc_manager = DocumentManager(canvas_model, unit_settings)
+        doc_manager.setDocumentDPI(250)
+        artboard_id = "artboard-2"
+        canvas_model.addItem(
+            make_artboard(artboard_id=artboard_id, width=100, height=50)
+        )
+
+        captured = {}
+
+        def fake_export_png(items, bounds, path, options):
+            captured["document_dpi"] = options.document_dpi
+            captured["target_dpi"] = options.target_dpi
+            return True
+
+        import lucent.exporter as exporter
+
+        monkeypatch.setattr(exporter, "export_png", fake_export_png)
+
+        result = doc_manager.exportArtboard(
+            artboard_id, str(tmp_path / "out.png"), 200, 0, ""
+        )
+
+        assert result is True
+        assert captured["document_dpi"] == 250
+        assert captured["target_dpi"] == 200
 
     def test_open_nonexistent_file_returns_false(
         self, doc_manager: DocumentManager

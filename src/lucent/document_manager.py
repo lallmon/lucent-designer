@@ -340,6 +340,8 @@ class DocumentManager(QObject):
 
         from lucent.exporter import (
             ExportOptions,
+            export_jpg,
+            export_pdf,
             export_png,
             export_svg,
         )
@@ -357,8 +359,12 @@ class DocumentManager(QObject):
         # Empty string means transparent, otherwise use specified color
         effective_bg = background if background else None
 
+        base_dpi = self._document_dpi
+        if self._unit_settings and self._unit_settings.displayUnit != "px":
+            base_dpi = int(self._unit_settings.previewDPI)
+
         options = ExportOptions(
-            document_dpi=self._document_dpi,
+            document_dpi=base_dpi,
             target_dpi=target_dpi,
             padding=padding,
             background=effective_bg,
@@ -373,7 +379,11 @@ class DocumentManager(QObject):
         )
 
         # Determine format from extension
-        if local_path.lower().endswith(".svg"):
+        lower_path = local_path.lower()
+        if lower_path.endswith(".svg"):
             return export_svg(items, bounds, local_path, options)
-        else:
-            return export_png(items, bounds, local_path, options)
+        if lower_path.endswith(".pdf"):
+            return export_pdf(items, bounds, local_path, options)
+        if lower_path.endswith(".jpg") or lower_path.endswith(".jpeg"):
+            return export_jpg(items, bounds, local_path, options)
+        return export_png(items, bounds, local_path, options)

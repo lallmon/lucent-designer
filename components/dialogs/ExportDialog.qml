@@ -12,12 +12,13 @@ Dialog {
     title: qsTr("Export Artboard")
     modal: true
     standardButtons: Dialog.Cancel
+    padding: 16
 
     property string artboardId: ""
     property string artboardName: "Artboard"
 
-    // Document DPI is always 72 (points = pixels at 1:1)
-    readonly property int documentDPI: 72
+    // Document DPI controls print scaling; screen exports are 1:1.
+    readonly property int documentDPI: documentManager ? documentManager.documentDPI : 72
 
     // Get selected DPI value from combo box
     readonly property int selectedDPI: {
@@ -26,11 +27,17 @@ Dialog {
         return 72;
     }
 
+    readonly property real printBaseDPI: {
+        if (unitSettings && unitSettings.displayUnit !== "px")
+            return unitSettings.previewDPI;
+        return documentDPI;
+    }
+
     readonly property real computedWidth: {
         if (!canvasModel || !artboardId)
             return 0;
         var bounds = canvasModel.getArtboardBounds(artboardId);
-        var scale = selectedDPI / documentDPI;
+        var scale = exportModeCombo.currentIndex === 1 ? selectedDPI / printBaseDPI : 1.0;
         return (bounds.width + paddingInput.value * 2) * scale;
     }
 
@@ -38,34 +45,34 @@ Dialog {
         if (!canvasModel || !artboardId)
             return 0;
         var bounds = canvasModel.getArtboardBounds(artboardId);
-        var scale = selectedDPI / documentDPI;
+        var scale = exportModeCombo.currentIndex === 1 ? selectedDPI / printBaseDPI : 1.0;
         return (bounds.height + paddingInput.value * 2) * scale;
     }
 
     width: 360
-    height: 320
+    implicitHeight: contentLayout.implicitHeight + footerBox.implicitHeight + topPadding + bottomPadding
 
     Platform.FileDialog {
         id: saveDialog
         title: qsTr("Export As")
         fileMode: Platform.FileDialog.SaveFile
-        nameFilters: formatCombo.currentIndex === 0 ? ["PNG files (*.png)"] : ["SVG files (*.svg)"]
-        defaultSuffix: formatCombo.currentIndex === 0 ? "png" : "svg"
+        nameFilters: formatCombo.currentIndex === 0 ? ["PNG files (*.png)"] : formatCombo.currentIndex === 1 ? ["SVG files (*.svg)"] : formatCombo.currentIndex === 2 ? ["JPG files (*.jpg *.jpeg)"] : ["PDF files (*.pdf)"]
+        defaultSuffix: formatCombo.currentIndex === 0 ? "png" : formatCombo.currentIndex === 1 ? "svg" : formatCombo.currentIndex === 2 ? "jpg" : "pdf"
         onAccepted: {
             if (documentManager) {
                 var bg = transparentCheck.checked ? "" : bgColorPicker.color.toString();
                 var filePath = saveDialog.file.toString();
-                console.log("Exporting to:", filePath, "DPI:", root.selectedDPI);
-                var result = documentManager.exportArtboard(root.artboardId, filePath, root.selectedDPI, paddingInput.value, bg);
+                var exportDpi = exportModeCombo.currentIndex === 1 ? root.selectedDPI : root.documentDPI;
+                console.log("Exporting to:", filePath, "DPI:", exportDpi);
+                var result = documentManager.exportArtboard(root.artboardId, filePath, exportDpi, paddingInput.value, bg);
                 console.log("Export result:", result);
             }
             root.close();
         }
     }
 
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 16
+    contentItem: ColumnLayout {
+        id: contentLayout
         spacing: 12
 
         Label {
@@ -84,17 +91,36 @@ Dialog {
             }
             ComboBox {
                 id: formatCombo
-                model: ["PNG", "SVG"]
+                model: ["PNG", "SVG", "JPG", "PDF"]
+                Layout.fillWidth: true
+                onCurrentIndexChanged: {
+                    if (currentIndex === 1) {
+                        transparentCheck.checked = true;
+                    } else if (currentIndex === 2) {
+                        transparentCheck.checked = false;
+                    }
+                }
+            }
+
+            Label {
+                text: qsTr("Export mode:")
+                visible: formatCombo.currentIndex === 0 || formatCombo.currentIndex === 2 || formatCombo.currentIndex === 3
+            }
+            ComboBox {
+                id: exportModeCombo
+                visible: formatCombo.currentIndex === 0 || formatCombo.currentIndex === 2 || formatCombo.currentIndex === 3
+                model: [qsTr("Screen (1×)"), qsTr("Print (DPI)")]
+                currentIndex: 0
                 Layout.fillWidth: true
             }
 
             Label {
                 text: qsTr("Resolution:")
-                visible: formatCombo.currentIndex === 0
+                visible: (formatCombo.currentIndex === 0 || formatCombo.currentIndex === 2 || formatCombo.currentIndex === 3) && exportModeCombo.currentIndex === 1
             }
             ComboBox {
                 id: dpiCombo
-                visible: formatCombo.currentIndex === 0
+                visible: (formatCombo.currentIndex === 0 || formatCombo.currentIndex === 2 || formatCombo.currentIndex === 3) && exportModeCombo.currentIndex === 1
                 model: ListModel {
                     ListElement {
                         text: "72 DPI (Screen)"
@@ -136,6 +162,7 @@ Dialog {
                     id: transparentCheck
                     text: qsTr("Transparent")
                     checked: true
+                    enabled: formatCombo.currentIndex !== 2
                 }
                 Lucent.ColorPickerButton {
                     id: bgColorPicker
@@ -156,17 +183,21 @@ Dialog {
 
         Label {
             text: qsTr("Output size: %1 × %2 px").arg(Math.round(root.computedWidth)).arg(Math.round(root.computedHeight))
-            visible: formatCombo.currentIndex === 0
+            visible: formatCombo.currentIndex === 0 || formatCombo.currentIndex === 2 || formatCombo.currentIndex === 3
             color: palette.text
         }
 
         Item {
             Layout.fillHeight: true
         }
+    }
 
+    footer: DialogButtonBox {
+        id: footerBox
+        standardButtons: Dialog.Cancel
         Button {
             text: qsTr("Export...")
-            Layout.alignment: Qt.AlignRight
+            DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
             onClicked: saveDialog.open()
         }
     }

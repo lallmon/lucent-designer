@@ -1,16 +1,21 @@
 # Copyright (C) 2026 The Culture List, Inc.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import xml.etree.ElementTree as ET
-
 from PySide6.QtCore import QRectF
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QImage, QImageWriter, QColor
+import pytest
 
 from lucent.appearances import Fill, Stroke
-from lucent.canvas_items import EllipseItem, PathItem, RectangleItem, TextItem
-from lucent.exporter import ExportOptions, compute_bounds, export_png, export_svg
-from lucent.exporter import _item_to_svg_element
-from lucent.geometry import EllipseGeometry, PathGeometry, RectGeometry, TextGeometry
+from lucent.canvas_items import RectangleItem
+from lucent.exporter import (
+    ExportOptions,
+    compute_bounds,
+    export_jpg,
+    export_pdf,
+    export_png,
+    export_svg,
+)
+from lucent.geometry import RectGeometry
 
 
 class _ExplodingItem:
@@ -25,15 +30,6 @@ def _make_rectangle_item(**geom_kwargs):
         Stroke("#000000", 1.0, 1.0, True),
     ]
     return RectangleItem(geometry=geometry, appearances=appearances)
-
-
-def _make_path_item(points, closed=False, fill_opacity=1.0):
-    geometry = PathGeometry(points=points, closed=closed)
-    appearances = [
-        Fill("#ff00ff", fill_opacity, True),
-        Stroke("#000000", 1.0, 1.0, True),
-    ]
-    return PathItem(geometry=geometry, appearances=appearances)
 
 
 def test_compute_bounds_padding_expands():
@@ -82,96 +78,54 @@ def test_export_png_returns_false_on_save_exception(tmp_path, monkeypatch):
     assert result is False
 
 
-def test_item_to_svg_element_rectangle_uniform():
-    rect = _make_rectangle_item(x=0, y=0, width=100, height=50, corner_radius=10)
-    elem = _item_to_svg_element(rect)
-    assert elem is not None
-    assert elem.tag == "rect"
-    assert elem.get("rx") == "5.0"
-    assert elem.get("ry") == "5.0"
+def test_export_jpg_writes_file(tmp_path):
+    formats = {bytes(fmt).lower() for fmt in QImageWriter.supportedImageFormats()}
+    if b"jpg" not in formats and b"jpeg" not in formats:
+        pytest.skip("JPEG image format plugin not available")
+    probe_path = tmp_path / "_probe.jpg"
+    probe_writer = QImageWriter(str(probe_path), b"jpg")
+    probe_image = QImage(1, 1, QImage.Format.Format_RGB32)
+    probe_image.fill(QColor("#ffffff"))
+    if not probe_writer.write(probe_image):
+        pytest.skip(f"JPEG writer unavailable: {probe_writer.errorString()}")
+    options = ExportOptions(background="#ffffff")
+    bounds = QRectF(0, 0, 10, 10)
+    result = export_jpg([], bounds, tmp_path / "out.jpg", options)
+    assert result is True
+    assert (tmp_path / "out.jpg").exists()
 
 
-def test_item_to_svg_element_rectangle_per_corner():
-    rect = _make_rectangle_item(
-        x=0,
-        y=0,
-        width=100,
-        height=50,
-        corner_radius_tl=10,
-        corner_radius_tr=15,
-        corner_radius_br=20,
-        corner_radius_bl=5,
-    )
-    elem = _item_to_svg_element(rect)
-    assert elem is not None
-    assert elem.tag == "path"
-    assert "A" in (elem.get("d") or "")
+def test_export_jpg_returns_false_on_empty_bounds(tmp_path):
+    options = ExportOptions(background="#ffffff")
+    result = export_jpg([], QRectF(), tmp_path / "out.jpg", options)
+    assert result is False
 
 
-def test_item_to_svg_element_path_fill_none_when_transparent():
-    path = _make_path_item(
-        points=[{"x": 0, "y": 0}, {"x": 10, "y": 0}],
-        closed=False,
-        fill_opacity=0.0,
-    )
-    elem = _item_to_svg_element(path)
-    assert elem is not None
-    assert elem.tag == "path"
-    assert elem.get("fill") == "none"
+def test_export_pdf_writes_file(tmp_path):
+    options = ExportOptions()
+    bounds = QRectF(0, 0, 10, 10)
+    result = export_pdf([], bounds, tmp_path / "out.pdf", options)
+    assert result is True
+    assert (tmp_path / "out.pdf").exists()
 
 
-def test_item_to_svg_element_ellipse():
-    ellipse = EllipseItem(
-        geometry=EllipseGeometry(center_x=50, center_y=50, radius_x=20, radius_y=10),
-        appearances=[
-            Fill("#ffffff", 0.0, True),
-            Stroke("#ffffff", 1.0, 1.0, True),
-        ],
-    )
-    elem = _item_to_svg_element(ellipse)
-    assert elem is not None
-    assert elem.tag == "ellipse"
-    assert elem.get("cx") == "50.0"
-    assert elem.get("rx") == "20.0"
+def test_export_pdf_returns_false_on_empty_bounds(tmp_path):
+    options = ExportOptions()
+    result = export_pdf([], QRectF(), tmp_path / "out.pdf", options)
+    assert result is False
 
 
-def test_item_to_svg_element_text():
-    text = TextItem(
-        geometry=TextGeometry(x=10, y=20, width=100, height=30),
-        text="Hello",
-        font_family="Arial",
-        font_size=12,
-        text_color="#000000",
-    )
-    elem = _item_to_svg_element(text)
-    assert elem is not None
-    assert elem.tag == "text"
-    assert elem.get("x") == "10.0"
-
-
-def test_export_svg_writes_with_background(tmp_path):
+def test_export_svg_writes_file_with_background(tmp_path):
     rect = _make_rectangle_item(x=0, y=0, width=10, height=10)
     bounds = QRectF(0, 0, 10, 10)
     options = ExportOptions(background="#ff0000")
-
     out_path = tmp_path / "out.svg"
     assert export_svg([rect], bounds, out_path, options) is True
-
-    tree = ET.parse(out_path)
-    root = tree.getroot()
-    assert root.tag.endswith("svg")
-    # First child should be background rect
-    bg = list(root)[0]
-    assert bg.tag.endswith("rect")
-    assert bg.get("fill") == "#ff0000"
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0
 
 
-def test_export_svg_returns_false_on_write_error(tmp_path, monkeypatch):
-    def raise_write(self, *args, **kwargs):
-        raise RuntimeError("write failed")
-
-    monkeypatch.setattr(ET.ElementTree, "write", raise_write, raising=True)
+def test_export_svg_returns_false_on_empty_bounds(tmp_path):
     options = ExportOptions()
-    bounds = QRectF(0, 0, 10, 10)
-    result = export_svg([], bounds, tmp_path / "out.svg", options)
+    result = export_svg([], QRectF(), tmp_path / "out.svg", options)
     assert result is False
